@@ -116,7 +116,21 @@
             </div>
           </div>
         </section>
-        <div class="build-note">Worth · 1.7-final</div>
+
+        <section class="settings-list settings-data-section">
+          <button class="settings-row" id="exportBtn" type="button">
+            <span><strong>Экспорт данных</strong><small>Скачать резервную копию JSON</small></span><span>›</span>
+          </button>
+          <label class="settings-row file-row">
+            <span><strong>Импорт данных</strong><small>Восстановить резервную копию JSON</small></span><span>›</span>
+            <input type="file" id="importInput" accept="application/json" />
+          </label>
+          <button class="settings-row danger" id="resetBtn" type="button">
+            <span><strong>Удалить все данные</strong><small>Счета, активы, позиции и история</small></span><span>›</span>
+          </button>
+        </section>
+
+        <div class="build-note">Worth · 1.8-final</div>
       </section>
     </main>
 
@@ -124,7 +138,6 @@
       <button class="tab active" data-nav="homeView"><svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V21H4z"/></svg><span>Главная</span></button>
       <button class="tab" data-nav="positionsView"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Позиции</span></button>
       <button class="tab" data-nav="historyView"><svg viewBox="0 0 24 24"><path d="M4 17l5-5 4 3 7-8"/></svg><span>История</span></button>
-      <button class="tab" data-nav="settingsView"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1A8 8 0 0 0 15 6l-.3-2.6h-4L10.4 6A8 8 0 0 0 8 7.1l-2.4-1-2 3.4L5.1 11A7 7 0 0 0 5 12c0 .3 0 .7.1 1l-1.5 1.5 2 3.4 2.4-1A8 8 0 0 0 10.4 18l.3 2.6h4L15 18a8 8 0 0 0 2.4-1.1l2.4 1 2-3.4-1.5-1.5c.1-.3.1-.7.1-1Z"/></svg><span>Настройки</span></button>
     </nav>
   </div>
 

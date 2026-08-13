@@ -129,3 +129,9 @@ html[data-theme="dark"] .primary-small,html[data-theme="dark"] .sheet-primary,ht
 .chart-card{overflow:hidden}
 #historyChart{display:block;width:100%;max-width:100%;height:270px}
 @media(max-width:390px){.chart-card{padding-left:6px;padding-right:6px}.position-comment{font-size:11px}}
+
+/* 1.8-final */
+.account-position-comment{color:var(--muted);font-size:10.5px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.settings-data-section{margin-top:14px}
+.settings-row.danger strong,.settings-row.danger small{color:var(--red)}
+.tab-bar{grid-template-columns:repeat(3,1fr)}
