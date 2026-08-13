@@ -146,7 +146,7 @@
       <div class="sheet-head"><div><div class="section-kicker">Новый</div><h2>Актив</h2></div><button type="button" class="close-button" data-close="assetModal">×</button></div>
       <label class="field"><span>Название</span><input name="name" required maxlength="50" autocomplete="off" placeholder="Например, Tether" /></label>
       <label class="field"><span>Тикер</span><input name="symbol" required maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="USDT" /></label>
-      <label class="field"><span>Текущая цена за единицу, $</span><input name="price" required type="number" min="0" step="any" inputmode="decimal" placeholder="1.00" /></label>
+      <label class="field"><span>Текущая цена за единицу, $</span><input name="price" required type="text" inputmode="decimal" autocomplete="off" placeholder="1,00" /></label>
       <button class="sheet-primary" type="submit">Создать актив</button>
     </form>
   </dialog>
@@ -158,7 +158,7 @@
       <div id="positionPrerequisite" class="inline-warning hidden">Сначала создайте хотя бы один счёт и один актив.</div>
       <label class="field"><span>Счёт</span><select name="accountId" required></select></label>
       <label class="field"><span>Актив</span><select name="assetId" required></select></label>
-      <label class="field"><span>Количество</span><input name="quantity" required type="number" step="any" inputmode="decimal" placeholder="1000" /></label>
+      <label class="field"><span>Количество</span><input name="quantity" required type="text" inputmode="decimal" autocomplete="off" placeholder="1000" /></label>
       <button class="sheet-primary" type="submit">Сохранить</button>
     </form>
   </dialog>
@@ -168,7 +168,7 @@
       <div class="sheet-handle"></div>
       <div class="sheet-head"><div><div class="section-kicker">Цена</div><h2 id="priceAssetTitle">Актив</h2></div><button type="button" class="close-button" data-close="priceModal">×</button></div>
       <input name="assetId" type="hidden" />
-      <label class="field"><span>Цена за единицу, $</span><input name="price" required type="number" min="0" step="any" inputmode="decimal" /></label>
+      <label class="field"><span>Цена за единицу, $</span><input name="price" required type="text" inputmode="decimal" autocomplete="off" /></label>
       <button class="sheet-primary" type="submit">Обновить цену</button>
     </form>
   </dialog>
