@@ -116,13 +116,7 @@
             </div>
           </div>
         </section>
-        <div class="section-title-row settings-section-title"><h2>Данные</h2></div>
-        <section class="settings-list">
-          <button class="settings-row" id="exportBtn"><span><strong>Экспорт</strong><small>Скачать резервную копию JSON</small></span><b>›</b></button>
-          <label class="settings-row file-row"><span><strong>Импорт</strong><small>Восстановить данные из JSON</small></span><b>›</b><input id="importInput" type="file" accept="application/json,.json" /></label>
-          <button class="settings-row danger" id="resetBtn"><span><strong>Удалить всё</strong><small>Очистить локальную базу</small></span><b>›</b></button>
-        </section>
-        <div class="build-note">Worth · 1.6-final</div>
+        <div class="build-note">Worth · 1.7-final</div>
       </section>
     </main>
 
@@ -171,6 +165,7 @@
       <label class="field"><span>Счёт</span><select name="accountId" required></select></label>
       <label class="field"><span>Актив</span><select name="assetId" required></select></label>
       <label class="field"><span>Количество</span><input name="quantity" required type="text" inputmode="decimal" autocomplete="off" placeholder="1000" /></label>
+      <label class="field"><span>Комментарий <em>необязательно</em></span><input name="comment" maxlength="80" type="text" autocomplete="off" placeholder="На машину, резерв, отпуск…" /></label>
       <button class="sheet-primary" type="submit">Сохранить</button>
     </form>
   </dialog>

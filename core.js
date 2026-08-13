@@ -53,7 +53,7 @@
       ...data,
       accounts:(data.accounts||[]).map(normalizeAccount),
       assets:(data.assets||[]).map(normalizeAsset),
-      positions:(data.positions||[]).map(x=>({...x})),
+      positions:(data.positions||[]).map(x=>({...x,comment:String(x.comment||'').trim()})),
       snapshots:(data.snapshots||[]).map(normalizeSnapshot)
     };
   }
