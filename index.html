@@ -27,7 +27,7 @@
       <section id="homeView" class="view active" aria-labelledby="homeTitle">
         <div class="balance-block">
           <div class="overline">Общий баланс</div>
-          <h1 id="homeTitle" class="balance" data-money-hidden="false">0 ₽</h1>
+          <h1 id="homeTitle" class="balance" data-money-hidden="false">0 $</h1>
           <button id="privacyToggle" class="privacy-toggle" type="button">
             <span id="balanceDelta">Сохраните первый снимок</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
@@ -86,6 +86,12 @@
           <button class="primary-small" id="saveSnapshotBtnHistory">Снимок</button>
         </div>
 
+        <div class="history-filter-wrap">
+          <select id="historyScope" class="history-filter" aria-label="Что показывать в истории">
+            <option value="portfolio">Весь портфель</option>
+          </select>
+        </div>
+
         <section class="surface chart-surface">
           <div class="chart-stat">
             <span id="historyRangeLabel">Вся история</span>
@@ -140,7 +146,7 @@
       <div class="sheet-head"><div><div class="section-kicker">Новый</div><h2>Актив</h2></div><button type="button" class="close-button" data-close="assetModal">×</button></div>
       <label class="field"><span>Название</span><input name="name" required maxlength="50" autocomplete="off" placeholder="Например, Tether" /></label>
       <label class="field"><span>Тикер</span><input name="symbol" required maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="USDT" /></label>
-      <label class="field"><span>Текущая цена за единицу, ₽</span><input name="price" required type="number" min="0" step="any" inputmode="decimal" placeholder="92.50" /></label>
+      <label class="field"><span>Текущая цена за единицу, $</span><input name="price" required type="number" min="0" step="any" inputmode="decimal" placeholder="1.00" /></label>
       <button class="sheet-primary" type="submit">Создать актив</button>
     </form>
   </dialog>
@@ -162,7 +168,7 @@
       <div class="sheet-handle"></div>
       <div class="sheet-head"><div><div class="section-kicker">Цена</div><h2 id="priceAssetTitle">Актив</h2></div><button type="button" class="close-button" data-close="priceModal">×</button></div>
       <input name="assetId" type="hidden" />
-      <label class="field"><span>Цена за единицу, ₽</span><input name="price" required type="number" min="0" step="any" inputmode="decimal" /></label>
+      <label class="field"><span>Цена за единицу, $</span><input name="price" required type="number" min="0" step="any" inputmode="decimal" /></label>
       <button class="sheet-primary" type="submit">Обновить цену</button>
     </form>
   </dialog>
@@ -175,6 +181,25 @@
       <div id="quickUpdateFields" class="quick-update-fields"></div>
       <button class="sheet-primary" type="submit">Сохранить изменения</button>
     </form>
+  </dialog>
+
+  <dialog id="accountEditModal" class="modal">
+    <form id="accountEditForm" class="sheet compact-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="section-kicker">Счёт</div><h2>Изменить название</h2></div><button type="button" class="close-button" data-close="accountEditModal">×</button></div>
+      <input name="accountId" type="hidden" />
+      <label class="field"><span>Название</span><input name="name" required maxlength="50" autocomplete="off" /></label>
+      <button class="sheet-primary" type="submit">Сохранить</button>
+    </form>
+  </dialog>
+
+  <dialog id="actionMenuModal" class="action-modal">
+    <div class="action-sheet">
+      <div class="sheet-handle"></div>
+      <div class="action-title" id="actionMenuTitle">Действия</div>
+      <div id="actionMenuItems" class="action-items"></div>
+      <button type="button" class="action-cancel" data-close="actionMenuModal">Отмена</button>
+    </div>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
