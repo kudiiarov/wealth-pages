@@ -86,7 +86,7 @@ function renderAccounts(){
   list.innerHTML=state.accounts.map(a=>{
     const open=state.expandedAccounts.has(a.id);
     const positions=state.positions.filter(p=>p.accountId===a.id);
-    const details=positions.length?positions.map(p=>{const asset=assetBy(p.assetId),comment=p.comment?`<small class="account-position-comment">• ${escapeHTML(p.comment)}</small>`:'';return `<div class="account-asset-row"><span class="mini-asset-icon ${iconLenClass(assetIcon(asset))}" style="background:${assetColor(asset)}">${escapeHTML(assetIcon(asset))}</span><div><strong>${escapeHTML(asset?.name||'Актив')}</strong><small>${number(p.quantity)} ${escapeHTML(asset?.code||'')}</small>${comment}</div><b>${money(positionValue(p))}</b></div>`}).join(''):'<div class="account-empty">На этом счёте пока нет активов</div>';
+    const details=positions.length?positions.map(p=>{const asset=assetBy(p.assetId),comment=p.comment?`<span class="account-position-comment">• ${escapeHTML(p.comment)}</span>`:'';return `<div class="account-asset-row"><span class="mini-asset-icon ${iconLenClass(assetIcon(asset))}" style="background:${assetColor(asset)}">${escapeHTML(assetIcon(asset))}</span><div><div class="account-position-title"><strong>${escapeHTML(asset?.code||asset?.name||'Актив')}</strong>${comment}</div><small>${escapeHTML(asset?.name||'')} · ${number(p.quantity)} ед.</small></div><b>${money(positionValue(p))}</b></div>`}).join(''):'<div class="account-empty">На этом счёте пока нет активов</div>';
     return `<div class="account-expand-card ${open?'expanded':''}">
       <div class="list-card account-toggle" data-account-toggle="${a.id}">
         <div class="list-icon ${iconLenClass(accountIcon(a))}" style="background:${accountColor(a)};color:#fff">${escapeHTML(accountIcon(a))}</div>
@@ -172,8 +172,38 @@ function accountMenu(id){const a=accountBy(id);if(!a)return;showActionMenu(a.nam
 function assetMenu(id){const a=assetBy(id);if(!a)return;showActionMenu(`${a.name} · ${a.code}`,[{label:'Настроить актив',run:()=>{const f=byId('assetEditForm');f.elements.assetId.value=a.id;f.elements.name.value=a.name;f.elements.code.value=a.code;f.elements.icon.value=a.icon;f.elements.color.value=a.color;openDialog('assetEditModal')}},{label:'Изменить цену',run:()=>{const f=byId('priceForm');f.elements.assetId.value=a.id;f.elements.price.value=inputDecimal(a.price);byId('priceAssetTitle').textContent=`${a.name} · ${a.code}`;openDialog('priceModal')}},{label:'Удалить актив',danger:true,run:async()=>{if(!confirm(`Удалить ${a.name} (${a.code}) и все позиции с этим активом?`))return;for(const p of state.positions.filter(p=>p.assetId===id))await dbDelete('positions',p.id);await dbDelete('assets',id);await reload();toast('Актив удалён')}}])}
 function positionMenu(id){const p=state.positions.find(x=>x.id===id),a=p&&assetBy(p.assetId);if(!p)return;showActionMenu(a?.name||'Позиция',[{label:'Изменить позицию',run:()=>{openDialog('positionModal');const f=byId('positionForm');f.dataset.editId=p.id;f.elements.accountId.value=p.accountId;f.elements.assetId.value=p.assetId;f.elements.quantity.value=inputDecimal(p.quantity);f.elements.comment.value=p.comment||'';byId('positionModeLabel').textContent='Редактирование'}},{label:'Удалить позицию',danger:true,run:async()=>{if(!confirm('Удалить эту позицию?'))return;await dbDelete('positions',id);await reload();toast('Позиция удалена')}}])}
 function snapshotMenu(id){showActionMenu('Снимок',[{label:'Удалить снимок',danger:true,run:async()=>{if(!confirm('Удалить этот снимок из истории?'))return;await dbDelete('snapshots',id);await reload();toast('Снимок удалён')}}])}
-function renderQuickUpdate(){const c=byId('quickUpdateFields');if(!state.assets.length){c.innerHTML='<div class="empty-state">Сначала добавьте активы.</div>';return}c.innerHTML=state.assets.map(a=>{const fields=state.positions.filter(p=>p.assetId===a.id).map(p=>`<div class="update-input"><label>${escapeHTML(accountBy(p.accountId)?.name||'Счёт')} · количество</label><input type="text" inputmode="decimal" autocomplete="off" data-position-qty="${p.id}" value="${inputDecimal(p.quantity)}"></div>`).join('');return `<div class="update-group"><div class="update-group-head"><strong>${escapeHTML(a.name)} · ${escapeHTML(a.code)}</strong><small>${visibleMoney(assetTotal(a.id))}</small></div><div class="update-grid"><div class="update-input"><label>Цена, $</label><input type="text" inputmode="decimal" autocomplete="off" data-asset-price="${a.id}" value="${inputDecimal(a.price)}"></div>${fields}</div></div>`}).join('')}
-function exportData(){const payload={app:'Worth',version:6,appVersion:'1.8-final',baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast('Резервная копия создана')}
+function renderQuickUpdate(){
+  const c=byId('quickUpdateFields');
+  if(!state.assets.length){c.innerHTML='<div class="empty-state">Сначала добавьте активы.</div>';return}
+  c.innerHTML=state.assets.map(a=>{
+    const positions=state.positions.filter(p=>p.assetId===a.id);
+    const positionRows=positions.length?positions.map(p=>{
+      const acc=accountBy(p.accountId);
+      return `<label class="quick-position-row">
+        <span class="quick-position-account">
+          <span class="quick-account-icon ${iconLenClass(accountIcon(acc))}" style="background:${accountColor(acc)}">${escapeHTML(accountIcon(acc))}</span>
+          <span><strong>${escapeHTML(acc?.name||'Счёт')}</strong><small>Количество ${escapeHTML(a.code)}</small></span>
+        </span>
+        <input type="text" inputmode="decimal" autocomplete="off" data-position-qty="${p.id}" value="${inputDecimal(p.quantity)}" aria-label="Количество ${escapeHTML(a.code)} на счёте ${escapeHTML(acc?.name||'Счёт')}">
+      </label>`;
+    }).join(''):`<div class="quick-no-positions">Нет позиций с этим активом</div>`;
+    return `<section class="quick-asset-card">
+      <div class="quick-asset-head">
+        <span class="quick-asset-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)}">${escapeHTML(assetIcon(a))}</span>
+        <div class="quick-asset-meta"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)} · ${money(assetTotal(a.id))}</small></div>
+      </div>
+      <label class="quick-price-row">
+        <span><strong>Цена за единицу</strong><small>Базовая цена в USD</small></span>
+        <div class="quick-price-input"><span>$</span><input type="text" inputmode="decimal" autocomplete="off" data-asset-price="${a.id}" value="${inputDecimal(a.price)}" aria-label="Цена ${escapeHTML(a.code)} в долларах"></div>
+      </label>
+      <div class="quick-positions-block">
+        <div class="quick-block-title">Остатки по счетам</div>
+        ${positionRows}
+      </div>
+    </section>`;
+  }).join('');
+}
+function exportData(){const payload={app:'Worth',version:7,appVersion:'1.9-final',baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast('Резервная копия создана')}
 function validateImport(data){return WorthCore.validateImport(data)}
 async function importData(file){try{const raw=JSON.parse(await file.text()),data=validateImport(raw);if(!confirm('Импорт полностью заменит текущие локальные данные. Продолжить?'))return;for(const n of STORE_NAMES){await dbClear(n);for(const item of data[n])await dbPut(n,item)}await reload();toast('Данные восстановлены')}catch(e){console.error(e);alert(`Не удалось импортировать резервную копию: ${e.message||'неподдерживаемый формат'}`)}}
 function bindEvents(){document.addEventListener('click',async e=>{const currency=e.target.closest('[data-currency-code]');if(currency){setDisplayCurrency(currency.dataset.currencyCode);return}const theme=e.target.closest('[data-theme-choice]');if(theme){setTheme(theme.dataset.themeChoice);return}const accountToggle=e.target.closest('[data-account-toggle]');if(accountToggle&&!e.target.closest('[data-account-menu]')){const id=accountToggle.dataset.accountToggle;state.expandedAccounts.has(id)?state.expandedAccounts.delete(id):state.expandedAccounts.add(id);renderAccounts();return}const assetToggle=e.target.closest('[data-asset-toggle]');if(assetToggle&&!e.target.closest('[data-asset-menu]')){const id=assetToggle.dataset.assetToggle;state.expandedAssets.has(id)?state.expandedAssets.delete(id):state.expandedAssets.add(id);renderAssets();return}const open=e.target.closest('[data-open]');if(open){openDialog(open.dataset.open);return}const close=e.target.closest('[data-close]');if(close){closeDialog(close.dataset.close);return}const nav=e.target.closest('[data-nav]');if(nav){navigate(nav.dataset.nav);return}const am=e.target.closest('[data-account-menu]');if(am){accountMenu(am.dataset.accountMenu);return}const asm=e.target.closest('[data-asset-menu]');if(asm){assetMenu(asm.dataset.assetMenu);return}const pm=e.target.closest('[data-position-menu]');if(pm){positionMenu(pm.dataset.positionMenu);return}const sm=e.target.closest('[data-snapshot-menu]');if(sm){snapshotMenu(sm.dataset.snapshotMenu);return}const ai=e.target.closest('[data-action-index]');if(ai){const action=pendingActions[Number(ai.dataset.actionIndex)];closeDialog('actionMenuModal');if(action)await action.run();return}});
