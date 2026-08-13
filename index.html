@@ -16,10 +16,12 @@
 <body>
   <div class="app-shell">
     <header class="app-header">
-      <div class="brand-mark" aria-hidden="true">W</div>
+      <button id="displayCurrencyBtn" class="currency-button" type="button" aria-label="Валюта отображения" title="Валюта отображения">
+        <span id="displayCurrencyIcon">$</span><small id="displayCurrencyCode">USD</small>
+      </button>
       <div class="header-spacer"></div>
-      <button id="backupShortcut" class="circle-button" aria-label="Резервная копия" title="Резервная копия">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+      <button id="settingsShortcut" class="circle-button" aria-label="Настройки" title="Настройки">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
       </button>
     </header>
 
@@ -28,11 +30,7 @@
         <div class="balance-block">
           <div class="overline">Общий баланс</div>
           <h1 id="homeTitle" class="balance" data-money-hidden="false">$0.00</h1>
-          <div id="rubBalance" class="rub-balance">≈ 0 ₽</div>
-          <button id="privacyToggle" class="privacy-toggle" type="button">
-            <span id="balanceDelta">Сохраните первый снимок</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
-          </button>
+          <div id="balanceDelta" class="balance-delta">Сохраните первый снимок</div>
         </div>
 
         <div class="quick-actions" aria-label="Быстрые действия">
@@ -105,21 +103,26 @@
         <div id="historyList" class="card-list history-list"></div>
       </section>
 
-      <section id="dataView" class="view" aria-labelledby="dataTitle">
+      <section id="settingsView" class="view" aria-labelledby="settingsTitle">
         <div class="page-heading simple">
-          <div><div class="overline">Локально на устройстве</div><h1 id="dataTitle">Данные</h1></div>
+          <div><div class="overline">Приложение</div><h1 id="settingsTitle">Настройки</h1></div>
         </div>
-        <section class="surface info-surface">
-          <div class="security-icon"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z"/></svg></div>
-          <h2>Ваши финансы не уходят в облако</h2>
-          <p>Счета, остатки, цены и история хранятся в IndexedDB этого браузера. Для переноса или восстановления используйте резервную копию.</p>
+        <section class="settings-list">
+          <div class="settings-row static-row">
+            <span><strong>Тема</strong><small>Светлая или тёмная</small></span>
+            <div class="theme-segment" role="group" aria-label="Тема приложения">
+              <button type="button" data-theme-choice="light">Светлая</button>
+              <button type="button" data-theme-choice="dark">Тёмная</button>
+            </div>
+          </div>
         </section>
+        <div class="section-title-row settings-section-title"><h2>Данные</h2></div>
         <section class="settings-list">
           <button class="settings-row" id="exportBtn"><span><strong>Экспорт</strong><small>Скачать резервную копию JSON</small></span><b>›</b></button>
           <label class="settings-row file-row"><span><strong>Импорт</strong><small>Восстановить данные из JSON</small></span><b>›</b><input id="importInput" type="file" accept="application/json,.json" /></label>
           <button class="settings-row danger" id="resetBtn"><span><strong>Удалить всё</strong><small>Очистить локальную базу</small></span><b>›</b></button>
         </section>
-        <div class="build-note">Worth · локальная версия 1.1</div>
+        <div class="build-note">Worth · 1.6-final</div>
       </section>
     </main>
 
@@ -127,7 +130,7 @@
       <button class="tab active" data-nav="homeView"><svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V21H4z"/></svg><span>Главная</span></button>
       <button class="tab" data-nav="positionsView"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Позиции</span></button>
       <button class="tab" data-nav="historyView"><svg viewBox="0 0 24 24"><path d="M4 17l5-5 4 3 7-8"/></svg><span>История</span></button>
-      <button class="tab" data-nav="dataView"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 8h14M5 16h14"/></svg><span>Данные</span></button>
+      <button class="tab" data-nav="settingsView"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1A8 8 0 0 0 15 6l-.3-2.6h-4L10.4 6A8 8 0 0 0 8 7.1l-2.4-1-2 3.4L5.1 11A7 7 0 0 0 5 12c0 .3 0 .7.1 1l-1.5 1.5 2 3.4 2.4-1A8 8 0 0 0 10.4 18l.3 2.6h4L15 18a8 8 0 0 0 2.4-1.1l2.4 1 2-3.4-1.5-1.5c.1-.3.1-.7.1-1Z"/></svg><span>Настройки</span></button>
     </nav>
   </div>
 
@@ -220,6 +223,16 @@
       </div>
       <button class="sheet-primary" type="submit">Сохранить</button>
     </form>
+  </dialog>
+
+
+  <dialog id="currencyModal" class="modal">
+    <div class="sheet compact-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="section-kicker">Отображение</div><h2>Валюта цен</h2></div><button type="button" class="close-button" data-close="currencyModal">×</button></div>
+      <p class="sheet-note">USD остаётся базовой валютой хранения. Выбор ниже меняет только отображение сумм на всех экранах.</p>
+      <div id="currencyOptions" class="currency-options"></div>
+    </div>
   </dialog>
 
   <dialog id="actionMenuModal" class="action-modal">

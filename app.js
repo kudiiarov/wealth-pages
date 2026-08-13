@@ -2,14 +2,28 @@
 'use strict';
 const DB_NAME='worth-local-portfolio', DB_VERSION=1;
 const STORE_NAMES=['accounts','assets','positions','snapshots'];
-const state={accounts:[],assets:[],positions:[],snapshots:[],moneyHidden:false,historyScope:'portfolio'};
+const state={accounts:[],assets:[],positions:[],snapshots:[],historyScope:'portfolio',displayCurrency:localStorage.getItem('worth-display-currency')||'USD',expandedAccounts:new Set(),theme:localStorage.getItem('worth-theme')||'light'};
 let db=null, pendingActions=[];
 const $=(sel,root=document)=>root.querySelector(sel), $$=(sel,root=document)=>Array.from(root.querySelectorAll(sel)), byId=id=>document.getElementById(id);
 const palette=['#17181b','#5667ff','#9b63e8','#21c26b','#f5a341','#33bfc6','#ee5264','#7a8395'];
 const usd=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2});
 const numberFmt=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:8});
-const rubFmt=new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:0});
-function money(v){return usd.format(Number(v)||0)} function number(v){return numberFmt.format(Number(v)||0)}
+function number(v){return numberFmt.format(Number(v)||0)}
+function displayAsset(){return state.displayCurrency==='USD'?null:state.assets.find(a=>a.code===state.displayCurrency)}
+function displayRate(){const a=displayAsset();return a&&Number(a.price)>0?Number(a.price):1}
+function displayValue(usdValue){return state.displayCurrency==='USD'?Number(usdValue||0):Number(usdValue||0)/displayRate()}
+function displayUnit(){const a=displayAsset();return a?assetIcon(a):'$'}
+function displayCode(){return displayAsset()?.code||'USD'}
+function money(v){
+  if(state.displayCurrency==='USD') return usd.format(Number(v)||0);
+  const a=displayAsset();
+  if(!a||Number(a.price)<=0) return usd.format(Number(v)||0);
+  const amount=displayValue(v);
+  const abs=Math.abs(amount);
+  const digits=abs>=1000?0:abs>=10?2:4;
+  const formatted=new Intl.NumberFormat('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:digits}).format(amount);
+  return `${formatted} ${assetIcon(a)}`;
+}
 function parseDecimal(value){
   const normalized=String(value??'').trim().replace(/\s+/g,'').replace(',', '.');
   if(!normalized||!/^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized)) return NaN;
@@ -25,7 +39,6 @@ function assetIcon(a){return WorthCore.trimIcon(a?.icon,a?.code||'•')}
 function accountIcon(a){return WorthCore.trimIcon(a?.icon,WorthCore.defaultAccountIcon(a?.type))}
 function assetColor(a){return WorthCore.validColor(a?.color)?a.color:colorFor(a?.id||'asset')}
 function accountColor(a){return WorthCore.validColor(a?.color)?a.color:colorFor(a?.id||'account')}
-function rubMoney(v){return rubFmt.format(Number(v)||0)}
 function openDatabase(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{for(const n of STORE_NAMES)if(!r.result.objectStoreNames.contains(n))r.result.createObjectStore(n,{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);r.onblocked=()=>rej(new Error('IndexedDB blocked'))})}
 function store(n,m='readonly'){return db.transaction(n,m).objectStore(n)} function dbAll(n){return new Promise((res,rej)=>{const r=store(n).getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})} function dbPut(n,v){return new Promise((res,rej)=>{const r=store(n,'readwrite').put(v);r.onsuccess=()=>res(v);r.onerror=()=>rej(r.error)})} function dbDelete(n,id){return new Promise((res,rej)=>{const r=store(n,'readwrite').delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})} function dbClear(n){return new Promise((res,rej)=>{const r=store(n,'readwrite').clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error)})}
 async function reload(){
@@ -46,17 +59,15 @@ async function reload(){
   renderAll();
 }
 function assetBy(id){return state.assets.find(x=>x.id===id)} function accountBy(id){return state.accounts.find(x=>x.id===id)}
-function positionValue(p){return WorthCore.positionValue(p,state.assets)} function portfolioTotal(){return WorthCore.portfolioTotal(state.positions,state.assets)} function assetQuantity(id){return WorthCore.assetQuantity(id,state.positions)} function assetTotal(id){return WorthCore.assetTotal(id,state.positions,state.assets)} function accountTotal(id){return WorthCore.accountTotal(id,state.positions,state.assets)} function visibleMoney(v){return state.moneyHidden?'••••••':money(v)}
-function renderAll(){renderBalance();renderAllocation();renderAccounts();renderAssets();renderPositions();refreshHistoryScope();renderHistory();refreshPositionForm()}
+function positionValue(p){return WorthCore.positionValue(p,state.assets)} function portfolioTotal(){return WorthCore.portfolioTotal(state.positions,state.assets)} function assetQuantity(id){return WorthCore.assetQuantity(id,state.positions)} function assetTotal(id){return WorthCore.assetTotal(id,state.positions,state.assets)} function accountTotal(id){return WorthCore.accountTotal(id,state.positions,state.assets)} function visibleMoney(v){return money(v)}
+function renderAll(){syncDisplayCurrency();applyTheme();renderCurrencyButton();renderBalance();renderAllocation();renderAccounts();renderAssets();renderPositions();refreshHistoryScope();renderHistory();refreshPositionForm()}
 function renderBalance(){
-  const total=portfolioTotal(),el=byId('homeTitle'),rubEl=byId('rubBalance'),delta=byId('balanceDelta'),last=state.snapshots.at(-1);
-  el.textContent=visibleMoney(total);
-  const rub=WorthCore.rubEquivalent(total,state.assets);
-  rubEl.textContent=state.moneyHidden?'≈ •••••• ₽':`≈ ${rubMoney(rub)}`;
+  const total=portfolioTotal(),el=byId('homeTitle'),delta=byId('balanceDelta'),last=state.snapshots.at(-1);
+  el.textContent=money(total);
   if(!last){delta.textContent='Сохраните первый снимок';delta.style.color='';return}
   const diff=total-Number(last.total||0),pct=last.total?diff/Math.abs(last.total)*100:0;
   if(Math.abs(diff)<.005){delta.textContent='Без изменений с последнего снимка';delta.style.color='';return}
-  delta.textContent=`${diff>0?'+':'−'}${state.moneyHidden?'••••':money(Math.abs(diff))} · ${diff>0?'+':'−'}${Math.abs(pct).toFixed(1)}%`;
+  delta.textContent=`${diff>0?'+':'−'}${money(Math.abs(diff))} · ${diff>0?'+':'−'}${Math.abs(pct).toFixed(1)}%`;
   delta.style.color=diff>0?'var(--green)':'var(--red)';
 }
 function renderAllocation(){
@@ -70,11 +81,24 @@ function renderAllocation(){
 function renderAccounts(){
   const list=byId('accountsList');
   if(!state.accounts.length){list.innerHTML='<div class="empty-state">Например: Наличные, банк, биржа или деньги, которые вам должны.</div>';return}
-  list.innerHTML=state.accounts.map(a=>`<div class="list-card"><div class="list-icon ${iconLenClass(accountIcon(a))}" style="background:${accountColor(a)};color:#fff">${escapeHTML(accountIcon(a))}</div><div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.type)} · ${state.positions.filter(p=>p.accountId===a.id).length} поз.</small></div><div class="list-value"><strong>${visibleMoney(accountTotal(a.id))}</strong></div><button class="menu-button" data-account-menu="${a.id}" aria-label="Действия со счётом">···</button></div>`).join('');
+  list.innerHTML=state.accounts.map(a=>{
+    const open=state.expandedAccounts.has(a.id);
+    const positions=state.positions.filter(p=>p.accountId===a.id);
+    const details=positions.length?positions.map(p=>{const asset=assetBy(p.assetId);return `<div class="account-asset-row"><span class="mini-asset-icon ${iconLenClass(assetIcon(asset))}" style="background:${assetColor(asset)}">${escapeHTML(assetIcon(asset))}</span><div><strong>${escapeHTML(asset?.name||'Актив')}</strong><small>${number(p.quantity)} ${escapeHTML(asset?.code||'')}</small></div><b>${money(positionValue(p))}</b></div>`}).join(''):'<div class="account-empty">На этом счёте пока нет активов</div>';
+    return `<div class="account-expand-card ${open?'expanded':''}">
+      <div class="list-card account-toggle" data-account-toggle="${a.id}">
+        <div class="list-icon ${iconLenClass(accountIcon(a))}" style="background:${accountColor(a)};color:#fff">${escapeHTML(accountIcon(a))}</div>
+        <div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.type)} · ${positions.length} поз.</small></div>
+        <div class="list-value"><strong>${money(accountTotal(a.id))}</strong></div>
+        <button class="menu-button" data-account-menu="${a.id}" aria-label="Действия со счётом">···</button>
+      </div>
+      <div class="account-assets ${open?'':'hidden'}">${details}</div>
+    </div>`;
+  }).join('');
 }
 function renderAssets(){
   const list=byId('assetsList');
-  if(!state.assets.length){list.innerHTML='<div class="empty-state">Актив — это валюта, металл, криптовалюта, акция или другое имущество с ценой в долларах.</div>';return}
+  if(!state.assets.length){list.innerHTML='<div class="empty-state">Актив — это валюта, металл, криптовалюта, акция или другое имущество с базовой ценой в долларах.</div>';return}
   list.innerHTML=state.assets.map(a=>`<div class="list-card"><div class="list-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)};color:#fff">${escapeHTML(assetIcon(a))}</div><div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)} · ${number(assetQuantity(a.id))} ед. · ${visibleMoney(a.price)} / ед.</small></div><div class="list-value"><strong>${visibleMoney(assetTotal(a.id))}</strong></div><button class="menu-button" data-asset-menu="${a.id}" aria-label="Действия с активом">···</button></div>`).join('');
 }
 function renderPositions(){
@@ -85,11 +109,66 @@ function renderPositions(){
 }
 function refreshHistoryScope(){const select=byId('historyScope'),current=state.historyScope;select.innerHTML='<option value="portfolio">Весь портфель</option>'+state.accounts.map(a=>`<option value="account:${a.id}">${escapeHTML(a.name)}</option>`).join('');if([...select.options].some(o=>o.value===current))select.value=current;else{state.historyScope='portfolio';select.value='portfolio'}}
 function historyData(){if(state.historyScope==='portfolio')return state.snapshots.map(s=>({snapshot:s,value:Number(s.total)||0}));const id=state.historyScope.slice(8);return state.snapshots.map(s=>{const rec=Array.isArray(s.accounts)?s.accounts.find(a=>a.accountId===id):null;return rec?{snapshot:s,value:Number(rec.total)||0}:null}).filter(Boolean)}
-function renderHistory(){const list=byId('historyList'),data=historyData(),isAccount=state.historyScope!=='portfolio';byId('historyRangeLabel').textContent=isAccount?(accountBy(state.historyScope.slice(8))?.name||'Счёт'):'Весь портфель';if(!data.length){list.innerHTML=`<div class="empty-state">${isAccount?'Для этого счёта пока нет совместимых снимков. Сделайте новый снимок после обновления приложения.':'Снимок фиксирует стоимость портфеля на выбранный момент. Делайте их регулярно, чтобы видеть динамику.'}</div>`}else{list.innerHTML=data.slice().reverse().map((item,reverseIndex,arr)=>{const chronologicalIndex=data.findIndex(x=>x.snapshot.id===item.snapshot.id),prev=data[chronologicalIndex-1],diff=prev?item.value-prev.value:null;return `<div class="list-card"><span class="history-dot"></span><div class="list-main"><strong>${formatDate(item.snapshot.createdAt)}</strong><small>${formatTime(item.snapshot.createdAt)}${diff===null?' · первый снимок':` · ${diff>=0?'+':'−'}${state.moneyHidden?'••••':money(Math.abs(diff))}`}</small></div><div class="list-value"><strong>${visibleMoney(item.value)}</strong></div><button class="menu-button" data-snapshot-menu="${item.snapshot.id}" aria-label="Действия со снимком">···</button></div>`}).join('')}drawChart()}
-function drawChart(){const canvas=byId('historyChart'),empty=byId('historyEmpty'),dateRow=byId('chartDates'),change=byId('historyChange'),data=historyData();if(data.length<2){empty.classList.remove('hidden');dateRow.children[0].textContent='';dateRow.children[1].textContent='';change.textContent='—';return}empty.classList.add('hidden');const rect=canvas.getBoundingClientRect();if(rect.width<20)return;const dpr=Math.min(devicePixelRatio||1,3),w=rect.width,h=220;canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);const vals=data.map(x=>x.value),min=Math.min(...vals),max=Math.max(...vals),range=max-min||Math.max(Math.abs(max),1),padX=4,padY=23,pts=vals.map((v,i)=>({x:padX+i*(w-padX*2)/(vals.length-1),y:padY+(max-v)/range*(h-padY*2)})),diff=vals.at(-1)-vals[0],pct=vals[0]?diff/Math.abs(vals[0])*100:0;const grad=ctx.createLinearGradient(0,0,0,h);grad.addColorStop(0,'rgba(33,194,107,.20)');grad.addColorStop(1,'rgba(33,194,107,0)');ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.lineTo(pts.at(-1).x,h-padY);ctx.lineTo(pts[0].x,h-padY);ctx.closePath();ctx.fillStyle=grad;ctx.fill();ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle=diff>=0?'#21c26b':'#ee5264';ctx.lineWidth=2.6;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();change.textContent=`${diff>=0?'+':'−'}${state.moneyHidden?'••••':money(Math.abs(diff))} · ${diff>=0?'+':'−'}${Math.abs(pct).toFixed(1)}%`;change.style.color=diff>=0?'var(--green)':'var(--red)';dateRow.children[0].textContent=shortDate(data[0].snapshot.createdAt);dateRow.children[1].textContent=shortDate(data.at(-1).snapshot.createdAt)}
+function renderHistory(){const list=byId('historyList'),data=historyData(),isAccount=state.historyScope!=='portfolio';byId('historyRangeLabel').textContent=isAccount?(accountBy(state.historyScope.slice(8))?.name||'Счёт'):'Весь портфель';if(!data.length){list.innerHTML=`<div class="empty-state">${isAccount?'Для этого счёта пока нет совместимых снимков. Сделайте новый снимок после обновления приложения.':'Снимок фиксирует стоимость портфеля на выбранный момент. Делайте их регулярно, чтобы видеть динамику.'}</div>`}else{list.innerHTML=data.slice().reverse().map((item,reverseIndex,arr)=>{const chronologicalIndex=data.findIndex(x=>x.snapshot.id===item.snapshot.id),prev=data[chronologicalIndex-1],diff=prev?item.value-prev.value:null;return `<div class="list-card"><span class="history-dot"></span><div class="list-main"><strong>${formatDate(item.snapshot.createdAt)}</strong><small>${formatTime(item.snapshot.createdAt)}${diff===null?' · первый снимок':` · ${diff>=0?'+':'−'}${money(Math.abs(diff))}`}</small></div><div class="list-value"><strong>${visibleMoney(item.value)}</strong></div><button class="menu-button" data-snapshot-menu="${item.snapshot.id}" aria-label="Действия со снимком">···</button></div>`}).join('')}drawChart()}
+function drawChart(){
+  const canvas=byId('historyChart'),empty=byId('historyEmpty'),dateRow=byId('chartDates'),change=byId('historyChange'),data=historyData();
+  if(data.length<2){empty.classList.remove('hidden');dateRow.children[0].textContent='';dateRow.children[1].textContent='';change.textContent='—';return}
+  empty.classList.add('hidden');
+  const rect=canvas.getBoundingClientRect();if(rect.width<20)return;
+  const dpr=Math.min(devicePixelRatio||1,3),w=rect.width,h=260;
+  canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+  const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  const vals=data.map(x=>displayValue(x.value)), raw=data.map(x=>x.value), min0=Math.min(...vals),max0=Math.max(...vals);
+  const extra=(max0-min0)*.12||Math.max(Math.abs(max0)*.08,1),min=min0-extra,max=max0+extra,range=max-min||1;
+  const pad={l:58,r:10,t:18,b:30}, plotW=w-pad.l-pad.r,plotH=h-pad.t-pad.b;
+  const css=getComputedStyle(document.documentElement), grid=css.getPropertyValue('--line').trim()||'#e7e8eb', muted=css.getPropertyValue('--muted').trim()||'#777', ink=css.getPropertyValue('--ink').trim()||'#111';
+  ctx.font='10px -apple-system,BlinkMacSystemFont,sans-serif';ctx.textBaseline='middle';
+  for(let i=0;i<4;i++){
+    const ratio=i/3,y=pad.t+ratio*plotH,val=max-ratio*range;
+    ctx.strokeStyle=grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+    ctx.fillStyle=muted;ctx.textAlign='right';
+    const label=state.displayCurrency==='USD'?usd.format(val):`${new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(val)} ${displayUnit()}`;
+    ctx.fillText(label,pad.l-7,y);
+  }
+  const pts=vals.map((v,i)=>({x:pad.l+i*plotW/(vals.length-1),y:pad.t+(max-v)/range*plotH}));
+  const diff=raw.at(-1)-raw[0],pct=raw[0]?diff/Math.abs(raw[0])*100:0,lineColor=diff>=0?'#21c26b':'#ee5264';
+  const grad=ctx.createLinearGradient(0,pad.t,0,h-pad.b);grad.addColorStop(0,diff>=0?'rgba(33,194,107,.18)':'rgba(238,82,100,.16)');grad.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.lineTo(pts.at(-1).x,h-pad.b);ctx.lineTo(pts[0].x,h-pad.b);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle=lineColor;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+  pts.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,3.2,0,Math.PI*2);ctx.fillStyle=lineColor;ctx.fill();if(data.length<=8||i===0||i===pts.length-1){ctx.fillStyle=ink;ctx.textAlign=i===0?'left':i===pts.length-1?'right':'center';ctx.textBaseline='bottom';ctx.font='10px -apple-system,BlinkMacSystemFont,sans-serif';ctx.fillText(money(raw[i]),p.x,Math.max(12,p.y-7));}});
+  change.textContent=`${diff>=0?'+':'−'}${money(Math.abs(diff))} · ${diff>=0?'+':'−'}${Math.abs(pct).toFixed(1)}%`;
+  change.style.color=diff>=0?'var(--green)':'var(--red)';
+  dateRow.children[0].textContent=shortDate(data[0].snapshot.createdAt);dateRow.children[1].textContent=shortDate(data.at(-1).snapshot.createdAt);
+}
 function refreshPositionForm(){const f=byId('positionForm');f.elements.accountId.innerHTML=state.accounts.map(a=>`<option value="${a.id}">${escapeHTML(a.name)}</option>`).join('');f.elements.assetId.innerHTML=state.assets.map(a=>`<option value="${a.id}">${escapeHTML(a.name)} · ${escapeHTML(a.code)}</option>`).join('');const disabled=!state.accounts.length||!state.assets.length;byId('positionPrerequisite').classList.toggle('hidden',!disabled);f.querySelector('.sheet-primary').disabled=disabled}
 function decl(n,o,f,m){const x=Math.abs(n)%100,y=x%10;if(x>10&&x<20)return m;if(y>1&&y<5)return f;if(y===1)return o;return m} function accountGlyph(t=''){if(t.includes('Банк'))return '▥';if(t.includes('Бирж'))return '↗';if(t.includes('Долг'))return '↔';if(t.includes('Крипто'))return '◇';if(t.includes('Налич'))return '$';return '•'}
 function formatDate(ts){return new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',year:'numeric'}).format(new Date(ts))} function shortDate(ts){return new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'short'}).format(new Date(ts))} function formatTime(ts){return new Intl.DateTimeFormat('ru-RU',{hour:'2-digit',minute:'2-digit'}).format(new Date(ts))}
+function syncDisplayCurrency(){
+  if(state.displayCurrency!=='USD'&&!state.assets.some(a=>a.code===state.displayCurrency&&Number(a.price)>0)){
+    state.displayCurrency='USD';localStorage.setItem('worth-display-currency','USD');
+  }
+}
+function renderCurrencyButton(){
+  const a=displayAsset();
+  byId('displayCurrencyIcon').textContent=a?assetIcon(a):'$';
+  byId('displayCurrencyCode').textContent=a?.code||'USD';
+}
+function renderCurrencyOptions(){
+  const box=byId('currencyOptions');
+  const items=[{code:'USD',name:'US Dollar',icon:'$',color:'#17181b'},...state.assets.filter(a=>Number(a.price)>0)];
+  box.innerHTML=items.map(a=>`<button type="button" class="currency-option ${state.displayCurrency===a.code?'selected':''}" data-currency-code="${escapeHTML(a.code)}"><span class="currency-option-icon ${iconLenClass(a.icon||'$')}" style="background:${a.color||'#17181b'}">${escapeHTML(a.icon||'$')}</span><span><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)}${a.code==='USD'?' · базовая':` · ${usd.format(Number(a.price))} / ед.`}</small></span><b>${state.displayCurrency===a.code?'✓':''}</b></button>`).join('');
+}
+function setDisplayCurrency(code){
+  state.displayCurrency=code;localStorage.setItem('worth-display-currency',code);closeDialog('currencyModal');renderAll();
+}
+function applyTheme(){
+  document.documentElement.dataset.theme=state.theme;
+  document.documentElement.style.colorScheme=state.theme;
+  $$('[data-theme-choice]').forEach(b=>b.classList.toggle('active',b.dataset.themeChoice===state.theme));
+}
+function setTheme(theme){
+  state.theme=theme==='dark'?'dark':'light';localStorage.setItem('worth-theme',state.theme);applyTheme();if(byId('historyView').classList.contains('active'))requestAnimationFrame(drawChart);
+}
 function toast(t){const el=byId('toast');el.textContent=t;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),1800)} function closeDialog(id){const d=byId(id);if(d?.open)d.close()} function openDialog(id){if(id==='positionModal')resetPositionForm();const d=byId(id);if(d&&!d.open)d.showModal()} function navigate(id){$$('.view').forEach(v=>v.classList.toggle('active',v.id===id));$$('.tab').forEach(t=>t.classList.toggle('active',t.dataset.nav===id));scrollTo({top:0,behavior:'instant'});if(id==='historyView')requestAnimationFrame(drawChart)} function resetPositionForm(){const f=byId('positionForm');f.reset();delete f.dataset.editId;byId('positionModeLabel').textContent='Новая';refreshPositionForm()}
 function showActionMenu(title,actions){pendingActions=actions;byId('actionMenuTitle').textContent=title;byId('actionMenuItems').innerHTML=actions.map((a,i)=>`<button type="button" class="action-item ${a.danger?'danger':''}" data-action-index="${i}">${escapeHTML(a.label)}</button>`).join('');openDialog('actionMenuModal')}
 async function saveSnapshot(){await dbPut('snapshots',{id:uid(),createdAt:Date.now(),total:portfolioTotal(),accounts:state.accounts.map(a=>({accountId:a.id,name:a.name,total:accountTotal(a.id)})),assets:state.assets.map(a=>({assetId:a.id,code:a.code,name:a.name,icon:a.icon,color:a.color,price:Number(a.price),quantity:assetQuantity(a.id),value:assetTotal(a.id)}))});await reload();toast('Снимок сохранён')}
@@ -98,11 +177,11 @@ function assetMenu(id){const a=assetBy(id);if(!a)return;showActionMenu(`${a.name
 function positionMenu(id){const p=state.positions.find(x=>x.id===id),a=p&&assetBy(p.assetId);if(!p)return;showActionMenu(a?.name||'Позиция',[{label:'Изменить позицию',run:()=>{openDialog('positionModal');const f=byId('positionForm');f.dataset.editId=p.id;f.elements.accountId.value=p.accountId;f.elements.assetId.value=p.assetId;f.elements.quantity.value=inputDecimal(p.quantity);byId('positionModeLabel').textContent='Редактирование'}},{label:'Удалить позицию',danger:true,run:async()=>{if(!confirm('Удалить эту позицию?'))return;await dbDelete('positions',id);await reload();toast('Позиция удалена')}}])}
 function snapshotMenu(id){showActionMenu('Снимок',[{label:'Удалить снимок',danger:true,run:async()=>{if(!confirm('Удалить этот снимок из истории?'))return;await dbDelete('snapshots',id);await reload();toast('Снимок удалён')}}])}
 function renderQuickUpdate(){const c=byId('quickUpdateFields');if(!state.assets.length){c.innerHTML='<div class="empty-state">Сначала добавьте активы.</div>';return}c.innerHTML=state.assets.map(a=>{const fields=state.positions.filter(p=>p.assetId===a.id).map(p=>`<div class="update-input"><label>${escapeHTML(accountBy(p.accountId)?.name||'Счёт')} · количество</label><input type="text" inputmode="decimal" autocomplete="off" data-position-qty="${p.id}" value="${inputDecimal(p.quantity)}"></div>`).join('');return `<div class="update-group"><div class="update-group-head"><strong>${escapeHTML(a.name)} · ${escapeHTML(a.code)}</strong><small>${visibleMoney(assetTotal(a.id))}</small></div><div class="update-grid"><div class="update-input"><label>Цена, $</label><input type="text" inputmode="decimal" autocomplete="off" data-asset-price="${a.id}" value="${inputDecimal(a.price)}"></div>${fields}</div></div>`}).join('')}
-function exportData(){const payload={app:'Worth',version:3,baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast('Резервная копия создана')}
+function exportData(){const payload={app:'Worth',version:4,appVersion:'1.6-final',baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast('Резервная копия создана')}
 function validateImport(data){return WorthCore.validateImport(data)}
 async function importData(file){try{const raw=JSON.parse(await file.text()),data=validateImport(raw);if(!confirm('Импорт полностью заменит текущие локальные данные. Продолжить?'))return;for(const n of STORE_NAMES){await dbClear(n);for(const item of data[n])await dbPut(n,item)}await reload();toast('Данные восстановлены')}catch(e){console.error(e);alert(`Не удалось импортировать резервную копию: ${e.message||'неподдерживаемый формат'}`)}}
-function bindEvents(){document.addEventListener('click',async e=>{const open=e.target.closest('[data-open]');if(open){openDialog(open.dataset.open);return}const close=e.target.closest('[data-close]');if(close){closeDialog(close.dataset.close);return}const nav=e.target.closest('[data-nav]');if(nav){navigate(nav.dataset.nav);return}const am=e.target.closest('[data-account-menu]');if(am){accountMenu(am.dataset.accountMenu);return}const asm=e.target.closest('[data-asset-menu]');if(asm){assetMenu(asm.dataset.assetMenu);return}const pm=e.target.closest('[data-position-menu]');if(pm){positionMenu(pm.dataset.positionMenu);return}const sm=e.target.closest('[data-snapshot-menu]');if(sm){snapshotMenu(sm.dataset.snapshotMenu);return}const ai=e.target.closest('[data-action-index]');if(ai){const action=pendingActions[Number(ai.dataset.actionIndex)];closeDialog('actionMenuModal');if(action)await action.run();return}});
-byId('historyScope').addEventListener('change',e=>{state.historyScope=e.target.value;renderHistory()});byId('privacyToggle').addEventListener('click',()=>{state.moneyHidden=!state.moneyHidden;renderAll()});byId('saveSnapshotBtn').addEventListener('click',saveSnapshot);byId('saveSnapshotBtnHistory').addEventListener('click',saveSnapshot);byId('openQuickUpdate').addEventListener('click',()=>{renderQuickUpdate();openDialog('quickUpdateModal')});byId('backupShortcut').addEventListener('click',()=>navigate('dataView'));byId('exportBtn').addEventListener('click',exportData);byId('importInput').addEventListener('change',async e=>{const f=e.target.files?.[0];if(f)await importData(f);e.target.value=''});byId('resetBtn').addEventListener('click',async()=>{if(!confirm('Удалить все счета, активы, позиции и историю с этого устройства?'))return;for(const n of STORE_NAMES)await dbClear(n);await reload();toast('Все данные удалены')});
+function bindEvents(){document.addEventListener('click',async e=>{const currency=e.target.closest('[data-currency-code]');if(currency){setDisplayCurrency(currency.dataset.currencyCode);return}const theme=e.target.closest('[data-theme-choice]');if(theme){setTheme(theme.dataset.themeChoice);return}const accountToggle=e.target.closest('[data-account-toggle]');if(accountToggle&&!e.target.closest('[data-account-menu]')){const id=accountToggle.dataset.accountToggle;state.expandedAccounts.has(id)?state.expandedAccounts.delete(id):state.expandedAccounts.add(id);renderAccounts();return}const open=e.target.closest('[data-open]');if(open){openDialog(open.dataset.open);return}const close=e.target.closest('[data-close]');if(close){closeDialog(close.dataset.close);return}const nav=e.target.closest('[data-nav]');if(nav){navigate(nav.dataset.nav);return}const am=e.target.closest('[data-account-menu]');if(am){accountMenu(am.dataset.accountMenu);return}const asm=e.target.closest('[data-asset-menu]');if(asm){assetMenu(asm.dataset.assetMenu);return}const pm=e.target.closest('[data-position-menu]');if(pm){positionMenu(pm.dataset.positionMenu);return}const sm=e.target.closest('[data-snapshot-menu]');if(sm){snapshotMenu(sm.dataset.snapshotMenu);return}const ai=e.target.closest('[data-action-index]');if(ai){const action=pendingActions[Number(ai.dataset.actionIndex)];closeDialog('actionMenuModal');if(action)await action.run();return}});
+byId('historyScope').addEventListener('change',e=>{state.historyScope=e.target.value;renderHistory()});byId('saveSnapshotBtn').addEventListener('click',saveSnapshot);byId('saveSnapshotBtnHistory').addEventListener('click',saveSnapshot);byId('openQuickUpdate').addEventListener('click',()=>{renderQuickUpdate();openDialog('quickUpdateModal')});byId('displayCurrencyBtn').addEventListener('click',()=>{renderCurrencyOptions();openDialog('currencyModal')});byId('settingsShortcut').addEventListener('click',()=>navigate('settingsView'));byId('exportBtn').addEventListener('click',exportData);byId('importInput').addEventListener('change',async e=>{const f=e.target.files?.[0];if(f)await importData(f);e.target.value=''});byId('resetBtn').addEventListener('click',async()=>{if(!confirm('Удалить все счета, активы, позиции и историю с этого устройства?'))return;for(const n of STORE_NAMES)await dbClear(n);await reload();toast('Все данные удалены')});
 byId('accountForm').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,name=f.elements.name.value.trim();if(!name)return;const raw={id:uid(),name,type:f.elements.type.value,icon:f.elements.icon.value,color:f.elements.color.value,createdAt:Date.now()};await dbPut('accounts',WorthCore.normalizeAccount(raw));f.reset();f.elements.color.value='#17181b';closeDialog('accountModal');await reload();toast('Счёт создан')});
 byId('accountEditForm').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,a=accountBy(f.elements.accountId.value),name=f.elements.name.value.trim();if(!a||!name)return;const next=WorthCore.normalizeAccount({...a,name,type:f.elements.type.value,icon:f.elements.icon.value,color:f.elements.color.value,updatedAt:Date.now()});await dbPut('accounts',next);closeDialog('accountEditModal');await reload();toast('Счёт обновлён')});
 byId('assetForm').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,name=f.elements.name.value.trim(),code=WorthCore.cleanCode(f.elements.code.value),price=parseDecimal(f.elements.price.value);if(!name||!code||!Number.isFinite(price)||price<0)return;if(state.assets.some(a=>a.code===code)){alert('Актив с таким кодом уже существует. Код актива должен быть уникальным.');return}const raw={id:uid(),name,code,icon:f.elements.icon.value,color:f.elements.color.value,price,createdAt:Date.now(),updatedAt:Date.now()};await dbPut('assets',WorthCore.normalizeAsset(raw));f.reset();f.elements.color.value='#5667ff';closeDialog('assetModal');await reload();toast('Актив создан')});
