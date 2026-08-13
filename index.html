@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f5f7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Worth" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>Worth — личный портфель</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand-mark" aria-hidden="true">W</div>
+      <div class="header-spacer"></div>
+      <button id="backupShortcut" class="circle-button" aria-label="Резервная копия" title="Резервная копия">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+      </button>
+    </header>
+
+    <main>
+      <section id="homeView" class="view active" aria-labelledby="homeTitle">
+        <div class="balance-block">
+          <div class="overline">Общий баланс</div>
+          <h1 id="homeTitle" class="balance" data-money-hidden="false">0 ₽</h1>
+          <button id="privacyToggle" class="privacy-toggle" type="button">
+            <span id="balanceDelta">Сохраните первый снимок</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+          </button>
+        </div>
+
+        <div class="quick-actions" aria-label="Быстрые действия">
+          <button class="quick-action" data-open="positionModal">
+            <span class="quick-icon">+</span><span>Остаток</span>
+          </button>
+          <button class="quick-action" id="openQuickUpdate">
+            <span class="quick-icon"><svg viewBox="0 0 24 24"><path d="M4 7h10M4 17h16M14 4v6M10 14v6"/></svg></span><span>Обновить</span>
+          </button>
+          <button class="quick-action" id="saveSnapshotBtn">
+            <span class="quick-icon"><svg viewBox="0 0 24 24"><path d="M12 3v14m0 0 5-5m-5 5-5-5M5 21h14"/></svg></span><span>Снимок</span>
+          </button>
+          <button class="quick-action" data-nav="historyView">
+            <span class="quick-icon"><svg viewBox="0 0 24 24"><path d="M4 17l5-5 4 3 7-8"/></svg></span><span>История</span>
+          </button>
+        </div>
+
+        <section class="surface hero-surface" aria-label="Распределение портфеля">
+          <div class="surface-head">
+            <div><div class="section-kicker">Портфель</div><h2>Распределение</h2></div>
+            <span id="assetsCount" class="soft-label">0 активов</span>
+          </div>
+          <div id="allocationBar" class="allocation-bar" aria-hidden="true"></div>
+          <div id="allocationList" class="allocation-list"></div>
+        </section>
+
+        <div class="section-title-row">
+          <h2>Счета</h2>
+          <button class="text-button" data-open="accountModal">Добавить</button>
+        </div>
+        <div id="accountsList" class="card-list"></div>
+
+        <div class="section-title-row">
+          <h2>Активы</h2>
+          <button class="text-button" data-open="assetModal">Добавить</button>
+        </div>
+        <div id="assetsList" class="card-list"></div>
+      </section>
+
+      <section id="positionsView" class="view" aria-labelledby="positionsTitle">
+        <div class="page-heading">
+          <div><div class="overline">По счетам</div><h1 id="positionsTitle">Позиции</h1></div>
+          <button class="primary-small" data-open="positionModal">+ Добавить</button>
+        </div>
+        <div id="positionsSummary" class="summary-strip"></div>
+        <div id="positionsList" class="card-list"></div>
+      </section>
+
+      <section id="historyView" class="view" aria-labelledby="historyTitle">
+        <div class="page-heading">
+          <div><div class="overline">Динамика</div><h1 id="historyTitle">История</h1></div>
+          <button class="primary-small" id="saveSnapshotBtnHistory">Снимок</button>
+        </div>
+
+        <section class="surface chart-surface">
+          <div class="chart-stat">
+            <span id="historyRangeLabel">Вся история</span>
+            <strong id="historyChange">—</strong>
+          </div>
+          <canvas id="historyChart" aria-label="График стоимости портфеля"></canvas>
+          <div id="historyEmpty" class="empty-state overlay-empty">Нужно минимум два снимка для графика.</div>
+          <div id="chartDates" class="chart-dates"><span></span><span></span></div>
+        </section>
+        <div id="historyList" class="card-list history-list"></div>
+      </section>
+
+      <section id="dataView" class="view" aria-labelledby="dataTitle">
+        <div class="page-heading simple">
+          <div><div class="overline">Локально на устройстве</div><h1 id="dataTitle">Данные</h1></div>
+        </div>
+        <section class="surface info-surface">
+          <div class="security-icon"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z"/></svg></div>
+          <h2>Ваши финансы не уходят в облако</h2>
+          <p>Счета, остатки, цены и история хранятся в IndexedDB этого браузера. Для переноса или восстановления используйте резервную копию.</p>
+        </section>
+        <section class="settings-list">
+          <button class="settings-row" id="exportBtn"><span><strong>Экспорт</strong><small>Скачать резервную копию JSON</small></span><b>›</b></button>
+          <label class="settings-row file-row"><span><strong>Импорт</strong><small>Восстановить данные из JSON</small></span><b>›</b><input id="importInput" type="file" accept="application/json,.json" /></label>
+          <button class="settings-row danger" id="resetBtn"><span><strong>Удалить всё</strong><small>Очистить локальную базу</small></span><b>›</b></button>
+        </section>
+        <div class="build-note">Worth · локальная версия 1.0</div>
+      </section>
+    </main>
+
+    <nav class="tab-bar" aria-label="Навигация">
+      <button class="tab active" data-nav="homeView"><svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V21H4z"/></svg><span>Главная</span></button>
+      <button class="tab" data-nav="positionsView"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Позиции</span></button>
+      <button class="tab" data-nav="historyView"><svg viewBox="0 0 24 24"><path d="M4 17l5-5 4 3 7-8"/></svg><span>История</span></button>
+      <button class="tab" data-nav="dataView"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 8h14M5 16h14"/></svg><span>Данные</span></button>
+    </nav>
+  </div>
+
+  <dialog id="accountModal" class="modal">
+    <form id="accountForm" class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="section-kicker">Новый</div><h2>Счёт</h2></div><button type="button" class="close-button" data-close="accountModal">×</button></div>
+      <label class="field"><span>Название</span><input name="name" required maxlength="50" autocomplete="off" placeholder="Например, Наличные" /></label>
+      <label class="field"><span>Тип</span><select name="type"><option>Наличные</option><option>Банк</option><option>Биржа</option><option>Криптокошелёк</option><option>Долг</option><option>Другое</option></select></label>
+      <button class="sheet-primary" type="submit">Создать счёт</button>
+    </form>
+  </dialog>
+
+  <dialog id="assetModal" class="modal">
+    <form id="assetForm" class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="section-kicker">Новый</div><h2>Актив</h2></div><button type="button" class="close-button" data-close="assetModal">×</button></div>
+      <label class="field"><span>Название</span><input name="name" required maxlength="50" autocomplete="off" placeholder="Например, Tether" /></label>
+      <label class="field"><span>Тикер</span><input name="symbol" required maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="USDT" /></label>
+      <label class="field"><span>Текущая цена за единицу, ₽</span><input name="price" required type="number" min="0" step="any" inputmode="decimal" placeholder="92.50" /></label>
+      <button class="sheet-primary" type="submit">Создать актив</button>
+    </form>
+  </dialog>
+
+  <dialog id="positionModal" class="modal">
+    <form id="positionForm" class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="section-kicker" id="positionModeLabel">Новая</div><h2>Позиция</h2></div><button type="button" class="close-button" data-close="positionModal">×</button></div>
+      <div id="positionPrerequisite" class="inline-warning hidden">Сначала создайте хотя бы один счёт и один актив.</div>
+      <label class="field"><span>Счёт</span><select name="accountId" required></select></label>
+      <label class="field"><span>Актив</span><select name="assetId" required></select></label>
+      <label class="field"><span>Количество</span><input name="quantity" required type="number" step="any" inputmode="decimal" placeholder="1000" /></label>
+      <button class="sheet-primary" type="submit">Сохранить</button>
+    </form>
+  </dialog>
+
+  <dialog id="priceModal" class="modal">
+    <form id="priceForm" class="sheet compact-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="section-kicker">Цена</div><h2 id="priceAssetTitle">Актив</h2></div><button type="button" class="close-button" data-close="priceModal">×</button></div>
+      <input name="assetId" type="hidden" />
+      <label class="field"><span>Цена за единицу, ₽</span><input name="price" required type="number" min="0" step="any" inputmode="decimal" /></label>
+      <button class="sheet-primary" type="submit">Обновить цену</button>
+    </form>
+  </dialog>
+
+  <dialog id="quickUpdateModal" class="modal">
+    <form id="quickUpdateForm" class="sheet tall-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head"><div><div class="section-kicker">Массовое изменение</div><h2>Обновить портфель</h2></div><button type="button" class="close-button" data-close="quickUpdateModal">×</button></div>
+      <p class="sheet-note">Измените только нужные значения. Цены применяются ко всем счетам с этим активом.</p>
+      <div id="quickUpdateFields" class="quick-update-fields"></div>
+      <button class="sheet-primary" type="submit">Сохранить изменения</button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="./core.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
