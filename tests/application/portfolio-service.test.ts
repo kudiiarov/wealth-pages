@@ -290,4 +290,41 @@ describe('PortfolioService', () => {
     app.clearDiagnostics();
     expect(app.getDiagnostics()).toEqual([]);
   });
+
+  it('records completion times for manual price refreshes and snapshots', async () => {
+    const app = service();
+    await app.initialize();
+
+    await app.refreshPrices();
+    await app.saveSnapshot();
+
+    expect(app.settings.lastPriceRefreshAt).toBe(1_700_000_000_000);
+    expect(app.settings.lastSnapshotAt).toBe(1_700_000_000_000);
+  });
+
+  it('records a normally completed partial price refresh', async () => {
+    const app = service(
+      new FixedPrices({
+        quotes: [],
+        failures: [{ assetId: 'btc', provider: 'coingecko' }],
+        skipped: [],
+      }),
+    );
+    await app.initialize();
+
+    await app.refreshPrices();
+
+    expect(app.settings.lastPriceRefreshAt).toBe(1_700_000_000_000);
+  });
+
+  it('does not record a failed price refresh as completed', async () => {
+    const app = service({
+      getUsdPrices: () => Promise.reject(new Error('offline')),
+    });
+    await app.initialize();
+
+    await expect(app.refreshPrices()).rejects.toThrow('offline');
+
+    expect(app.settings.lastPriceRefreshAt).toBeUndefined();
+  });
 });

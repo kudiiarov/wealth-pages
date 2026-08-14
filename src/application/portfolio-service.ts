@@ -234,6 +234,7 @@ export class PortfolioService {
     );
     await this.dependencies.repository.put('snapshots', snapshot);
     await this.reload();
+    this.saveSettings({ lastSnapshotAt: this.dependencies.clock.now() });
   }
 
   async deleteSnapshot(id: string): Promise<void> {
@@ -298,6 +299,7 @@ export class PortfolioService {
         skipped: batch.skipped.length,
       },
     });
+    this.saveSettings({ lastPriceRefreshAt: this.dependencies.clock.now() });
     return {
       updated,
       skipped: batch.skipped.length,
