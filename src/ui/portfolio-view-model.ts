@@ -23,6 +23,11 @@ export interface AssetProfile {
   tags: string[];
 }
 
+export type PortfolioFilter =
+  | { kind: 'all' }
+  | { kind: 'tag'; value: string }
+  | { kind: 'category'; value: string };
+
 export interface CategoryAllocationRow {
   category: AssetCategory;
   value: number;
@@ -77,6 +82,18 @@ export function inferAssetProfile(asset: Asset): AssetProfile {
   return { category: 'other', tags: asset.tags ?? [] };
 }
 
+export function assetMatchesPortfolioFilter(
+  asset: Asset,
+  filter: PortfolioFilter,
+): boolean {
+  if (filter.kind === 'all') return true;
+  const profile = inferAssetProfile(asset);
+  if (filter.kind === 'category') return profile.category === filter.value;
+  return profile.tags.some(
+    (tag) => tag.toLocaleLowerCase() === filter.value.toLocaleLowerCase(),
+  );
+}
+
 export function accountOverviewRows(data: PortfolioData): AccountOverviewRow[] {
   return data.accounts
     .map((account) => ({ account, value: accountTotal(account.id, data) }))
@@ -128,13 +145,25 @@ export function portfolioExposures(data: PortfolioData): ExposureRow[] {
     (sum, { value }) => sum + Math.abs(value),
     0,
   );
-  const totals = new Map<string, number>();
+  const totals = new Map<string, { tag: string; value: number }>();
+  const labels = data.assets
+    .flatMap((asset) => inferAssetProfile(asset).tags)
+    .reduce<Map<string, string>>((result, tag) => {
+      const key = tag.toLocaleLowerCase();
+      if (!result.has(key)) result.set(key, tag);
+      return result;
+    }, new Map());
   for (const { asset, value } of allocationRows(data)) {
     for (const tag of inferAssetProfile(asset).tags) {
-      totals.set(tag, (totals.get(tag) ?? 0) + Math.abs(value));
+      const key = tag.toLocaleLowerCase();
+      const current = totals.get(key);
+      totals.set(key, {
+        tag: labels.get(key) ?? current?.tag ?? tag,
+        value: (current?.value ?? 0) + Math.abs(value),
+      });
     }
   }
-  return Array.from(totals, ([tag, value]) => ({
+  return Array.from(totals.values(), ({ tag, value }) => ({
     tag,
     value,
     percentage: gross ? (value / gross) * 100 : 0,

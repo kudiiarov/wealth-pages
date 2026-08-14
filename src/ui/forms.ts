@@ -38,9 +38,11 @@ function taxonomy(form: HTMLFormElement): {
 } {
   const selectedCategory = optionalValue(form, 'category');
   const category = (
-    selectedCategory === '__custom__'
+    selectedCategory === 'new' || selectedCategory === '__custom__'
       ? optionalValue(form, 'customCategory')
-      : selectedCategory
+      : selectedCategory.startsWith('value:')
+        ? selectedCategory.slice(6)
+        : selectedCategory
   ).trim();
   const selectedTags = Array.from(
     form.querySelectorAll<HTMLInputElement>('input[name="tags"]:checked'),

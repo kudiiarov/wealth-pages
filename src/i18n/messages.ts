@@ -242,6 +242,7 @@ const ru = {
   stalePrice: 'Устарела',
   performancePeriod: 'Период доходности',
   portfolioTrend: 'Динамика стоимости портфеля',
+  chartInspectionHelp: 'Используйте стрелки влево и вправо для точных значений',
   addPortfolioItem: 'Добавить в портфель',
   portfolioViewMode: 'Режим просмотра портфеля',
 } as const;
@@ -483,6 +484,7 @@ const en = {
   stalePrice: 'Stale',
   performancePeriod: 'Performance period',
   portfolioTrend: 'Portfolio value trend',
+  chartInspectionHelp: 'Use the left and right arrow keys for exact values',
   addPortfolioItem: 'Add to portfolio',
   portfolioViewMode: 'Portfolio view mode',
 } satisfies MessageDictionary;

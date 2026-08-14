@@ -90,6 +90,20 @@ export class WorthController {
           this.renderer.clearChartInspection(kind);
         }
       });
+      canvas.addEventListener('focus', () =>
+        this.renderer.selectLastChartPoint(kind),
+      );
+      canvas.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        this.renderer.moveChartInspection(
+          kind,
+          event.key === 'ArrowLeft' ? -1 : 1,
+        );
+      });
+      canvas.addEventListener('blur', () =>
+        this.renderer.clearChartInspection(kind),
+      );
     }
   }
 
@@ -166,8 +180,10 @@ export class WorthController {
       '[data-portfolio-filter]',
     );
     if (portfolioFilter?.dataset.portfolioFilter) {
-      this.renderer.ui.portfolioFilter =
-        portfolioFilter.dataset.portfolioFilter;
+      const key = portfolioFilter.dataset.portfolioFilter;
+      this.renderer.ui.portfolioFilter = key.startsWith('tag:')
+        ? { kind: 'tag', value: key.slice(4) }
+        : { kind: 'all' };
       this.renderer.renderAll();
       return;
     }
@@ -177,7 +193,7 @@ export class WorthController {
     );
     if (driverFilter?.dataset.driverFilter) {
       this.renderer.ui.portfolioMode = 'assets';
-      this.renderer.ui.portfolioFilter = 'all';
+      this.renderer.ui.portfolioFilter = { kind: 'all' };
       this.renderer.ui.portfolioQuery = driverFilter.dataset.driverFilter;
       requiredElement(
         'portfolioSearch',
@@ -198,7 +214,10 @@ export class WorthController {
         HTMLInputElement,
         this.documentRef,
       ).value = '';
-      this.renderer.ui.portfolioFilter = 'all';
+      this.renderer.ui.portfolioFilter = {
+        kind: 'category',
+        value: categoryFilter.dataset.categoryFilter,
+      };
       this.renderer.renderAll();
     }
     const exposureFilter = closestElement<HTMLElement>(
@@ -213,7 +232,10 @@ export class WorthController {
         HTMLInputElement,
         this.documentRef,
       ).value = '';
-      this.renderer.ui.portfolioFilter = exposureFilter.dataset.exposureFilter;
+      this.renderer.ui.portfolioFilter = {
+        kind: 'tag',
+        value: exposureFilter.dataset.exposureFilter,
+      };
       this.renderer.renderAll();
     }
     const portfolioAdd = closestElement<HTMLElement>(
@@ -779,7 +801,7 @@ export class WorthController {
     const select = formControl(form, 'category');
     const field = form.querySelector<HTMLElement>('.custom-category-field');
     const input = formControl(form, 'customCategory');
-    const custom = select.value === '__custom__';
+    const custom = select.value === 'new' || select.value === '__custom__';
     field?.classList.toggle('hidden', !custom);
     input.toggleAttribute('required', custom);
     if (custom) input.focus();

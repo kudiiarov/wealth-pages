@@ -88,6 +88,31 @@ describe('backup validation and serialization', () => {
     expect(backup.accounts).not.toBe(validated.data.accounts);
   });
 
+  it('round-trips custom taxonomy without sharing tag arrays', () => {
+    const validated = validateBackup({
+      ...currentV14,
+      assets: [
+        {
+          ...currentV14.assets[0],
+          category: 'Commodities',
+          tags: ['Energy', 'Long term'],
+        },
+      ],
+    });
+    const settings = validateBackup(currentV14).settings as AppSettings;
+    const backup = createBackup(
+      validated.data,
+      settings,
+      '2026-08-14T00:00:00.000Z',
+    );
+
+    expect(validateBackup(backup).data.assets[0]).toMatchObject({
+      category: 'Commodities',
+      tags: ['Energy', 'Long term'],
+    });
+    expect(backup.assets[0]?.tags).not.toBe(validated.data.assets[0]?.tags);
+  });
+
   it('ignores invalid schema 15 scheduling settings', () => {
     const backup = validateBackup({
       ...currentV14,

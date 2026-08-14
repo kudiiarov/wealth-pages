@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 import {
   accountOverviewRows,
   allocationRows,
+  assetMatchesPortfolioFilter,
   assetOverviewRows,
   categoryAllocationRows,
   inferAssetProfile,
@@ -248,6 +249,87 @@ it('builds available filters only from tags that are present on assets', () => {
   };
 
   expect(portfolioTags(data)).toEqual(['currency', 'Energy', 'Long term']);
+});
+
+it('keeps category filters separate from arbitrary tag names', () => {
+  const commodity = {
+    id: 'oil',
+    name: 'Brent',
+    code: 'BRENT',
+    icon: 'B',
+    color: '#17181b',
+    price: 80,
+    autoUpdateSource: 'none' as const,
+    category: 'Commodities',
+    tags: ['all', 'Energy'],
+  };
+  const cash = {
+    ...commodity,
+    id: 'cash',
+    code: 'USD',
+    category: 'cash-currencies',
+    tags: ['currency'],
+  };
+
+  expect(
+    assetMatchesPortfolioFilter(commodity, {
+      kind: 'category',
+      value: 'Commodities',
+    }),
+  ).toBe(true);
+  expect(
+    assetMatchesPortfolioFilter(cash, {
+      kind: 'category',
+      value: 'Commodities',
+    }),
+  ).toBe(false);
+  expect(
+    assetMatchesPortfolioFilter(commodity, { kind: 'tag', value: 'all' }),
+  ).toBe(true);
+  expect(assetMatchesPortfolioFilter(cash, { kind: 'tag', value: 'all' })).toBe(
+    false,
+  );
+});
+
+it('combines case variants into one exposure', () => {
+  const data: PortfolioData = {
+    accounts: [
+      { id: 'a', name: 'A', type: 'cash', icon: '$', color: '#17181b' },
+    ],
+    assets: [
+      {
+        id: 'one',
+        name: 'One',
+        code: 'ONE',
+        icon: '1',
+        color: '#17181b',
+        price: 10,
+        autoUpdateSource: 'none',
+        category: 'Other',
+        tags: ['Energy'],
+      },
+      {
+        id: 'two',
+        name: 'Two',
+        code: 'TWO',
+        icon: '2',
+        color: '#5667ff',
+        price: 20,
+        autoUpdateSource: 'none',
+        category: 'Other',
+        tags: ['energy'],
+      },
+    ],
+    positions: [
+      { id: 'p1', accountId: 'a', assetId: 'one', quantity: 1, comment: '' },
+      { id: 'p2', accountId: 'a', assetId: 'two', quantity: 1, comment: '' },
+    ],
+    snapshots: [],
+  };
+
+  expect(portfolioExposures(data)).toEqual([
+    { tag: 'Energy', value: 30, percentage: 100 },
+  ]);
 });
 
 it('ranks flow-adjusted asset drivers without treating deposits as gains', () => {

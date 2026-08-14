@@ -29,7 +29,7 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
   await page.locator('#assetForm [name="price"]').fill('1');
   await page
     .locator('#assetForm [name="category"]')
-    .selectOption('cash-currencies');
+    .selectOption('value:cash-currencies');
   await page
     .locator('#assetForm .taxonomy-tag')
     .filter({ hasText: 'Валюты' })
@@ -43,9 +43,32 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
   await page.locator('[data-portfolio-add]').click();
   await page
     .locator('#actionMenuItems')
+    .getByText('Актив', { exact: true })
+    .click();
+  await page.locator('#assetForm [name="name"]').fill('Bitcoin');
+  await page.locator('#assetForm [name="code"]').fill('BTC');
+  await page.locator('#assetForm [name="price"]').fill('50000');
+  await page
+    .locator('#assetForm [name="category"]')
+    .selectOption('value:crypto');
+  await page
+    .locator('#assetForm .taxonomy-tag')
+    .filter({ hasText: 'Крипто' })
+    .click();
+  await page
+    .locator('#assetForm')
+    .getByRole('button', { name: 'Создать актив' })
+    .click();
+
+  await page.locator('[data-portfolio-add]').click();
+  await page
+    .locator('#actionMenuItems')
     .getByText('Позиция', { exact: true })
     .click();
   await page.locator('#positionForm [name="quantity"]').fill('100');
+  await page
+    .locator('#positionForm [name="assetId"]')
+    .selectOption({ label: 'Доллар · USD' });
   await page.locator('#positionForm [name="comment"]').fill('Резерв');
   await page
     .locator('#positionForm')
@@ -87,9 +110,11 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
   await page.locator('#portfolioSearch').fill('USD');
   await expect(page.locator('#positionsList .portfolio-row')).toHaveCount(1);
   await page.locator('#portfolioSearch').fill('');
-  await page.locator('[data-portfolio-filter="currency"]').click();
+  await page.locator('[data-portfolio-filter="tag:currency"]').click();
   await expect(page.locator('#positionsList')).toContainText('Доллар');
-  await expect(page.locator('[data-portfolio-filter="Резерв"]')).toBeVisible();
+  await expect(
+    page.locator('[data-portfolio-filter="tag:Резерв"]'),
+  ).toBeVisible();
   await page.locator('#portfolioSearch').fill('BTC');
   await page.locator('[data-nav="homeView"]').click();
   await expect(page.locator('#categoryAllocationList')).toContainText(
@@ -100,6 +125,7 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
     .click();
   await expect(page.locator('#portfolioSearch')).toHaveValue('');
   await expect(page.locator('#positionsList')).toContainText('Доллар');
+  await expect(page.locator('#positionsList')).not.toContainText('Bitcoin');
   await page.locator('.tab[data-nav="homeView"]').click();
   await page.locator('#privacyToggle').click();
   await expect(page.locator('#homeTitle')).toHaveText('••••');
@@ -246,7 +272,7 @@ test('shows exact portfolio values while inspecting both charts', async ({
             id: 'position',
             accountId: 'account',
             assetId: 'usd',
-            quantity: 123.45,
+            quantity: 140.67,
             comment: '',
           });
           transaction.objectStore('snapshots').put({
@@ -277,6 +303,25 @@ test('shows exact portfolio values while inspecting both charts', async ({
   await page.mouse.move(homeBox.x + 6, homeBox.y + homeBox.height / 2);
   await expect(page.locator('#homeChartTooltip')).toBeVisible();
   await expect(page.locator('#homeChartTooltip')).toContainText('$100.12');
+  await homeCanvas.focus();
+  await expect(page.locator('#homeChartTooltip')).toContainText('$140.67');
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#homeChartTooltip')).toContainText('$123.45');
+  await expect(page.locator('#homeChartTooltip small')).toContainText('·');
+
+  await homeCanvas.dispatchEvent('pointermove', {
+    pointerId: 7,
+    pointerType: 'touch',
+    buttons: 1,
+    clientX: homeBox.x + 6,
+    clientY: homeBox.y + homeBox.height / 2,
+  });
+  await expect(page.locator('#homeChartTooltip')).toContainText('$100.12');
+  await homeCanvas.dispatchEvent('pointercancel', {
+    pointerId: 7,
+    pointerType: 'touch',
+  });
+  await expect(page.locator('#homeChartTooltip')).toBeHidden();
 
   await page.locator('[data-nav="historyView"]').click();
   const historyCanvas = page.locator('#historyChart');
@@ -288,4 +333,12 @@ test('shows exact portfolio values while inspecting both charts', async ({
   );
   await expect(page.locator('#historyChartTooltip')).toBeVisible();
   await expect(page.locator('#historyChartTooltip')).toContainText('$123.45');
+  await historyCanvas.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#historyChartTooltip')).toContainText('$100.12');
+  await expect(historyCanvas).toHaveAttribute('tabindex', '0');
+  await expect(page.locator('#historyChartTooltip')).toHaveAttribute(
+    'aria-live',
+    'polite',
+  );
 });

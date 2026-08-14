@@ -170,7 +170,10 @@ export function validateBackup(value: unknown): ValidatedBackup {
 function cloneData(data: PortfolioData): PortfolioData {
   return {
     accounts: data.accounts.map((account) => ({ ...account })),
-    assets: data.assets.map((asset) => ({ ...asset })),
+    assets: data.assets.map((asset) => ({
+      ...asset,
+      ...(asset.tags ? { tags: [...asset.tags] } : {}),
+    })),
     positions: data.positions.map((position) => ({ ...position })),
     snapshots: data.snapshots.map((snapshot) => ({
       ...snapshot,

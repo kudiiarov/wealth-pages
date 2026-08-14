@@ -36,7 +36,7 @@
 <div aria-label="Период доходности" class="home-periods" id="homePeriods" role="group">
 <button data-home-period="1d" type="button">1D</button><button data-home-period="1w" type="button">1W</button><button data-home-period="1m" type="button">1M</button><button data-home-period="1y" type="button">1Y</button><button class="active" data-home-period="all" type="button">ALL</button>
 </div>
-<div class="chart-inspector home-chart-inspector"><canvas aria-label="Динамика стоимости портфеля" id="homeChart"></canvas><output class="chart-tooltip hidden" id="homeChartTooltip"></output></div>
+<div class="chart-inspector home-chart-inspector"><canvas aria-describedby="homeChartTooltip" aria-label="Динамика стоимости портфеля" id="homeChart" tabindex="0"></canvas><output aria-live="polite" class="chart-tooltip hidden" id="homeChartTooltip" role="status"></output></div>
 <button class="price-trust" data-nav="settingsView" id="priceTrust" type="button"><span></span><b id="priceTrustText">—</b></button>
 </div>
 <section class="home-insight-section">
@@ -75,7 +75,7 @@
 <span data-i18n="allHistory" id="historyRangeLabel">Вся история</span>
 <strong id="historyChange">—</strong>
 </div>
-<div class="chart-inspector history-chart-inspector"><canvas aria-label="График стоимости портфеля" id="historyChart"></canvas><output class="chart-tooltip hidden" id="historyChartTooltip"></output></div>
+<div class="chart-inspector history-chart-inspector"><canvas aria-describedby="historyChartTooltip" aria-label="График стоимости портфеля" id="historyChart" tabindex="0"></canvas><output aria-live="polite" class="chart-tooltip hidden" id="historyChartTooltip" role="status"></output></div>
 <div class="empty-state overlay-empty" data-i18n="needTwo" id="historyEmpty">Нужно минимум два снимка для графика.</div>
 <div class="chart-dates" id="chartDates"><span></span><span></span></div>
 </section>

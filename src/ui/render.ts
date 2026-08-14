@@ -43,6 +43,7 @@ import { all, escapeHtml, requiredElement } from './dom';
 import { formControl } from './forms';
 import {
   accountOverviewRows,
+  assetMatchesPortfolioFilter,
   assetOverviewRows,
   categoryAllocationRows,
   inferAssetProfile,
@@ -50,6 +51,7 @@ import {
   portfolioExposures,
   portfolioTags,
   priceFreshness,
+  type PortfolioFilter,
 } from './portfolio-view-model';
 import { drawPortfolioSparkline } from './chart';
 
@@ -68,7 +70,7 @@ export interface UiState {
   historyScope: string;
   homePeriod: '1d' | '1w' | '1m' | '1y' | 'all';
   portfolioMode: 'assets' | 'accounts';
-  portfolioFilter: string;
+  portfolioFilter: PortfolioFilter;
   portfolioQuery: string;
   expandedPortfolioRows: Set<string>;
 }
@@ -88,7 +90,7 @@ export class WorthRenderer {
     historyScope: 'portfolio',
     homePeriod: 'all',
     portfolioMode: 'assets',
-    portfolioFilter: 'all',
+    portfolioFilter: { kind: 'all' },
     portfolioQuery: '',
     expandedPortfolioRows: new Set(),
   };
@@ -144,7 +146,7 @@ export class WorthRenderer {
         ...portfolioTags(this.service.data),
       ]),
     );
-    container.innerHTML = `<label class="field"><span>${escapeHtml(this.t('category'))}</span><select name="category" required><option value="">${escapeHtml(this.t('chooseCategory'))}</option>${categories.map((category) => `<option value="${escapeHtml(category)}" ${category === selectedCategory ? 'selected' : ''}>${escapeHtml(this.categoryLabel(category))}</option>`).join('')}<option value="__custom__">${escapeHtml(this.t('newCategory'))}</option></select></label><label class="field custom-category-field hidden"><span>${escapeHtml(this.t('categoryName'))}</span><input autocomplete="off" maxlength="40" name="customCategory" placeholder="${escapeHtml(this.t('categoryExample'))}"></label><fieldset class="taxonomy-tags"><legend>${escapeHtml(this.t('tags'))}</legend><p>${escapeHtml(this.t('tagsHint'))}</p><div class="taxonomy-tag-list">${tags.map((tag) => `<label class="taxonomy-tag"><input type="checkbox" name="tags" value="${escapeHtml(tag)}" ${selectedTags.has(tag) ? 'checked' : ''}><span>${escapeHtml(this.tagLabel(tag))}</span></label>`).join('')}</div><label class="field"><span>${escapeHtml(this.t('customTags'))}</span><input autocomplete="off" maxlength="120" name="customTags" placeholder="${escapeHtml(this.t('tagsExample'))}"></label></fieldset>`;
+    container.innerHTML = `<label class="field"><span>${escapeHtml(this.t('category'))}</span><select name="category" required><option value="">${escapeHtml(this.t('chooseCategory'))}</option>${categories.map((category) => `<option value="value:${escapeHtml(category)}" ${category === selectedCategory ? 'selected' : ''}>${escapeHtml(this.categoryLabel(category))}</option>`).join('')}<option value="new">${escapeHtml(this.t('newCategory'))}</option></select></label><label class="field custom-category-field hidden"><span>${escapeHtml(this.t('categoryName'))}</span><input autocomplete="off" maxlength="40" name="customCategory" placeholder="${escapeHtml(this.t('categoryExample'))}"></label><fieldset class="taxonomy-tags"><legend>${escapeHtml(this.t('tags'))}</legend><p>${escapeHtml(this.t('tagsHint'))}</p><div class="taxonomy-tag-list">${tags.map((tag) => `<label class="taxonomy-tag"><input type="checkbox" name="tags" value="${escapeHtml(tag)}" ${selectedTags.has(tag) ? 'checked' : ''}><span>${escapeHtml(this.tagLabel(tag))}</span></label>`).join('')}</div><label class="field"><span>${escapeHtml(this.t('customTags'))}</span><input autocomplete="off" maxlength="120" name="customTags" placeholder="${escapeHtml(this.t('tagsExample'))}"></label></fieldset>`;
   }
 
   private refreshAssetTaxonomyForms(): void {
@@ -264,6 +266,37 @@ export class WorthRenderer {
       clientX - canvas.getBoundingClientRect().left,
     );
     if (index === undefined) return;
+    this.showChartPoint(kind, index);
+  }
+
+  moveChartInspection(kind: 'home' | 'history', delta: -1 | 1): void {
+    const geometry =
+      kind === 'home' ? this.homeChartGeometry : this.historyChartGeometry;
+    if (!geometry?.points.length) return;
+    const current =
+      kind === 'home' ? this.homeChartSelection : this.historyChartSelection;
+    this.showChartPoint(
+      kind,
+      Math.min(
+        Math.max((current ?? geometry.points.length - 1) + delta, 0),
+        geometry.points.length - 1,
+      ),
+    );
+  }
+
+  selectLastChartPoint(kind: 'home' | 'history'): void {
+    const geometry =
+      kind === 'home' ? this.homeChartGeometry : this.historyChartGeometry;
+    if (!geometry?.points.length) return;
+    this.showChartPoint(kind, geometry.points.length - 1);
+  }
+
+  private showChartPoint(kind: 'home' | 'history', index: number): void {
+    const canvas = requiredElement(
+      kind === 'home' ? 'homeChart' : 'historyChart',
+      HTMLCanvasElement,
+      this.documentRef,
+    );
     if (kind === 'home') {
       this.homeChartSelection = index;
       this.redrawHomeChart();
@@ -501,7 +534,11 @@ export class WorthRenderer {
     );
     this.element('homeChart').setAttribute(
       'aria-label',
-      this.t('portfolioTrend'),
+      `${this.t('portfolioTrend')}. ${this.t('chartInspectionHelp')}`,
+    );
+    this.element('historyChart').setAttribute(
+      'aria-label',
+      `${this.t('history')}. ${this.t('chartInspectionHelp')}`,
     );
     this.element('portfolioAdd').setAttribute(
       'aria-label',
@@ -634,7 +671,7 @@ export class WorthRenderer {
   renderPortfolioExplorer(): void {
     const filters = this.element('portfolioFilters');
     const tags = portfolioTags(this.service.data);
-    filters.innerHTML = `<button data-portfolio-filter="all" type="button">${escapeHtml(this.t('all'))}</button>${tags.map((tag) => `<button data-portfolio-filter="${escapeHtml(tag)}" type="button">${escapeHtml(this.tagLabel(tag))}</button>`).join('')}`;
+    filters.innerHTML = `<button data-portfolio-filter="all" type="button">${escapeHtml(this.t('all'))}</button>${tags.map((tag) => `<button data-portfolio-filter="tag:${escapeHtml(tag)}" type="button">${escapeHtml(this.tagLabel(tag))}</button>`).join('')}`;
     all<HTMLElement>('[data-portfolio-mode]', this.documentRef).forEach(
       (button) => {
         const active = button.dataset.portfolioMode === this.ui.portfolioMode;
@@ -644,8 +681,13 @@ export class WorthRenderer {
     );
     all<HTMLElement>('[data-portfolio-filter]', this.documentRef).forEach(
       (button) => {
+        const key = button.dataset.portfolioFilter;
         const active =
-          button.dataset.portfolioFilter === this.ui.portfolioFilter;
+          (key === 'all' && this.ui.portfolioFilter.kind === 'all') ||
+          (key?.startsWith('tag:') === true &&
+            this.ui.portfolioFilter.kind === 'tag' &&
+            key.slice(4).toLocaleLowerCase() ===
+              this.ui.portfolioFilter.value.toLocaleLowerCase());
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', String(active));
       },
@@ -715,19 +757,15 @@ export class WorthRenderer {
       return;
     }
 
-    const filter = this.ui.portfolioFilter;
     const rows = assetOverviewRows(this.service.data).filter(({ asset }) => {
-      const profile = inferAssetProfile(asset);
       const matchesQuery =
         !query ||
         asset.name.toLocaleLowerCase(locale(this.language)).includes(query) ||
         asset.code.toLocaleLowerCase(locale(this.language)).includes(query);
-      const matchesFilter =
-        filter === 'all' ||
-        profile.tags.some(
-          (tag) => tag.toLocaleLowerCase() === filter.toLocaleLowerCase(),
-        );
-      return matchesQuery && matchesFilter;
+      return (
+        matchesQuery &&
+        assetMatchesPortfolioFilter(asset, this.ui.portfolioFilter)
+      );
     });
     this.element('portfolioSummary').textContent =
       `${rows.length} ${this.t('assets').toLocaleLowerCase(locale(this.language))} · ${this.money(portfolioTotal(this.service.data))}`;
