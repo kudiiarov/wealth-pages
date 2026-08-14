@@ -479,7 +479,7 @@ export class WorthRenderer {
 
   private renderAccounts(): void {
     const list = this.element('accountsList');
-    const toggle = this.element('accountsSectionToggle');
+    const toggle = this.element('accountsListToggle');
     toggle.setAttribute(
       'aria-expanded',
       String(this.ui.accountsSectionExpanded),
@@ -487,6 +487,10 @@ export class WorthRenderer {
     const rows = accountOverviewRows(this.service.data);
     this.element('accountsSectionMeta').textContent =
       `${Math.min(rows.length, this.ui.accountsSectionExpanded ? rows.length : 3)} / ${rows.length} · ${this.money(portfolioTotal(this.service.data))}`;
+    toggle.classList.toggle('hidden', rows.length <= 3);
+    toggle.textContent = this.ui.accountsSectionExpanded
+      ? this.t('showLess')
+      : this.t('showMore', rows.length - 3);
     if (!this.service.data.accounts.length) {
       list.innerHTML = `<div class="empty-state">${this.t('emptyAccounts')}</div>`;
       return;
@@ -517,11 +521,15 @@ export class WorthRenderer {
 
   private renderAssets(): void {
     const list = this.element('assetsList');
-    const toggle = this.element('assetsSectionToggle');
+    const toggle = this.element('assetsListToggle');
     toggle.setAttribute('aria-expanded', String(this.ui.assetsSectionExpanded));
     const rows = assetOverviewRows(this.service.data);
     this.element('assetsSectionMeta').textContent =
       `${Math.min(rows.length, this.ui.assetsSectionExpanded ? rows.length : 3)} / ${rows.length} · ${this.money(portfolioTotal(this.service.data))}`;
+    toggle.classList.toggle('hidden', rows.length <= 3);
+    toggle.textContent = this.ui.assetsSectionExpanded
+      ? this.t('showLess')
+      : this.t('showMore', rows.length - 3);
     if (!this.service.data.assets.length) {
       list.innerHTML = `<div class="empty-state">${this.t('emptyAssets')}</div>`;
       return;

@@ -38,6 +38,10 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
     'Основной счёт',
   );
   await expect(page.locator('.position-asset-child .list-icon')).toHaveCount(0);
+  const childMainBox = await page
+    .locator('.position-asset-child .list-main')
+    .boundingBox();
+  expect(childMainBox?.width).toBeGreaterThan(100);
   await expect(page.locator('.position-asset-child')).not.toContainText(
     'Доллар',
   );

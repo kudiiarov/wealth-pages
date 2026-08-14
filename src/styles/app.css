@@ -64,7 +64,8 @@ svg {
 .balance-label-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 4px;
 }
 .privacy-button {
   width: 44px;
@@ -1851,6 +1852,28 @@ html[data-theme='dark'] .quick-position-row > input {
   font-size: 13px;
   font-weight: 700;
 }
+.list-disclosure {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface-soft);
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 700;
+}
+.section-heading-copy {
+  display: grid;
+  gap: 3px;
+}
+.section-heading-copy h2 {
+  margin: 0;
+}
+.section-heading-copy small {
+  color: var(--muted);
+  font-size: 11px;
+}
 .section-disclosure {
   min-height: 44px;
   flex: 1;
@@ -1937,7 +1960,10 @@ html[data-theme='dark'] .quick-position-row > input {
 .position-group-rows {
   display: grid;
   gap: 8px;
-  padding-left: 10px;
+  padding-left: 0;
+}
+.position-asset-child {
+  grid-template-columns: minmax(0, 1fr) minmax(88px, max-content) 28px;
 }
 .automation-controls {
   display: flex !important;

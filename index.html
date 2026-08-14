@@ -47,15 +47,17 @@
 <button aria-controls="allocationList" aria-expanded="false" class="disclosure-more hidden" id="allocationToggle" type="button"></button>
 </section>
 <div class="section-title-row">
-<button aria-controls="accountsList" aria-expanded="false" class="section-disclosure" id="accountsSectionToggle" type="button"><span><h2 data-i18n="accounts">Счета</h2><small id="accountsSectionMeta"></small></span><b>⌄</b></button>
+<div class="section-heading-copy"><h2 data-i18n="accounts">Счета</h2><small id="accountsSectionMeta"></small></div>
 <button class="text-button" data-i18n="add" data-open="accountModal">Добавить</button>
 </div>
 <div class="card-list" id="accountsList"></div>
+<button aria-controls="accountsList" aria-expanded="false" class="list-disclosure hidden" id="accountsListToggle" type="button"></button>
 <div class="section-title-row">
-<button aria-controls="assetsList" aria-expanded="false" class="section-disclosure" id="assetsSectionToggle" type="button"><span><h2 data-i18n="assets">Активы</h2><small id="assetsSectionMeta"></small></span><b>⌄</b></button>
+<div class="section-heading-copy"><h2 data-i18n="assets">Активы</h2><small id="assetsSectionMeta"></small></div>
 <button class="text-button" data-i18n="add" data-open="assetModal">Добавить</button>
 </div>
 <div class="card-list" id="assetsList"></div>
+<button aria-controls="assetsList" aria-expanded="false" class="list-disclosure hidden" id="assetsListToggle" type="button"></button>
 </section>
 <section aria-labelledby="positionsTitle" class="view" id="positionsView">
 <div class="page-heading">
@@ -138,7 +140,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 3.2.2-final</div>
+<div class="build-note">Worth · 3.2.3-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">

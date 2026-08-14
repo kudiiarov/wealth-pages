@@ -313,12 +313,12 @@ export class WorthController {
         !this.renderer.ui.allocationExpanded;
       this.renderer.renderAll();
     });
-    this.element('accountsSectionToggle').addEventListener('click', () => {
+    this.element('accountsListToggle').addEventListener('click', () => {
       this.renderer.ui.accountsSectionExpanded =
         !this.renderer.ui.accountsSectionExpanded;
       this.renderer.renderAll();
     });
-    this.element('assetsSectionToggle').addEventListener('click', () => {
+    this.element('assetsListToggle').addEventListener('click', () => {
       this.renderer.ui.assetsSectionExpanded =
         !this.renderer.ui.assetsSectionExpanded;
       this.renderer.renderAll();
