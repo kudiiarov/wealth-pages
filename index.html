@@ -32,40 +32,33 @@
 <div class="pnl-summary-row" id="pnlSummaryRow">
 <span class="pnl-money" id="pnlMoney">—</span>
 <span class="pnl-percent" id="pnlPercent">—</span>
-<button class="pnl-date-button" id="pnlPeriodToggle" type="button">—</button>
 </div>
-<div class="pnl-mode-caption" id="pnlModeCaption"></div>
-
+<div aria-label="Период доходности" class="home-periods" id="homePeriods" role="group">
+<button data-home-period="1d" type="button">1D</button><button data-home-period="1w" type="button">1W</button><button data-home-period="1m" type="button">1M</button><button data-home-period="1y" type="button">1Y</button><button class="active" data-home-period="all" type="button">ALL</button>
 </div>
-<section aria-label="Распределение портфеля" class="surface hero-surface">
-<div class="surface-head">
-<div><div class="section-kicker" data-i18n="portfolio">Портфель</div><h2 data-i18n="allocation">Распределение</h2></div>
-<span class="soft-label" data-i18n="zeroAssets" id="assetsCount">0 активов</span>
+<canvas aria-label="Динамика стоимости портфеля" id="homeChart"></canvas>
+<button class="price-trust" data-nav="settingsView" id="priceTrust" type="button"><span></span><b id="priceTrustText">—</b></button>
 </div>
-<div aria-hidden="true" class="allocation-bar" id="allocationBar"></div>
-<div class="allocation-list" id="allocationList"></div>
-<button aria-controls="allocationList" aria-expanded="false" class="disclosure-more hidden" id="allocationToggle" type="button"></button>
+<section class="home-insight-section">
+<h2 data-i18n="whatChanged">Что изменилось</h2>
+<div class="driver-list surface" id="portfolioDrivers"></div>
 </section>
-<div class="section-title-row">
-<div class="section-heading-copy"><h2 data-i18n="accounts">Счета</h2><small id="accountsSectionMeta"></small></div>
-<button class="text-button" data-i18n="add" data-open="accountModal">Добавить</button>
-</div>
-<div class="card-list" id="accountsList"></div>
-<button aria-controls="accountsList" aria-expanded="false" class="list-disclosure hidden" id="accountsListToggle" type="button"></button>
-<div class="section-title-row">
-<div class="section-heading-copy"><h2 data-i18n="assets">Активы</h2><small id="assetsSectionMeta"></small></div>
-<button class="text-button" data-i18n="add" data-open="assetModal">Добавить</button>
-</div>
-<div class="card-list" id="assetsList"></div>
-<button aria-controls="assetsList" aria-expanded="false" class="list-disclosure hidden" id="assetsListToggle" type="button"></button>
+<section class="home-insight-section">
+<h2 data-i18n="portfolioStructure">Структура портфеля</h2>
+<div class="structure-panel surface"><div aria-hidden="true" class="allocation-bar" id="categoryAllocationBar"></div><div class="category-list" id="categoryAllocationList"></div><button class="structure-link" data-nav="positionsView" type="button"><span data-i18n="viewPortfolio">Открыть портфель</span><b>›</b></button></div>
+</section>
+<section class="home-insight-section exposure-section"><h2 data-i18n="exposures">Экспозиции</h2><div class="exposure-list" id="exposureList"></div></section>
 </section>
 <section aria-labelledby="positionsTitle" class="view" id="positionsView">
-<div class="page-heading">
-<div><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="positions" id="positionsTitle">Позиции</h1></div>
-<button class="primary-small" data-i18n="addPlus" data-open="positionModal">+ Добавить</button>
+<div class="page-heading portfolio-heading">
+<div><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="explore" id="positionsTitle">Обзор</h1></div>
+<button aria-label="Добавить" class="portfolio-add" data-portfolio-add id="portfolioAdd" type="button">+</button>
 </div>
-<div aria-label="Группировка позиций" class="grouping-segment" role="group"><button data-grouping="accounts" type="button" data-i18n="byAccounts">По счетам</button><button data-grouping="assets" type="button" data-i18n="byAssets">По активам</button></div>
-<div class="card-list" id="positionsList"></div>
+<div aria-label="Режим портфеля" class="portfolio-segment" id="portfolioSegment" role="group"><button class="active" data-portfolio-mode="assets" type="button" data-i18n="assets">Активы</button><button data-portfolio-mode="accounts" type="button" data-i18n="accounts">Счета</button></div>
+<label class="portfolio-search"><svg aria-hidden="true" viewbox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg><input data-i18n-placeholder="searchAssets" id="portfolioSearch" type="search" placeholder="Поиск активов" autocomplete="off"></label>
+<div class="portfolio-filters" id="portfolioFilters"><button class="active" data-portfolio-filter="all" type="button" data-i18n="all">Все</button><button data-portfolio-filter="crypto" type="button" data-i18n="crypto">Крипто</button><button data-portfolio-filter="currency" type="button" data-i18n="currency">Валюты</button><button data-portfolio-filter="gold" type="button" data-i18n="gold">Золото</button></div>
+<div class="portfolio-summary"><span id="portfolioSummary">—</span><span id="portfolioFreshness">—</span></div>
+<div class="portfolio-explorer-list" id="positionsList"></div>
 </section>
 <section aria-labelledby="historyTitle" class="view" id="historyView">
 <div class="page-heading">
@@ -140,12 +133,12 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 3.2.3-final</div>
+<div class="build-note">Worth · 3.3.0-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">
 <button class="tab active" data-nav="homeView"><svg viewbox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V21H4z"></path></svg><span data-i18n="home">Главная</span></button>
-<button class="tab" data-nav="positionsView"><svg viewbox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></svg><span data-i18n="positions">Позиции</span></button>
+<button class="tab" data-nav="positionsView"><svg viewbox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8h8"></path></svg><span data-i18n="portfolio">Портфель</span></button>
 <button class="tab" data-nav="historyView"><svg viewbox="0 0 24 24"><path d="M4 17l5-5 4 3 7-8"></path></svg><span data-i18n="history">История</span></button>
 </nav>
 </div>

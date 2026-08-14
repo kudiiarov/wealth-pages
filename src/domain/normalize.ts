@@ -1,6 +1,7 @@
 import type {
   Account,
   Asset,
+  AssetCategory,
   AutoUpdateSource,
   PortfolioData,
   Position,
@@ -70,9 +71,33 @@ function normalizeAutoUpdateSource(value: unknown): AutoUpdateSource {
   return value === 'coingecko' || value === 'frankfurter' ? value : 'none';
 }
 
+function normalizeCategory(value: unknown): AssetCategory | undefined {
+  return value === 'cash-currencies' ||
+    value === 'crypto' ||
+    value === 'precious-metals' ||
+    value === 'other'
+    ? value
+    : undefined;
+}
+
+function normalizeTags(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const tags = Array.from(
+    new Set(
+      value
+        .filter((tag): tag is string => typeof tag === 'string')
+        .map((tag) => tag.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+  return tags.length ? tags : undefined;
+}
+
 export function normalizeAsset(value: UnknownRecord): Asset {
   const { symbol, ...asset } = value;
   const code = cleanCode(asset.code || symbol || '');
+  const category = normalizeCategory(asset.category);
+  const tags = normalizeTags(asset.tags);
 
   return {
     ...asset,
@@ -83,6 +108,8 @@ export function normalizeAsset(value: UnknownRecord): Asset {
     color: validColor(asset.color) ? asset.color : DEFAULT_ASSET_COLOR,
     price: numeric(asset.price),
     autoUpdateSource: normalizeAutoUpdateSource(asset.autoUpdateSource),
+    ...(category ? { category } : {}),
+    ...(tags ? { tags } : {}),
   };
 }
 

@@ -128,3 +128,18 @@ export function selectPnlSeries(
     ? [snapshots.at(-1)!, current]
     : [...snapshots, current];
 }
+
+export function selectPnlSeriesSince(
+  snapshots: readonly PnlPoint[],
+  current: PnlPoint,
+  periodStart?: number,
+): PnlPoint[] {
+  if (snapshots.length === 0) return [];
+  if (periodStart === undefined) return [...snapshots, current];
+  let baselineIndex = 0;
+  for (let index = 0; index < snapshots.length; index += 1) {
+    if (snapshots[index]!.createdAt <= periodStart) baselineIndex = index;
+    else break;
+  }
+  return [...snapshots.slice(baselineIndex), current];
+}

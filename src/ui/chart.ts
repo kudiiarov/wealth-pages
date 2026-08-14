@@ -13,6 +13,69 @@ export interface ChartFormatters {
   language: Language;
 }
 
+export function drawPortfolioSparkline(
+  canvas: HTMLCanvasElement,
+  data: readonly HistoryDatum[],
+): void {
+  const rectangle = canvas.getBoundingClientRect();
+  if (rectangle.width < 20) return;
+  const context = canvas.getContext('2d');
+  if (!context) return;
+  const scale = Math.min(window.devicePixelRatio || 1, 3);
+  const width = rectangle.width;
+  const height = 104;
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+  context.setTransform(scale, 0, 0, scale, 0, 0);
+  context.clearRect(0, 0, width, height);
+  if (data.length < 2) return;
+
+  const values = data.map(({ value }) => value);
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const padding = 5;
+  const flat = high === low;
+  const range = high - low || Math.max(Math.abs(high) * 0.02, 1);
+  const points = values.map((value, index) => ({
+    x: padding + (index * (width - padding * 2)) / (values.length - 1),
+    y: flat
+      ? height / 2
+      : padding + ((high - value) / range) * (height - padding * 2),
+  }));
+  const positive = values.at(-1)! >= values[0]!;
+  const color = positive ? '#9cda68' : '#ee5264';
+  const gradient = context.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(
+    0,
+    positive ? 'rgba(156,218,104,.2)' : 'rgba(238,82,100,.18)',
+  );
+  gradient.addColorStop(1, 'rgba(13,15,18,0)');
+  const first = points[0]!;
+  const last = points.at(-1)!;
+  context.beginPath();
+  points.forEach((point, index) =>
+    index ? context.lineTo(point.x, point.y) : context.moveTo(point.x, point.y),
+  );
+  context.lineTo(last.x, height);
+  context.lineTo(first.x, height);
+  context.closePath();
+  context.fillStyle = gradient;
+  context.fill();
+  context.beginPath();
+  points.forEach((point, index) =>
+    index ? context.lineTo(point.x, point.y) : context.moveTo(point.x, point.y),
+  );
+  context.strokeStyle = color;
+  context.lineWidth = 2.25;
+  context.lineJoin = 'round';
+  context.lineCap = 'round';
+  context.stroke();
+  context.beginPath();
+  context.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+  context.fillStyle = color;
+  context.fill();
+}
+
 export function drawHistoryChart(
   canvas: HTMLCanvasElement,
   empty: HTMLElement,

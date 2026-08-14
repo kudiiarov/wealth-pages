@@ -52,6 +52,9 @@ export class WorthController {
         if (this.element('historyView').classList.contains('active')) {
           this.renderer.redrawChart();
         }
+        if (this.element('homeView').classList.contains('active')) {
+          this.renderer.redrawHomeChart();
+        }
       },
       { passive: true },
     );
@@ -92,60 +95,149 @@ export class WorthController {
       this.renderer.renderAll();
       return;
     }
-    const grouping = closestElement<HTMLElement>(
+    const homePeriod = closestElement<HTMLElement>(
       event.target,
-      '[data-grouping]',
+      '[data-home-period]',
     );
     if (
-      grouping?.dataset.grouping === 'accounts' ||
-      grouping?.dataset.grouping === 'assets'
+      homePeriod?.dataset.homePeriod === '1d' ||
+      homePeriod?.dataset.homePeriod === '1w' ||
+      homePeriod?.dataset.homePeriod === '1m' ||
+      homePeriod?.dataset.homePeriod === '1y' ||
+      homePeriod?.dataset.homePeriod === 'all'
     ) {
-      this.service.saveSettings({
-        positionGrouping: grouping.dataset.grouping,
-      });
+      this.renderer.ui.homePeriod = homePeriod.dataset.homePeriod;
       this.renderer.renderAll();
       return;
     }
-    const positionGroup = closestElement<HTMLElement>(
+    const portfolioMode = closestElement<HTMLElement>(
       event.target,
-      '[data-position-group]',
+      '[data-portfolio-mode]',
     );
-    if (positionGroup?.dataset.positionGroup) {
-      this.toggleSet(
-        this.renderer.ui.collapsedPositionGroups,
-        positionGroup.dataset.positionGroup,
-      );
+    if (
+      portfolioMode?.dataset.portfolioMode === 'assets' ||
+      portfolioMode?.dataset.portfolioMode === 'accounts'
+    ) {
+      this.renderer.ui.portfolioMode = portfolioMode.dataset.portfolioMode;
+      this.renderer.ui.portfolioQuery = '';
+      requiredElement(
+        'portfolioSearch',
+        HTMLInputElement,
+        this.documentRef,
+      ).value = '';
       this.renderer.renderAll();
       return;
     }
-    const accountToggle = closestElement<HTMLElement>(
+    const portfolioFilter = closestElement<HTMLElement>(
       event.target,
-      '[data-account-toggle]',
+      '[data-portfolio-filter]',
     );
     if (
-      accountToggle?.dataset.accountToggle &&
-      !closestElement(event.target, '[data-account-menu]')
+      portfolioFilter?.dataset.portfolioFilter === 'all' ||
+      portfolioFilter?.dataset.portfolioFilter === 'crypto' ||
+      portfolioFilter?.dataset.portfolioFilter === 'currency' ||
+      portfolioFilter?.dataset.portfolioFilter === 'gold'
     ) {
-      this.toggleSet(
-        this.renderer.ui.expandedAccounts,
-        accountToggle.dataset.accountToggle,
-      );
+      this.renderer.ui.portfolioFilter =
+        portfolioFilter.dataset.portfolioFilter;
       this.renderer.renderAll();
       return;
     }
-    const assetToggle = closestElement<HTMLElement>(
+    const driverFilter = closestElement<HTMLElement>(
       event.target,
-      '[data-asset-toggle]',
+      '[data-driver-filter]',
     );
-    if (
-      assetToggle?.dataset.assetToggle &&
-      !closestElement(event.target, '[data-asset-menu]')
-    ) {
-      this.toggleSet(
-        this.renderer.ui.expandedAssets,
-        assetToggle.dataset.assetToggle,
-      );
+    if (driverFilter?.dataset.driverFilter) {
+      this.renderer.ui.portfolioMode = 'assets';
+      this.renderer.ui.portfolioFilter = 'all';
+      this.renderer.ui.portfolioQuery = driverFilter.dataset.driverFilter;
+      requiredElement(
+        'portfolioSearch',
+        HTMLInputElement,
+        this.documentRef,
+      ).value = driverFilter.dataset.driverFilter;
       this.renderer.renderAll();
+    }
+    const categoryFilter = closestElement<HTMLElement>(
+      event.target,
+      '[data-category-filter]',
+    );
+    if (categoryFilter?.dataset.categoryFilter) {
+      this.renderer.ui.portfolioMode = 'assets';
+      this.renderer.ui.portfolioQuery = '';
+      requiredElement(
+        'portfolioSearch',
+        HTMLInputElement,
+        this.documentRef,
+      ).value = '';
+      const mapping: Record<
+        string,
+        'all' | 'crypto' | 'currency' | 'gold' | 'stablecoin' | 'other'
+      > = {
+        crypto: 'crypto',
+        'cash-currencies': 'currency',
+        'precious-metals': 'gold',
+        other: 'other',
+      };
+      this.renderer.ui.portfolioFilter =
+        mapping[categoryFilter.dataset.categoryFilter] ?? 'all';
+      this.renderer.renderAll();
+    }
+    const exposureFilter = closestElement<HTMLElement>(
+      event.target,
+      '[data-exposure-filter]',
+    );
+    if (exposureFilter?.dataset.exposureFilter) {
+      this.renderer.ui.portfolioMode = 'assets';
+      this.renderer.ui.portfolioQuery = '';
+      requiredElement(
+        'portfolioSearch',
+        HTMLInputElement,
+        this.documentRef,
+      ).value = '';
+      const tag = exposureFilter.dataset.exposureFilter;
+      this.renderer.ui.portfolioFilter =
+        tag === 'crypto' ||
+        tag === 'currency' ||
+        tag === 'gold' ||
+        tag === 'stablecoin'
+          ? tag
+          : 'all';
+      this.renderer.renderAll();
+    }
+    const portfolioAdd = closestElement<HTMLElement>(
+      event.target,
+      '[data-portfolio-add]',
+    );
+    if (portfolioAdd) {
+      this.showActionMenu(this.renderer.t('add'), [
+        {
+          label: this.renderer.t('position'),
+          run: () => this.openDialog('positionModal'),
+        },
+        {
+          label: this.renderer.t('account'),
+          run: () => this.openDialog('accountModal'),
+        },
+        {
+          label: this.renderer.t('asset'),
+          run: () => this.openDialog('assetModal'),
+        },
+      ]);
+      return;
+    }
+    const portfolioExpand = closestElement<HTMLElement>(
+      event.target,
+      '[data-portfolio-expand]',
+    );
+    if (portfolioExpand?.dataset.portfolioExpand) {
+      const id = portfolioExpand.dataset.portfolioExpand;
+      if (this.renderer.ui.expandedPortfolioRows.has(id)) {
+        this.renderer.ui.expandedPortfolioRows.delete(id);
+      } else {
+        this.renderer.ui.expandedPortfolioRows.add(id);
+      }
+      this.renderer.renderPortfolioExplorer();
       return;
     }
     const opener = closestElement<HTMLElement>(event.target, '[data-open]');
@@ -237,12 +329,6 @@ export class WorthController {
       },
     );
 
-    this.element('pnlPeriodToggle').addEventListener('click', () => {
-      this.service.saveSettings({
-        pnlPeriod: this.service.settings.pnlPeriod === 'last' ? 'all' : 'last',
-      });
-      this.renderer.renderAll();
-    });
     this.element('privacyToggle').addEventListener('click', () => {
       this.service.saveSettings({
         balancesHidden: !this.service.settings.balancesHidden,
@@ -308,20 +394,15 @@ export class WorthController {
       'click',
       () => void this.saveSnapshot(),
     );
-    this.element('allocationToggle').addEventListener('click', () => {
-      this.renderer.ui.allocationExpanded =
-        !this.renderer.ui.allocationExpanded;
-      this.renderer.renderAll();
-    });
-    this.element('accountsListToggle').addEventListener('click', () => {
-      this.renderer.ui.accountsSectionExpanded =
-        !this.renderer.ui.accountsSectionExpanded;
-      this.renderer.renderAll();
-    });
-    this.element('assetsListToggle').addEventListener('click', () => {
-      this.renderer.ui.assetsSectionExpanded =
-        !this.renderer.ui.assetsSectionExpanded;
-      this.renderer.renderAll();
+    requiredElement(
+      'portfolioSearch',
+      HTMLInputElement,
+      this.documentRef,
+    ).addEventListener('input', (event) => {
+      const input = event.currentTarget;
+      if (!(input instanceof HTMLInputElement)) return;
+      this.renderer.ui.portfolioQuery = input.value;
+      this.renderer.renderPortfolioExplorer();
     });
     this.element('displayCurrencyBtn').addEventListener('click', () => {
       this.renderer.renderCurrencyOptions();
@@ -812,6 +893,8 @@ export class WorthController {
     this.windowRef.scrollTo({ top: 0, behavior: 'auto' });
     if (id === 'historyView')
       requestAnimationFrame(() => this.renderer.redrawChart());
+    if (id === 'homeView')
+      requestAnimationFrame(() => this.renderer.redrawHomeChart());
   }
 
   private toast(message: string): void {
@@ -838,11 +921,6 @@ export class WorthController {
       return 'cryptoWallet';
     if (value.includes('налич') || value === 'cash') return 'cash';
     return 'other';
-  }
-
-  private toggleSet(values: Set<string>, id: string): void {
-    if (values.has(id)) values.delete(id);
-    else values.add(id);
   }
 
   private form(id: string): HTMLFormElement {

@@ -9,16 +9,10 @@ import type {
   SnapshotPosition,
 } from '../domain/models';
 import { validColor } from '../domain/normalize';
-import {
-  accountTotal,
-  assetQuantity,
-  assetTotal,
-  portfolioTotal,
-  positionValue,
-} from '../domain/portfolio';
+import { assetTotal, portfolioTotal, positionValue } from '../domain/portfolio';
 import {
   flowAdjustedPnl,
-  selectPnlSeries,
+  selectPnlSeriesSince,
   type PnlPoint,
   type PnlResult,
 } from '../domain/pnl';
@@ -43,10 +37,14 @@ import { all, escapeHtml, requiredElement } from './dom';
 import { formControl } from './forms';
 import {
   accountOverviewRows,
-  allocationRows,
   assetOverviewRows,
+  categoryAllocationRows,
+  inferAssetProfile,
+  portfolioDrivers,
+  portfolioExposures,
+  priceFreshness,
 } from './portfolio-view-model';
-import { buildPositionGroups } from './position-groups';
+import { drawPortfolioSparkline } from './chart';
 
 const palette = [
   '#17181b',
@@ -61,12 +59,12 @@ const palette = [
 
 export interface UiState {
   historyScope: string;
-  expandedAccounts: Set<string>;
-  expandedAssets: Set<string>;
-  allocationExpanded: boolean;
-  accountsSectionExpanded: boolean;
-  assetsSectionExpanded: boolean;
-  collapsedPositionGroups: Set<string>;
+  homePeriod: '1d' | '1w' | '1m' | '1y' | 'all';
+  portfolioMode: 'assets' | 'accounts';
+  portfolioFilter:
+    'all' | 'crypto' | 'currency' | 'gold' | 'stablecoin' | 'other';
+  portfolioQuery: string;
+  expandedPortfolioRows: Set<string>;
 }
 
 interface HistoryItem {
@@ -78,12 +76,11 @@ interface HistoryItem {
 export class WorthRenderer {
   readonly ui: UiState = {
     historyScope: 'portfolio',
-    expandedAccounts: new Set(),
-    expandedAssets: new Set(),
-    allocationExpanded: false,
-    accountsSectionExpanded: false,
-    assetsSectionExpanded: false,
-    collapsedPositionGroups: new Set(),
+    homePeriod: 'all',
+    portfolioMode: 'assets',
+    portfolioFilter: 'all',
+    portfolioQuery: '',
+    expandedPortfolioRows: new Set(),
   };
 
   constructor(
@@ -101,14 +98,22 @@ export class WorthRenderer {
     this.applyLanguage();
     this.renderCurrencyButton();
     this.renderPrivacyToggle();
-    this.renderPnlSummary();
-    this.renderAllocation();
-    this.renderAccounts();
-    this.renderAssets();
-    this.renderPositions();
+    this.renderHomeDashboard();
+    this.renderPortfolioExplorer();
     this.refreshHistoryScope();
     this.renderHistory();
     this.refreshPositionForm();
+  }
+
+  redrawHomeChart(): void {
+    const series = this.homeSeries();
+    const canvas = requiredElement(
+      'homeChart',
+      HTMLCanvasElement,
+      this.documentRef,
+    );
+    canvas.classList.toggle('empty', series.length < 2);
+    drawPortfolioSparkline(canvas, series);
   }
 
   renderQuickUpdate(): void {
@@ -384,6 +389,22 @@ export class WorthRenderer {
     const currencyButton = this.element('displayCurrencyBtn');
     currencyButton.setAttribute('aria-label', this.t('displayCurrencyAria'));
     currencyButton.setAttribute('title', this.t('displayCurrencyTitle'));
+    this.element('homePeriods').setAttribute(
+      'aria-label',
+      this.t('performancePeriod'),
+    );
+    this.element('homeChart').setAttribute(
+      'aria-label',
+      this.t('portfolioTrend'),
+    );
+    this.element('portfolioAdd').setAttribute(
+      'aria-label',
+      this.t('addPortfolioItem'),
+    );
+    this.element('portfolioSegment').setAttribute(
+      'aria-label',
+      this.t('portfolioViewMode'),
+    );
   }
 
   private applyTheme(): void {
@@ -400,210 +421,243 @@ export class WorthRenderer {
     );
   }
 
-  private renderPnlSummary(): void {
-    const result = this.pnl(() => true);
-    const compatible = this.compatibleSnapshots();
-    const reference =
-      this.service.settings.pnlPeriod === 'last'
-        ? compatible.at(-1)
-        : compatible[0];
+  private renderHomeDashboard(): void {
+    all<HTMLElement>('[data-home-period]', this.documentRef).forEach(
+      (button) => {
+        const active = button.dataset.homePeriod === this.ui.homePeriod;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      },
+    );
+    const result = this.homePnl(() => true);
     this.element('homeTitle').textContent = this.money(
       portfolioTotal(this.service.data),
     );
     const moneyElement = this.element('pnlMoney');
     const percentElement = this.element('pnlPercent');
-    const dateButton = this.element('pnlPeriodToggle');
-    const caption = this.element('pnlModeCaption');
-    if (!result || !reference) {
-      moneyElement.textContent = '—';
-      percentElement.textContent = '—';
-      dateButton.textContent = '—';
-      caption.textContent = this.t('pnlNoBaseline');
-      moneyElement.className = 'pnl-money';
-      percentElement.className = 'pnl-percent';
-      return;
-    }
-    const sign = result.pnl > 0 ? '+' : result.pnl < 0 ? '−' : '';
+    const sign =
+      result?.pnl && result.pnl > 0
+        ? '+'
+        : result?.pnl && result.pnl < 0
+          ? '−'
+          : '';
     const style =
-      result.pnl > 0 ? 'pnl-positive' : result.pnl < 0 ? 'pnl-negative' : '';
-    moneyElement.textContent = this.service.settings.balancesHidden
-      ? this.money(Math.abs(result.pnl))
-      : `${sign}${this.money(Math.abs(result.pnl))}`;
-    percentElement.textContent = `${sign}${Math.abs(result.pct || 0).toFixed(2)}%`;
-    dateButton.textContent = new Intl.DateTimeFormat(locale(this.language), {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-    }).format(new Date(reference.createdAt));
-    caption.textContent =
-      this.service.settings.pnlPeriod === 'last'
-        ? this.t('pnlVsLast')
-        : this.t('pnlVsFirst');
+      result?.pnl && result.pnl > 0
+        ? 'pnl-positive'
+        : result?.pnl && result.pnl < 0
+          ? 'pnl-negative'
+          : '';
+    moneyElement.textContent = result
+      ? this.service.settings.balancesHidden
+        ? this.money(Math.abs(result.pnl))
+        : `${sign}${this.money(Math.abs(result.pnl))}`
+      : '—';
+    percentElement.textContent = result
+      ? `${sign}${Math.abs(result.pct || 0).toFixed(2)}%`
+      : '—';
     moneyElement.className = `pnl-money ${style}`;
     percentElement.className = `pnl-percent ${style}`;
-  }
 
-  private renderAllocation(): void {
-    const rows = allocationRows(this.service.data);
-    const gross = rows.reduce((total, { value }) => total + Math.abs(value), 0);
-    this.element('assetsCount').textContent = this.t(
-      'assetsCount',
-      rows.length,
-    );
-    if (!rows.length || gross === 0) {
-      this.element('allocationBar').innerHTML = '';
-      this.element('allocationList').innerHTML =
-        `<div class="empty-state">${this.t('emptyAllocation')}</div>`;
-      return;
-    }
-    this.element('allocationBar').innerHTML = rows
+    const drivers = portfolioDrivers(
+      this.service.data,
+      this.homePnlSeries(),
+    ).slice(0, 3);
+    this.element('portfolioDrivers').innerHTML = drivers.length
+      ? drivers
+          .map(({ assetId, code, value }) => {
+            const asset = this.assetBy(assetId);
+            const direction = value > 0 ? 'positive' : 'negative';
+            const valueSign = value > 0 ? '+' : value < 0 ? '−' : '';
+            return `<button class="driver-row" data-nav="positionsView" data-driver-filter="${escapeHtml(code)}" type="button"><span class="driver-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><strong>${escapeHtml(code)}</strong><b class="${direction}">${valueSign}${this.money(Math.abs(value))}</b><i aria-hidden="true">${value >= 0 ? '↗' : '↘'}</i></button>`;
+          })
+          .join('')
+      : `<div class="empty-state compact-empty">${this.t('pnlNoBaseline')}</div>`;
+
+    const categories = categoryAllocationRows(this.service.data);
+    const colors: Record<string, string> = {
+      crypto: '#9cda68',
+      'cash-currencies': '#299bc6',
+      'precious-metals': '#f4ad29',
+      other: '#9298a1',
+    };
+    this.element('categoryAllocationBar').innerHTML = categories
       .map(
-        ({ asset, value }) =>
-          `<span class="allocation-segment" style="width:${(Math.abs(value) / gross) * 100}%;background:${this.assetColor(asset)}"></span>`,
+        ({ category, percentage }) =>
+          `<span class="allocation-segment" style="width:${percentage}%;background:${colors[category]}"></span>`,
       )
       .join('');
-    this.element('allocationList').innerHTML = rows
-      .slice(0, this.ui.allocationExpanded ? undefined : 3)
-      .map(({ asset, value, quantity }) => {
-        const pnl = this.pnl((position) => position.assetId === asset.id);
-        return `<div class="allocation-row"><span class="asset-badge ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><div class="allocation-meta"><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(asset.code)} · ${formatNumber(quantity, this.language)} · ${((Math.abs(value) / gross) * 100).toFixed(1)}%</small></div><div class="allocation-value"><strong>${this.money(value)}</strong><small>${this.money(asset.price)} / ${this.t('unitShort')}</small><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div></div>`;
-      })
-      .join('');
-    const toggle = this.element('allocationToggle');
-    toggle.classList.toggle('hidden', rows.length <= 3);
-    toggle.textContent = this.ui.allocationExpanded
-      ? this.t('showLess')
-      : this.t('showMore', rows.length - 3);
-    toggle.setAttribute('aria-expanded', String(this.ui.allocationExpanded));
-  }
+    this.element('categoryAllocationList').innerHTML = categories.length
+      ? categories
+          .map(
+            ({ category, percentage }) =>
+              `<button class="category-row" data-nav="positionsView" data-category-filter="${category}" type="button"><span style="background:${colors[category]}"></span><strong>${escapeHtml(this.categoryLabel(category))}</strong><b>${percentage.toFixed(0)}%</b></button>`,
+          )
+          .join('')
+      : `<div class="empty-state compact-empty">${this.t('emptyAllocation')}</div>`;
 
-  private renderAccounts(): void {
-    const list = this.element('accountsList');
-    const toggle = this.element('accountsListToggle');
-    toggle.setAttribute(
-      'aria-expanded',
-      String(this.ui.accountsSectionExpanded),
+    const exposures = portfolioExposures(this.service.data).slice(0, 6);
+    this.element('exposureList').innerHTML = exposures.length
+      ? exposures
+          .map(
+            ({ tag, percentage }) =>
+              `<button class="exposure-chip" data-nav="positionsView" data-exposure-filter="${escapeHtml(tag)}" type="button"><span>${escapeHtml(this.tagLabel(tag))}</span><b>${percentage.toFixed(0)}%</b></button>`,
+          )
+          .join('')
+      : `<span class="muted-inline">${this.t('noExposures')}</span>`;
+
+    const freshness = priceFreshness(
+      this.service.data,
+      Date.now(),
+      this.service.settings.priceRefreshIntervalHours * 60 * 60 * 1000,
     );
-    const rows = accountOverviewRows(this.service.data);
-    this.element('accountsSectionMeta').textContent =
-      `${Math.min(rows.length, this.ui.accountsSectionExpanded ? rows.length : 3)} / ${rows.length} · ${this.money(portfolioTotal(this.service.data))}`;
-    toggle.classList.toggle('hidden', rows.length <= 3);
-    toggle.textContent = this.ui.accountsSectionExpanded
-      ? this.t('showLess')
-      : this.t('showMore', rows.length - 3);
-    if (!this.service.data.accounts.length) {
-      list.innerHTML = `<div class="empty-state">${this.t('emptyAccounts')}</div>`;
-      return;
-    }
-    list.innerHTML = rows
-      .slice(0, this.ui.accountsSectionExpanded ? undefined : 3)
-      .map(({ account }) => {
-        const open = this.ui.expandedAccounts.has(account.id);
-        const positions = this.service.data.positions.filter(
-          ({ accountId }) => accountId === account.id,
-        );
-        const details = positions.length
-          ? positions
-              .map((position) => {
-                const asset = this.assetBy(position.assetId);
-                const comment = position.comment
-                  ? `<span class="account-position-comment">• ${escapeHtml(position.comment)}</span>`
-                  : '';
-                return `<div class="account-asset-row"><span class="mini-asset-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><div><div class="account-position-title"><strong>${escapeHtml(asset?.code || asset?.name || this.t('asset'))}</strong>${comment}</div><small>${escapeHtml(asset?.name || '')} · ${formatNumber(position.quantity, this.language)} ${this.t('unitShort')}</small></div><b>${this.money(positionValue(position, this.service.data.assets))}</b></div>`;
-              })
-              .join('')
-          : `<div class="account-empty">${this.t('emptyAccount')}</div>`;
-        const pnl = this.pnl((position) => position.accountId === account.id);
-        return `<div class="account-expand-card ${open ? 'expanded' : ''}"><div class="list-card account-toggle" data-account-toggle="${account.id}"><div class="list-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)};color:#fff">${escapeHtml(this.accountIcon(account))}</div><div class="list-main"><strong>${escapeHtml(account.name)}</strong><small>${escapeHtml(this.accountTypeLabel(account.type))} · ${positions.length} ${this.t('positionsShort')}</small></div><div class="list-value"><strong>${this.money(accountTotal(account.id, this.service.data))}</strong><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div><button class="menu-button" data-account-menu="${account.id}" aria-label="${this.t('actions')}">···</button></div><div class="account-assets ${open ? '' : 'hidden'}">${details}</div></div>`;
-      })
-      .join('');
+    const trust = this.element('priceTrust');
+    trust.classList.toggle(
+      'warning',
+      freshness.tracked > 0 && freshness.current < freshness.tracked,
+    );
+    this.element('priceTrustText').textContent =
+      freshness.tracked > 0 && freshness.current < freshness.tracked
+        ? this.t('pricesCurrent', freshness.current, freshness.tracked)
+        : freshness.latestUpdateAt
+          ? this.t(
+              'pricesUpdatedAgo',
+              formatRelativeTime(
+                freshness.latestUpdateAt,
+                Date.now(),
+                this.language,
+              ),
+            )
+          : this.t('pricesNotTracked');
+    this.redrawHomeChart();
   }
 
-  private renderAssets(): void {
-    const list = this.element('assetsList');
-    const toggle = this.element('assetsListToggle');
-    toggle.setAttribute('aria-expanded', String(this.ui.assetsSectionExpanded));
-    const rows = assetOverviewRows(this.service.data);
-    this.element('assetsSectionMeta').textContent =
-      `${Math.min(rows.length, this.ui.assetsSectionExpanded ? rows.length : 3)} / ${rows.length} · ${this.money(portfolioTotal(this.service.data))}`;
-    toggle.classList.toggle('hidden', rows.length <= 3);
-    toggle.textContent = this.ui.assetsSectionExpanded
-      ? this.t('showLess')
-      : this.t('showMore', rows.length - 3);
-    if (!this.service.data.assets.length) {
-      list.innerHTML = `<div class="empty-state">${this.t('emptyAssets')}</div>`;
+  renderPortfolioExplorer(): void {
+    all<HTMLElement>('[data-portfolio-mode]', this.documentRef).forEach(
+      (button) => {
+        const active = button.dataset.portfolioMode === this.ui.portfolioMode;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      },
+    );
+    all<HTMLElement>('[data-portfolio-filter]', this.documentRef).forEach(
+      (button) => {
+        const active =
+          button.dataset.portfolioFilter === this.ui.portfolioFilter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      },
+    );
+    const filters = this.element('portfolioFilters');
+    filters.classList.toggle('hidden', this.ui.portfolioMode === 'accounts');
+    const search = requiredElement(
+      'portfolioSearch',
+      HTMLInputElement,
+      this.documentRef,
+    );
+    search.placeholder = this.t(
+      this.ui.portfolioMode === 'assets' ? 'searchAssets' : 'searchAccounts',
+    );
+    const list = this.element('positionsList');
+    const query = this.ui.portfolioQuery
+      .trim()
+      .toLocaleLowerCase(locale(this.language));
+    const freshness = priceFreshness(
+      this.service.data,
+      Date.now(),
+      this.service.settings.priceRefreshIntervalHours * 60 * 60 * 1000,
+    );
+    this.element('portfolioFreshness').textContent =
+      freshness.tracked > 0 && freshness.current < freshness.tracked
+        ? this.t('pricesCurrent', freshness.current, freshness.tracked)
+        : freshness.latestUpdateAt
+          ? this.t(
+              'updatedAgo',
+              formatRelativeTime(
+                freshness.latestUpdateAt,
+                Date.now(),
+                this.language,
+              ),
+            )
+          : this.t('pricesNotTracked');
+
+    if (this.ui.portfolioMode === 'accounts') {
+      const rows = accountOverviewRows(this.service.data).filter(
+        ({ account }) =>
+          !query ||
+          account.name.toLocaleLowerCase(locale(this.language)).includes(query),
+      );
+      this.element('portfolioSummary').textContent =
+        `${rows.length} ${this.t('accounts').toLocaleLowerCase(locale(this.language))} · ${this.money(portfolioTotal(this.service.data))}`;
+      list.innerHTML = rows.length
+        ? rows
+            .map(({ account, value }) => {
+              const positions = this.service.data.positions.filter(
+                ({ accountId }) => accountId === account.id,
+              );
+              const expanded = this.ui.expandedPortfolioRows.has(
+                `account:${account.id}`,
+              );
+              const pnl = this.homePnl(
+                (position) => position.accountId === account.id,
+              );
+              const details = positions
+                .map((position) => {
+                  const asset = this.assetBy(position.assetId);
+                  return `<button class="portfolio-position-row" data-position-menu="${position.id}" type="button"><span><strong>${escapeHtml(asset?.name || this.t('asset'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset?.code || '')}${position.comment ? ` · ${escapeHtml(position.comment)}` : ''}</small></span><b>${this.money(positionValue(position, this.service.data.assets))}</b><i>›</i></button>`;
+                })
+                .join('');
+              return `<section class="portfolio-explorer-group ${expanded ? 'expanded' : ''}"><button class="portfolio-row" data-portfolio-expand="account:${account.id}" aria-expanded="${String(expanded)}" type="button"><span class="portfolio-row-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span class="portfolio-row-main"><strong>${escapeHtml(account.name)}</strong><small>${escapeHtml(this.accountTypeLabel(account.type))} · ${positions.length} ${this.t('positionsShort')}</small></span><span class="portfolio-row-value"><strong>${this.money(value)}</strong><small class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></span><i>⌄</i></button><div class="portfolio-position-list ${expanded ? '' : 'hidden'}">${details || `<div class="account-empty">${this.t('emptyAccount')}</div>`}<button class="portfolio-manage" data-account-menu="${account.id}" type="button">${this.t('manageAccount')}</button></div></section>`;
+            })
+            .join('')
+        : `<div class="empty-state">${this.t('emptyAccounts')}</div>`;
       return;
     }
-    list.innerHTML = rows
-      .slice(0, this.ui.assetsSectionExpanded ? undefined : 3)
-      .map(({ asset }) => {
-        const open = this.ui.expandedAssets.has(asset.id);
-        const positions = this.service.data.positions.filter(
-          ({ assetId }) => assetId === asset.id,
-        );
-        const details = positions.length
-          ? positions
+
+    const filter = this.ui.portfolioFilter;
+    const rows = assetOverviewRows(this.service.data).filter(({ asset }) => {
+      const profile = inferAssetProfile(asset);
+      const matchesQuery =
+        !query ||
+        asset.name.toLocaleLowerCase(locale(this.language)).includes(query) ||
+        asset.code.toLocaleLowerCase(locale(this.language)).includes(query);
+      const matchesFilter =
+        filter === 'all' ||
+        profile.tags.includes(filter) ||
+        (filter === 'currency' && profile.category === 'cash-currencies') ||
+        (filter === 'gold' && profile.category === 'precious-metals') ||
+        (filter === 'other' && profile.category === 'other');
+      return matchesQuery && matchesFilter;
+    });
+    this.element('portfolioSummary').textContent =
+      `${rows.length} ${this.t('assets').toLocaleLowerCase(locale(this.language))} · ${this.money(portfolioTotal(this.service.data))}`;
+    const gross = assetOverviewRows(this.service.data).reduce(
+      (sum, { value }) => sum + Math.abs(value),
+      0,
+    );
+    list.innerHTML = rows.length
+      ? rows
+          .map(({ asset, value }) => {
+            const positions = this.service.data.positions.filter(
+              ({ assetId }) => assetId === asset.id,
+            );
+            const expanded = this.ui.expandedPortfolioRows.has(
+              `asset:${asset.id}`,
+            );
+            const pnl = this.homePnl(
+              (position) => position.assetId === asset.id,
+            );
+            const allocation = gross ? (Math.abs(value) / gross) * 100 : 0;
+            const stale = freshness.staleAssetIds.includes(asset.id);
+            const details = positions
               .map((position) => {
                 const account = this.accountBy(position.accountId);
-                const comment = position.comment
-                  ? `<small class="asset-position-comment">• ${escapeHtml(position.comment)}</small>`
-                  : '';
-                return `<div class="account-asset-row"><span class="mini-asset-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><div><strong>${escapeHtml(account?.name || this.t('account'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}</small>${comment}</div><b>${this.money(positionValue(position, this.service.data.assets))}</b></div>`;
+                return `<button class="portfolio-position-row" data-position-menu="${position.id}" type="button"><span><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}${position.comment ? ` · ${escapeHtml(position.comment)}` : ''}</small></span><b>${this.money(positionValue(position, this.service.data.assets))}</b><i>›</i></button>`;
               })
-              .join('')
-          : `<div class="account-empty">${this.t('emptyAsset')}</div>`;
-        const pnl = this.pnl((position) => position.assetId === asset.id);
-        const source =
-          asset.autoUpdateSource === 'none'
-            ? this.t('autoSourceNone')
-            : `${this.t('autoSourceLabel')}: ${asset.autoUpdateSource === 'coingecko' ? this.t('autoSourceCoinGecko') : this.t('autoSourceFrankfurter')} · ${formatRelativeTime(asset.priceUpdatedAt, Date.now(), this.language)}`;
-        return `<div class="account-expand-card ${open ? 'expanded' : ''}"><div class="list-card asset-toggle" data-asset-toggle="${asset.id}"><div class="list-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)};color:#fff">${escapeHtml(this.assetIcon(asset))}</div><div class="list-main"><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(asset.code)} · ${formatNumber(assetQuantity(asset.id, this.service.data.positions), this.language)} ${this.t('unitShort')} · ${this.money(asset.price)} / ${this.t('unitShort')}<br><span class="asset-updated-time">${source}</span></small></div><div class="list-value"><strong>${this.money(this.assetTotal(asset.id))}</strong><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div><button class="menu-button" data-asset-menu="${asset.id}" aria-label="${this.t('actions')}">···</button></div><div class="account-assets ${open ? '' : 'hidden'}">${details}</div></div>`;
-      })
-      .join('');
-  }
-
-  private renderPositions(): void {
-    all<HTMLElement>('[data-grouping]', this.documentRef).forEach((button) => {
-      const active =
-        button.dataset.grouping === this.service.settings.positionGrouping;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-pressed', String(active));
-    });
-    const list = this.element('positionsList');
-    if (!this.service.data.positions.length) {
-      list.innerHTML = `<div class="empty-state">${this.t('emptyPositions')}</div>`;
-      return;
-    }
-    list.innerHTML = buildPositionGroups(
-      this.service.data,
-      this.service.settings.positionGrouping,
-    )
-      .map((group) => {
-        const collapsed = this.ui.collapsedPositionGroups.has(group.id);
-        const identity = group.account ?? group.asset;
-        const icon = group.account
-          ? this.accountIcon(group.account)
-          : this.assetIcon(group.asset);
-        const color = group.account
-          ? this.accountColor(group.account)
-          : this.assetColor(group.asset);
-        const rows = group.positions
-          .map((position) => {
-            const asset = this.assetBy(position.assetId);
-            const account = this.accountBy(position.accountId);
-            const comment = position.comment
-              ? `<span class="position-comment">• ${escapeHtml(position.comment)}</span>`
-              : '';
-            const pnl = this.pnl((record) => record.positionId === position.id);
-            if (this.service.settings.positionGrouping === 'assets') {
-              return `<div class="list-card position-asset-child"><div class="list-main"><div class="position-title-line"><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong>${comment}</div><small>${formatNumber(position.quantity, this.language)} ${this.t('unitShort')}</small></div><div class="list-value"><strong>${this.money(positionValue(position, this.service.data.assets))}</strong><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div><button class="menu-button" data-position-menu="${position.id}" aria-label="${this.t('actions')}">···</button></div>`;
-            }
-            return `<div class="list-card"><div class="list-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)};color:#fff">${escapeHtml(this.assetIcon(asset))}</div><div class="list-main"><div class="position-title-line"><strong>${escapeHtml(asset?.code || asset?.name || this.t('asset'))}</strong>${comment}</div><small>${escapeHtml(account?.name || this.t('deletedAccount'))} · ${formatNumber(position.quantity, this.language)} ${this.t('unitShort')} · ${escapeHtml(asset?.name || '')}</small></div><div class="list-value"><strong>${this.money(positionValue(position, this.service.data.assets))}</strong><small>${asset ? this.money(asset.price) : '—'} / ${this.t('unitShort')}</small><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div><button class="menu-button" data-position-menu="${position.id}" aria-label="${this.t('actions')}">···</button></div>`;
+              .join('');
+            return `<section class="portfolio-explorer-group ${expanded ? 'expanded' : ''} ${stale ? 'stale-price' : ''}"><button class="portfolio-row" data-portfolio-expand="asset:${asset.id}" aria-expanded="${String(expanded)}" type="button"><span class="portfolio-row-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span class="portfolio-row-main"><strong>${escapeHtml(asset.name)} <em>${escapeHtml(asset.code)}</em></strong><small>${escapeHtml(this.categoryLabel(inferAssetProfile(asset).category))}${stale ? `<b class="stale-label">${this.t('stalePrice')}</b>` : ''}</small></span><span class="portfolio-row-value"><strong>${this.money(value)}</strong><small>${allocation.toFixed(1)}% <b class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</b></small></span><i>⌄</i></button><div class="portfolio-position-list ${expanded ? '' : 'hidden'}">${details || `<div class="account-empty">${this.t('emptyAsset')}</div>`}<button class="portfolio-manage" data-asset-menu="${asset.id}" type="button">${this.t('manageAsset')}</button></div></section>`;
           })
-          .join('');
-        return `<section class="position-group"><button class="position-group-head" data-position-group="${group.id}" aria-expanded="${String(!collapsed)}"><span class="list-icon ${this.iconLengthClass(icon)}" style="background:${color};color:#fff">${escapeHtml(icon)}</span><span><strong>${escapeHtml(identity?.name || '')}</strong><small>${group.positions.length} ${this.t('positionsShort')}</small></span><b>${this.money(group.total)}</b><i>⌄</i></button><div class="position-group-rows ${collapsed ? 'hidden' : ''}">${rows}</div></section>`;
-      })
-      .join('');
+          .join('')
+      : `<div class="empty-state">${this.t('emptyAssets')}</div>`;
   }
 
   private refreshHistoryScope(): void {
@@ -743,6 +797,77 @@ export class WorthRenderer {
     return this.t('positionHistory');
   }
 
+  private homePeriodStart(): number | undefined {
+    const durations = {
+      '1d': 24 * 60 * 60 * 1000,
+      '1w': 7 * 24 * 60 * 60 * 1000,
+      '1m': 30 * 24 * 60 * 60 * 1000,
+      '1y': 365 * 24 * 60 * 60 * 1000,
+    } as const;
+    return this.ui.homePeriod === 'all'
+      ? undefined
+      : Date.now() - durations[this.ui.homePeriod];
+  }
+
+  private homeReferencePoint(): PnlPoint | undefined {
+    const series = this.homePnlSeries();
+    return series.length > 1 ? series[0] : undefined;
+  }
+
+  private homeReferenceSnapshot(): Snapshot | undefined {
+    const point = this.homeReferencePoint();
+    return point
+      ? this.service.data.snapshots.find(
+          ({ createdAt }) => createdAt === point.createdAt,
+        )
+      : undefined;
+  }
+
+  private homePnl(
+    include: (position: SnapshotPosition) => boolean,
+  ): PnlResult | null {
+    return flowAdjustedPnl(this.homePnlSeries(), include);
+  }
+
+  private homePnlSeries(): PnlPoint[] {
+    return selectPnlSeriesSince(
+      this.compatibleSnapshots(),
+      this.currentPnlPoint(),
+      this.homePeriodStart(),
+    );
+  }
+
+  private homeSeries(): HistoryDatum[] {
+    const start = this.homePeriodStart();
+    const snapshots = this.service.data.snapshots.filter(
+      ({ createdAt }) => start === undefined || createdAt >= start,
+    );
+    const reference = this.homeReferenceSnapshot();
+    const series =
+      reference && !snapshots.some(({ id }) => id === reference.id)
+        ? [reference, ...snapshots]
+        : snapshots;
+    return [
+      ...series.map(({ createdAt, total }) => ({ createdAt, value: total })),
+      { createdAt: Date.now(), value: portfolioTotal(this.service.data) },
+    ];
+  }
+
+  private categoryLabel(category: string): string {
+    if (category === 'crypto') return this.t('crypto');
+    if (category === 'cash-currencies') return this.t('cashCurrencies');
+    if (category === 'precious-metals') return this.t('preciousMetals');
+    return this.t('other');
+  }
+
+  private tagLabel(tag: string): string {
+    if (tag === 'crypto') return this.t('crypto');
+    if (tag === 'currency') return this.t('currency');
+    if (tag === 'gold') return this.t('gold');
+    if (tag === 'stablecoin') return this.t('stablecoins');
+    return tag;
+  }
+
   private currentPnlPoint(): PnlPoint {
     return {
       createdAt: Date.now(),
@@ -786,17 +911,6 @@ export class WorthRenderer {
           ]
         : [],
     );
-  }
-
-  private pnl(
-    include: (position: SnapshotPosition) => boolean,
-  ): PnlResult | null {
-    const points = selectPnlSeries(
-      this.compatibleSnapshots(),
-      this.currentPnlPoint(),
-      this.service.settings.pnlPeriod,
-    );
-    return flowAdjustedPnl(points, include);
   }
 
   private pnlPercent(result: PnlResult | null): string {

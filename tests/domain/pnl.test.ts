@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   flowAdjustedPnl,
   selectPnlSeries,
+  selectPnlSeriesSince,
   type PnlPoint,
 } from '../../src/domain/pnl';
 
@@ -72,6 +73,16 @@ describe('flow-adjusted P&L', () => {
     expect(
       selectPnlSeries(snapshots, current, 'last').map((x) => x.createdAt),
     ).toEqual([2, 3]);
+  });
+
+  it('keeps every intermediate snapshot after the period baseline', () => {
+    const snapshots = [point(1, 1, 100), point(2, 2, 200), point(3, 2, 250)];
+    const current = point(4, 2, 300);
+
+    const series = selectPnlSeriesSince(snapshots, current, 1.5);
+
+    expect(series.map(({ createdAt }) => createdAt)).toEqual([1, 2, 3, 4]);
+    expect(flowAdjustedPnl(series, includeAll)?.pnl).toBe(300);
   });
 
   it('returns null without a comparable interval', () => {
