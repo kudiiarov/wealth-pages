@@ -103,7 +103,6 @@ export class WorthController {
       this.service.saveSettings({
         positionGrouping: grouping.dataset.grouping,
       });
-      this.renderer.ui.collapsedPositionGroups.clear();
       this.renderer.renderAll();
       return;
     }

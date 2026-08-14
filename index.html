@@ -50,12 +50,12 @@
 <button aria-controls="accountsList" aria-expanded="false" class="section-disclosure" id="accountsSectionToggle" type="button"><span><h2 data-i18n="accounts">Счета</h2><small id="accountsSectionMeta"></small></span><b>⌄</b></button>
 <button class="text-button" data-i18n="add" data-open="accountModal">Добавить</button>
 </div>
-<div class="card-list hidden" id="accountsList"></div>
+<div class="card-list" id="accountsList"></div>
 <div class="section-title-row">
 <button aria-controls="assetsList" aria-expanded="false" class="section-disclosure" id="assetsSectionToggle" type="button"><span><h2 data-i18n="assets">Активы</h2><small id="assetsSectionMeta"></small></span><b>⌄</b></button>
 <button class="text-button" data-i18n="add" data-open="assetModal">Добавить</button>
 </div>
-<div class="card-list hidden" id="assetsList"></div>
+<div class="card-list" id="assetsList"></div>
 </section>
 <section aria-labelledby="positionsTitle" class="view" id="positionsView">
 <div class="page-heading">
@@ -112,7 +112,7 @@
 <span class="automation-controls"><select aria-label="Период обновления цен" id="priceRefreshIntervalHours"><option value="1">1 ч</option><option value="3">3 ч</option><option value="6">6 ч</option><option value="12">12 ч</option><option value="24">24 ч</option></select><input id="autoPriceRefresh" type="checkbox"/></span>
 </label>
 <label class="settings-row automation-row">
-<span><strong data-i18n="autoSnapshot">Автоснимки</strong><small data-i18n="autoSnapshotSub">Сохранять историю после обновления цен</small></span>
+<span><strong data-i18n="autoSnapshot">Автоснимки</strong><small data-i18n="autoSnapshotSub">Автоматически сохранять историю портфеля</small></span>
 <span class="automation-controls"><select aria-label="Период снимков" id="snapshotIntervalHours"><option value="1">1 ч</option><option value="3">3 ч</option><option value="6">6 ч</option><option value="12">12 ч</option><option value="24">24 ч</option></select><input id="autoSnapshot" type="checkbox"/></span>
 </label>
 </section>
@@ -138,7 +138,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 3.2.0-final</div>
+<div class="build-note">Worth · 3.2.1-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">

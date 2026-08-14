@@ -41,7 +41,11 @@ import {
 import { drawHistoryChart, type HistoryDatum } from './chart';
 import { all, escapeHtml, requiredElement } from './dom';
 import { formControl } from './forms';
-import { allocationRows } from './portfolio-view-model';
+import {
+  accountOverviewRows,
+  allocationRows,
+  assetOverviewRows,
+} from './portfolio-view-model';
 import { buildPositionGroups } from './position-groups';
 
 const palette = [
@@ -361,6 +365,11 @@ export class WorthRenderer {
       this.service.settings.snapshotIntervalHours,
     );
     snapshotInterval.disabled = !this.service.settings.autoSnapshot;
+    for (const select of [priceInterval, snapshotInterval]) {
+      for (const option of select.options) {
+        option.textContent = this.t('hoursLabel', Number(option.value));
+      }
+    }
     const currencyButton = this.element('displayCurrencyBtn');
     currencyButton.setAttribute('aria-label', this.t('displayCurrencyAria'));
     currencyButton.setAttribute('title', this.t('displayCurrencyTitle'));
@@ -457,20 +466,21 @@ export class WorthRenderer {
 
   private renderAccounts(): void {
     const list = this.element('accountsList');
-    list.classList.toggle('hidden', !this.ui.accountsSectionExpanded);
     const toggle = this.element('accountsSectionToggle');
     toggle.setAttribute(
       'aria-expanded',
       String(this.ui.accountsSectionExpanded),
     );
+    const rows = accountOverviewRows(this.service.data);
     this.element('accountsSectionMeta').textContent =
-      `${this.service.data.accounts.length} · ${this.money(portfolioTotal({ ...this.service.data, positions: this.service.data.positions }))}`;
+      `${Math.min(rows.length, this.ui.accountsSectionExpanded ? rows.length : 3)} / ${rows.length} · ${this.money(portfolioTotal(this.service.data))}`;
     if (!this.service.data.accounts.length) {
       list.innerHTML = `<div class="empty-state">${this.t('emptyAccounts')}</div>`;
       return;
     }
-    list.innerHTML = this.service.data.accounts
-      .map((account) => {
+    list.innerHTML = rows
+      .slice(0, this.ui.accountsSectionExpanded ? undefined : 3)
+      .map(({ account }) => {
         const open = this.ui.expandedAccounts.has(account.id);
         const positions = this.service.data.positions.filter(
           ({ accountId }) => accountId === account.id,
@@ -494,17 +504,18 @@ export class WorthRenderer {
 
   private renderAssets(): void {
     const list = this.element('assetsList');
-    list.classList.toggle('hidden', !this.ui.assetsSectionExpanded);
     const toggle = this.element('assetsSectionToggle');
     toggle.setAttribute('aria-expanded', String(this.ui.assetsSectionExpanded));
+    const rows = assetOverviewRows(this.service.data);
     this.element('assetsSectionMeta').textContent =
-      `${this.service.data.assets.length} · ${this.money(portfolioTotal(this.service.data))}`;
+      `${Math.min(rows.length, this.ui.assetsSectionExpanded ? rows.length : 3)} / ${rows.length} · ${this.money(portfolioTotal(this.service.data))}`;
     if (!this.service.data.assets.length) {
       list.innerHTML = `<div class="empty-state">${this.t('emptyAssets')}</div>`;
       return;
     }
-    list.innerHTML = this.service.data.assets
-      .map((asset) => {
+    list.innerHTML = rows
+      .slice(0, this.ui.assetsSectionExpanded ? undefined : 3)
+      .map(({ asset }) => {
         const open = this.ui.expandedAssets.has(asset.id);
         const positions = this.service.data.positions.filter(
           ({ assetId }) => assetId === asset.id,

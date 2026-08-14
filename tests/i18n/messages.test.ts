@@ -23,4 +23,13 @@ describe('localized messages', () => {
     expect(translate('ru', 'assetsCount', 5)).toBe('5 активов');
     expect(translate('ru', 'assetsCount', 11)).toBe('11 активов');
   });
+
+  it('localizes automation intervals and keeps snapshot copy implementation-neutral', () => {
+    expect(translate('ru', 'hoursLabel', 3)).toBe('3 ч');
+    expect(translate('en', 'hoursLabel', 1)).toBe('1 hour');
+    expect(translate('en', 'hoursLabel', 6)).toBe('6 hours');
+    expect(translate('en', 'autoSnapshotSub')).toBe(
+      'Automatically create portfolio history',
+    );
+  });
 });

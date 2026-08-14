@@ -1,6 +1,10 @@
 import { expect, it } from 'vitest';
 
-import { allocationRows } from '../../src/ui/portfolio-view-model';
+import {
+  accountOverviewRows,
+  allocationRows,
+  assetOverviewRows,
+} from '../../src/ui/portfolio-view-model';
 import type { PortfolioData } from '../../src/domain/models';
 
 it('orders allocation by absolute value without truncating the bar data', () => {
@@ -62,5 +66,72 @@ it('orders allocation by absolute value without truncating the bar data', () => 
     ['y', 50],
     ['z', 20],
     ['w', 10],
+  ]);
+});
+
+it('orders account and asset overviews by absolute value including empty entities', () => {
+  const data: PortfolioData = {
+    accounts: [
+      { id: 'small', name: 'Small', type: 'cash', icon: 'S', color: '#111111' },
+      { id: 'large', name: 'Large', type: 'cash', icon: 'L', color: '#222222' },
+      { id: 'empty', name: 'Empty', type: 'cash', icon: 'E', color: '#333333' },
+    ],
+    assets: [
+      {
+        id: 'positive',
+        name: 'Positive',
+        code: 'POS',
+        icon: 'P',
+        color: '#111111',
+        price: 10,
+        autoUpdateSource: 'none',
+      },
+      {
+        id: 'liability',
+        name: 'Liability',
+        code: 'NEG',
+        icon: 'N',
+        color: '#222222',
+        price: 20,
+        autoUpdateSource: 'none',
+      },
+      {
+        id: 'unused',
+        name: 'Unused',
+        code: 'NIL',
+        icon: 'U',
+        color: '#333333',
+        price: 1,
+        autoUpdateSource: 'none',
+      },
+    ],
+    positions: [
+      {
+        id: '1',
+        accountId: 'small',
+        assetId: 'positive',
+        quantity: 1,
+        comment: '',
+      },
+      {
+        id: '2',
+        accountId: 'large',
+        assetId: 'liability',
+        quantity: -2,
+        comment: '',
+      },
+    ],
+    snapshots: [],
+  };
+
+  expect(accountOverviewRows(data).map(({ account }) => account.id)).toEqual([
+    'large',
+    'small',
+    'empty',
+  ]);
+  expect(assetOverviewRows(data).map(({ asset }) => asset.id)).toEqual([
+    'liability',
+    'positive',
+    'unused',
   ]);
 });
