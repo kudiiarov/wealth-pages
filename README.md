@@ -103,3 +103,12 @@ python3 -m http.server 8080
 - Automatic updates persist `priceSource` and `priceUpdatedAt` in the asset JSON automatically.
 - Completed additional EN localization, including the display-currency selector and dynamic option labels.
 - JSON schema version 10; old backups remain compatible.
+
+
+## 2.2-final
+- Manual asset price entry now supports a selected quote currency (USD, RUB, CNY, EUR, or any asset with a known USD price).
+- The quote-currency selector sits to the right of the price field in single-price edit and bulk update.
+- Entered prices are converted to the canonical USD-per-unit price before storage.
+- `manualPriceCurrency` is stored in asset JSON for convenience; old JSON remains compatible.
+- Asset cards now show the relative time of the latest successful automatic price refresh from `priceUpdatedAt`.
+- JSON schema version 11.

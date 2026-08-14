@@ -128,7 +128,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 2.1-final</div>
+<div class="build-note">Worth · 2.2-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">
@@ -181,7 +181,9 @@
 <div class="sheet-handle"></div>
 <div class="sheet-head"><div><div class="section-kicker" data-i18n="price">Цена</div><h2 id="priceAssetTitle">Актив</h2></div><button class="close-button" data-close="priceModal" type="button">×</button></div>
 <input name="assetId" type="hidden"/>
-<label class="field"><span data-i18n="unitPrice">Цена за единицу, $</span><input autocomplete="off" inputmode="decimal" name="price" required="" type="text"/></label>
+<label class="field"><span data-i18n="unitPrice">Цена за единицу</span>
+<div class="price-entry"><input name="price" required type="text" inputmode="decimal" autocomplete="off"/><select name="priceCurrency" class="price-currency-select" aria-label="Price currency"></select></div>
+</label>
 <button class="sheet-primary" data-i18n="updatePrice" type="submit">Обновить цену</button>
 </form>
 </dialog>
