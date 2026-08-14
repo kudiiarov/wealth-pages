@@ -243,6 +243,12 @@ export class WorthController {
       });
       this.renderer.renderAll();
     });
+    this.element('privacyToggle').addEventListener('click', () => {
+      this.service.saveSettings({
+        balancesHidden: !this.service.settings.balancesHidden,
+      });
+      this.renderer.renderAll();
+    });
     requiredElement(
       'autoPriceRefresh',
       HTMLInputElement,

@@ -19,6 +19,7 @@ function settings(overrides: Partial<AppSettings> = {}): AppSettings {
     autoSnapshot: true,
     snapshotIntervalHours: 6,
     positionGrouping: 'accounts',
+    balancesHidden: false,
     ...overrides,
   };
 }

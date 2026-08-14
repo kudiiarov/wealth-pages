@@ -53,6 +53,7 @@ describe('BrowserSettingsStore', () => {
       autoSnapshot: false,
       snapshotIntervalHours: 6,
       positionGrouping: 'accounts',
+      balancesHidden: false,
     });
   });
 
@@ -81,6 +82,7 @@ describe('BrowserSettingsStore', () => {
       snapshotIntervalHours: 24,
       lastSnapshotAt: 1_700_000_100_000,
       positionGrouping: 'assets',
+      balancesHidden: true,
     });
 
     expect(store.load()).toMatchObject({
@@ -91,6 +93,7 @@ describe('BrowserSettingsStore', () => {
       snapshotIntervalHours: 24,
       lastSnapshotAt: 1_700_000_100_000,
       positionGrouping: 'assets',
+      balancesHidden: true,
     });
   });
 

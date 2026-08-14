@@ -29,6 +29,7 @@ const defaults: AppSettings = {
   autoSnapshot: false,
   snapshotIntervalHours: 6,
   positionGrouping: 'accounts',
+  balancesHidden: false,
 };
 
 class MemoryRepository implements PortfolioRepository {

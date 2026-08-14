@@ -14,6 +14,7 @@ export const SETTINGS_KEYS = {
   snapshotIntervalHours: 'worth-snapshot-hours',
   lastSnapshotAt: 'worth-last-snapshot',
   positionGrouping: 'worth-position-grouping',
+  balancesHidden: 'worth-balances-hidden',
 } as const;
 
 const AUTOMATION_INTERVALS: readonly AutomationInterval[] = [1, 3, 6, 12, 24];
@@ -77,6 +78,8 @@ export class BrowserSettingsStore implements SettingsStore {
         this.storage.getItem(SETTINGS_KEYS.positionGrouping) === 'assets'
           ? 'assets'
           : 'accounts',
+      balancesHidden:
+        this.storage.getItem(SETTINGS_KEYS.balancesHidden) === '1',
     };
   }
 
@@ -131,6 +134,11 @@ export class BrowserSettingsStore implements SettingsStore {
       this.storage.setItem(
         SETTINGS_KEYS.positionGrouping,
         settings.positionGrouping,
+      );
+    if (settings.balancesHidden !== undefined)
+      this.storage.setItem(
+        SETTINGS_KEYS.balancesHidden,
+        settings.balancesHidden ? '1' : '0',
       );
   }
 }

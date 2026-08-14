@@ -100,6 +100,7 @@ export class WorthRenderer {
     this.applyTheme();
     this.applyLanguage();
     this.renderCurrencyButton();
+    this.renderPrivacyToggle();
     this.renderPnlSummary();
     this.renderAllocation();
     this.renderAccounts();
@@ -229,7 +230,17 @@ export class WorthRenderer {
   }
 
   money(value: number): string {
+    if (this.service.settings.balancesHidden) return '••••';
     return formatMoney(value, this.language, this.displayAsset());
+  }
+
+  private renderPrivacyToggle(): void {
+    const button = this.element('privacyToggle');
+    const hidden = this.service.settings.balancesHidden;
+    const label = this.t(hidden ? 'showBalances' : 'hideBalances');
+    button.setAttribute('aria-pressed', String(hidden));
+    button.setAttribute('aria-label', label);
+    button.setAttribute('title', label);
   }
 
   accountBy(id: string): Account | undefined {
@@ -415,7 +426,9 @@ export class WorthRenderer {
     const sign = result.pnl > 0 ? '+' : result.pnl < 0 ? '−' : '';
     const style =
       result.pnl > 0 ? 'pnl-positive' : result.pnl < 0 ? 'pnl-negative' : '';
-    moneyElement.textContent = `${sign}${this.money(Math.abs(result.pnl))}`;
+    moneyElement.textContent = this.service.settings.balancesHidden
+      ? this.money(Math.abs(result.pnl))
+      : `${sign}${this.money(Math.abs(result.pnl))}`;
     percentElement.textContent = `${sign}${Math.abs(result.pct || 0).toFixed(2)}%`;
     dateButton.textContent = new Intl.DateTimeFormat(locale(this.language), {
       day: '2-digit',
@@ -574,6 +587,9 @@ export class WorthRenderer {
               ? `<span class="position-comment">• ${escapeHtml(position.comment)}</span>`
               : '';
             const pnl = this.pnl((record) => record.positionId === position.id);
+            if (this.service.settings.positionGrouping === 'assets') {
+              return `<div class="list-card position-asset-child"><div class="list-main"><div class="position-title-line"><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong>${comment}</div><small>${formatNumber(position.quantity, this.language)} ${this.t('unitShort')}</small></div><div class="list-value"><strong>${this.money(positionValue(position, this.service.data.assets))}</strong><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div><button class="menu-button" data-position-menu="${position.id}" aria-label="${this.t('actions')}">···</button></div>`;
+            }
             return `<div class="list-card"><div class="list-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)};color:#fff">${escapeHtml(this.assetIcon(asset))}</div><div class="list-main"><div class="position-title-line"><strong>${escapeHtml(asset?.code || asset?.name || this.t('asset'))}</strong>${comment}</div><small>${escapeHtml(account?.name || this.t('deletedAccount'))} · ${formatNumber(position.quantity, this.language)} ${this.t('unitShort')} · ${escapeHtml(asset?.name || '')}</small></div><div class="list-value"><strong>${this.money(positionValue(position, this.service.data.assets))}</strong><small>${asset ? this.money(asset.price) : '—'} / ${this.t('unitShort')}</small><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div><button class="menu-button" data-position-menu="${position.id}" aria-label="${this.t('actions')}">···</button></div>`;
           })
           .join('');

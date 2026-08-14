@@ -33,6 +33,21 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
 
   await expect(page.locator('#homeTitle')).toHaveText('$100.00');
   await expect(page.locator('#positionsList')).toContainText('Основной счёт');
+  await page.locator('[data-grouping="assets"]').click();
+  await expect(page.locator('.position-asset-child')).toContainText(
+    'Основной счёт',
+  );
+  await expect(page.locator('.position-asset-child .list-icon')).toHaveCount(0);
+  await expect(page.locator('.position-asset-child')).not.toContainText(
+    'Доллар',
+  );
+  await page.locator('[data-nav="homeView"]').click();
+  await page.locator('#privacyToggle').click();
+  await expect(page.locator('#homeTitle')).toHaveText('••••');
+  await page.reload();
+  await expect(page.locator('#homeTitle')).toHaveText('••••');
+  await page.locator('#privacyToggle').click();
+  await expect(page.locator('#homeTitle')).toHaveText('$100.00');
   await page.locator('[data-nav="historyView"]').click();
   await page.locator('#saveSnapshotBtnHistory').click();
   await expect(page.locator('#toast')).toContainText('Снимок');

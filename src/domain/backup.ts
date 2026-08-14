@@ -7,7 +7,7 @@ import type {
 import { normalizeData } from './normalize';
 
 export const BACKUP_VERSION = 15;
-export const APP_VERSION = '3.2.1-final';
+export const APP_VERSION = '3.2.2-final';
 
 export interface ValidatedBackup {
   version: number;
@@ -91,6 +91,8 @@ function parseSettings(value: unknown): Partial<AppSettings> | undefined {
     value.positionGrouping === 'assets'
   )
     settings.positionGrouping = value.positionGrouping;
+  if (typeof value.balancesHidden === 'boolean')
+    settings.balancesHidden = value.balancesHidden;
   return Object.keys(settings).length > 0 ? settings : undefined;
 }
 

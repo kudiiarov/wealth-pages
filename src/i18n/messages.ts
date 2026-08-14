@@ -16,6 +16,8 @@ function declineRussian(
 
 const ru = {
   totalBalance: 'Общий баланс',
+  hideBalances: 'Скрыть суммы',
+  showBalances: 'Показать суммы',
   position: 'Позиция',
   update: 'Обновить',
   snapshot: 'Снимок',
@@ -219,6 +221,8 @@ type MessageDictionary = {
 
 const en = {
   totalBalance: 'Total balance',
+  hideBalances: 'Hide balances',
+  showBalances: 'Show balances',
   position: 'Position',
   update: 'Update',
   snapshot: 'Snapshot',

@@ -112,6 +112,7 @@ export interface AppSettings {
   snapshotIntervalHours: AutomationInterval;
   lastSnapshotAt?: number;
   positionGrouping: PositionGrouping;
+  balancesHidden: boolean;
 }
 
 export type StoreName = keyof PortfolioData;
