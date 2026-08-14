@@ -10,9 +10,8 @@
 <meta content="Worth" name="apple-mobile-web-app-title"/>
 <meta content="telephone=no" name="format-detection"/>
 <title data-i18n="appTitle">Worth — личный портфель</title>
-<link href="./manifest.json" rel="manifest"/>
-<link href="./icon.svg" rel="icon" type="image/svg+xml"/>
-<link href="./styles.css" rel="stylesheet"/>
+<link href="%BASE_URL%manifest.webmanifest" rel="manifest"/>
+<link href="%BASE_URL%icon.svg" rel="icon" type="image/svg+xml"/>
 </head>
 <body>
 <div class="app-shell">
@@ -267,7 +266,6 @@
 </div>
 </dialog>
 <div aria-live="polite" class="toast" id="toast" role="status"></div>
-<script src="./core.js"></script>
-<script src="./app.js"></script>
+<script type="module" src="/src/main.ts"></script>
 </body>
 </html>

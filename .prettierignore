@@ -1,0 +1,6 @@
+index.html
+README.md
+tests/fixtures/legacy-core.cjs
+dist
+node_modules
+package-lock.json
