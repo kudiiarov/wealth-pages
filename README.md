@@ -112,3 +112,12 @@ python3 -m http.server 8080
 - `manualPriceCurrency` is stored in asset JSON for convenience; old JSON remains compatible.
 - Asset cards now show the relative time of the latest successful automatic price refresh from `priceUpdatedAt`.
 - JSON schema version 11.
+
+
+## 2.3-final
+- Explicit asset auto-update source: None / CoinGecko / Frankfurter.
+- Bulk refresh updates only configured assets.
+- Frankfurter uses v2 pair requests `USD/{CODE}`, fixing explicit RUB updates.
+- Export JSON now includes appSettings: language, theme, displayCurrency.
+- Import restores appSettings when present; old backups remain compatible.
+- JSON schema version 12.

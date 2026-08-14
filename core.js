@@ -36,6 +36,7 @@
     x.icon=trimIcon(x.icon,x.code.slice(0,5)||'•');
     x.color=validColor(x.color)?x.color:DEFAULT_ASSET_COLOR;
     x.price=n(x.price);
+    x.autoUpdateSource=['coingecko','frankfurter'].includes(x.autoUpdateSource)?x.autoUpdateSource:'none';
     return x;
   }
   function normalizeSnapshot(s){

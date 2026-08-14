@@ -128,7 +128,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 2.2-final</div>
+<div class="build-note">Worth · 2.3-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">
@@ -161,6 +161,13 @@
 <label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color" value="#5667ff"/><b data-i18n="choose">Выбрать</b></span></label>
 </div>
 <label class="field"><span data-i18n="currentPrice">Текущая цена за единицу, $</span><input autocomplete="off" inputmode="decimal" name="price" placeholder="1,00" required="" type="text"/></label>
+<label class="field"><span data-i18n="autoUpdate">Автообновление</span>
+<select name="autoUpdateSource">
+<option value="none" data-i18n="autoNone">Нет</option>
+<option value="coingecko">CoinGecko</option>
+<option value="frankfurter">Frankfurter</option>
+</select>
+</label>
 <button class="sheet-primary" data-i18n="createAsset" type="submit">Создать актив</button>
 </form>
 </dialog>
@@ -221,6 +228,13 @@
 <label class="field"><span data-i18n="icon">Иконка · 1–5 символов</span><input autocomplete="off" maxlength="5" name="icon"/></label>
 <label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color"/><b data-i18n="choose">Выбрать</b></span></label>
 </div>
+<label class="field"><span data-i18n="autoUpdate">Автообновление</span>
+<select name="autoUpdateSource">
+<option value="none" data-i18n="autoNone">Нет</option>
+<option value="coingecko">CoinGecko</option>
+<option value="frankfurter">Frankfurter</option>
+</select>
+</label>
 <button class="sheet-primary" data-i18n="save" type="submit">Сохранить</button>
 </form>
 </dialog>
