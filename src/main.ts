@@ -4,6 +4,7 @@ import { PortfolioService } from './application/portfolio-service';
 import { HttpPriceProvider } from './infrastructure/http/price-providers';
 import { IndexedDbPortfolioRepository } from './infrastructure/indexeddb/portfolio-repository';
 import { BrowserFileTransfer } from './platform/browser/file-transfer';
+import { BrowserDiagnosticLog } from './platform/browser/diagnostic-log';
 import { BrowserSettingsStore } from './platform/browser/settings-store';
 import { WorthController } from './ui/events';
 import { WorthRenderer } from './ui/render';
@@ -18,11 +19,13 @@ function nextId(): string {
 
 async function start(): Promise<void> {
   const settings = new BrowserSettingsStore();
+  const diagnostics = new BrowserDiagnosticLog();
   const service = new PortfolioService({
     repository: new IndexedDbPortfolioRepository(),
     settings,
     files: new BrowserFileTransfer(),
-    prices: new HttpPriceProvider(),
+    diagnostics,
+    prices: new HttpPriceProvider(fetch, Date.now, diagnostics),
     clock: {
       now: Date.now,
       isoNow: () => new Date().toISOString(),

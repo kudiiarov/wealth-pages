@@ -1706,6 +1706,62 @@ html[data-theme='dark'] .quick-position-row > input {
   width: 100%;
 }
 
+.diagnostics-sheet {
+  min-height: min(78vh, 680px);
+}
+
+.diagnostics-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.diagnostic-entry {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--muted);
+  border-radius: 14px;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.diagnostic-entry.diagnostic-warn {
+  border-left-color: #d99516;
+}
+
+.diagnostic-entry.diagnostic-error {
+  border-left-color: var(--red);
+}
+
+.diagnostic-entry time,
+.diagnostic-entry code {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.diagnostic-entry p {
+  margin: 0;
+}
+
+.diagnostics-actions {
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding: 14px 0 max(14px, env(safe-area-inset-bottom));
+  position: sticky;
+}
+
+.danger-text {
+  color: var(--red);
+}
+
 /* 2.4-final */
 .pnl-period-wrap {
   margin-top: 14px;

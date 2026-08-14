@@ -15,6 +15,8 @@ import {
 import { buildSnapshot } from '../domain/snapshots';
 import type {
   Clock,
+  DiagnosticEntry,
+  DiagnosticLog,
   FileTransfer,
   IdGenerator,
   PortfolioRepository,
@@ -27,6 +29,7 @@ export interface PortfolioServiceDependencies {
   repository: PortfolioRepository;
   settings: SettingsStore;
   files: FileTransfer;
+  diagnostics: DiagnosticLog;
   prices: PriceProvider;
   clock: Clock;
   ids: IdGenerator;
@@ -83,6 +86,14 @@ export class PortfolioService {
 
   get settings(): AppSettings {
     return this.appSettings;
+  }
+
+  getDiagnostics(): DiagnosticEntry[] {
+    return this.dependencies.diagnostics.list();
+  }
+
+  clearDiagnostics(): void {
+    this.dependencies.diagnostics.clear();
   }
 
   async initialize(): Promise<void> {
@@ -275,6 +286,18 @@ export class PortfolioService {
     }
 
     await this.reload();
+    this.dependencies.diagnostics.record({
+      level:
+        batch.failures.length === 0 ? 'info' : updated > 0 ? 'warn' : 'error',
+      scope: 'prices',
+      event: 'refresh.completed',
+      context: {
+        requested: targets.length,
+        updated,
+        failed: batch.failures.length,
+        skipped: batch.skipped.length,
+      },
+    });
     return {
       updated,
       skipped: batch.skipped.length,

@@ -39,6 +39,25 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
   await expect(page.locator('#accountsList')).toContainText('Основной счёт');
 
   await page.locator('#settingsShortcut').click();
+  await page.locator('#refreshPricesBtn').click();
+  await expect(page.locator('#toast')).toContainText(
+    'Нет активов с доступным автоматическим источником цены',
+  );
+  await page.locator('#diagnosticsBtn').click();
+  await expect(page.locator('#diagnosticsModal')).toBeVisible();
+  await expect(page.locator('#diagnosticsModal')).toContainText(
+    'Журнал событий',
+  );
+  await expect(page.locator('#diagnosticsList')).toContainText(
+    'prices.refresh.completed',
+  );
+  await expect(page.locator('#copyDiagnosticsBtn')).toBeVisible();
+  await page.locator('#clearDiagnosticsBtn').click();
+  await expect(page.locator('#diagnosticsList')).toContainText(
+    'Событий пока нет',
+  );
+  await page.locator('[data-close="diagnosticsModal"]').click();
+
   const downloadPromise = page.waitForEvent('download');
   await page.locator('#exportBtn').click();
   const download = await downloadPromise;

@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type {
+  DiagnosticEvent,
+  DiagnosticLog,
+} from '../../src/application/ports';
 import type { Asset } from '../../src/domain/models';
 import { HttpPriceProvider } from '../../src/infrastructure/http/price-providers';
 
@@ -18,6 +22,22 @@ function asset(code: string, source: Asset['autoUpdateSource']): Asset {
 function requestUrl(input: RequestInfo | URL): string {
   if (typeof input === 'string') return input;
   return input instanceof URL ? input.href : input.url;
+}
+
+class CapturingDiagnosticLog implements DiagnosticLog {
+  readonly events: DiagnosticEvent[] = [];
+
+  record(event: DiagnosticEvent): void {
+    this.events.push(structuredClone(event));
+  }
+
+  list() {
+    return [];
+  }
+
+  clear(): void {
+    this.events.length = 0;
+  }
 }
 
 describe('HttpPriceProvider', () => {
@@ -69,7 +89,12 @@ describe('HttpPriceProvider', () => {
   });
 
   it('skips unknown and unconfigured assets instead of guessing', async () => {
-    const provider = new HttpPriceProvider(fetchMock, () => 10_000);
+    const diagnostics = new CapturingDiagnosticLog();
+    const provider = new HttpPriceProvider(
+      fetchMock,
+      () => 10_000,
+      diagnostics,
+    );
 
     const result = await provider.getUsdPrices([
       asset('UNKNOWN', 'coingecko'),
@@ -78,6 +103,28 @@ describe('HttpPriceProvider', () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(result.skipped).toEqual(['unknown', 'usd']);
+    expect(diagnostics.events).toEqual([
+      {
+        level: 'warn',
+        scope: 'prices',
+        event: 'asset.skipped',
+        context: {
+          asset: 'UNKNOWN',
+          provider: 'coingecko',
+          reason: 'unsupported-code',
+        },
+      },
+      {
+        level: 'info',
+        scope: 'prices',
+        event: 'asset.skipped',
+        context: {
+          asset: 'USD',
+          provider: 'none',
+          reason: 'unconfigured',
+        },
+      },
+    ]);
   });
 
   it('caches fiat pairs for 60 seconds and reports partial failures', async () => {
@@ -105,5 +152,66 @@ describe('HttpPriceProvider', () => {
     ]);
     expect(second.quotes).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('records provider, assets, URL, status, and error for diagnostics', async () => {
+    fetchMock.mockResolvedValue(new Response('rate limited', { status: 429 }));
+    const diagnostics = new CapturingDiagnosticLog();
+    const provider = new HttpPriceProvider(
+      fetchMock,
+      () => 10_000,
+      diagnostics,
+    );
+
+    await provider.getUsdPrices([asset('BTC', 'coingecko')]);
+
+    expect(diagnostics.events).toEqual([
+      {
+        level: 'info',
+        scope: 'prices',
+        event: 'request.started',
+        context: {
+          provider: 'coingecko',
+          assets: 'BTC',
+          url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+        },
+      },
+      {
+        level: 'error',
+        scope: 'prices',
+        event: 'request.failed',
+        message: 'CoinGecko 429',
+        context: {
+          provider: 'coingecko',
+          assets: 'BTC',
+          status: 429,
+          url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+        },
+      },
+    ]);
+  });
+
+  it('records a network exception when WebKit returns no HTTP response', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Load failed'));
+    const diagnostics = new CapturingDiagnosticLog();
+    const provider = new HttpPriceProvider(
+      fetchMock,
+      () => 10_000,
+      diagnostics,
+    );
+
+    await provider.getUsdPrices([asset('RUB', 'frankfurter')]);
+
+    expect(diagnostics.events.at(-1)).toEqual({
+      level: 'error',
+      scope: 'prices',
+      event: 'request.failed',
+      message: 'Load failed',
+      context: {
+        provider: 'frankfurter',
+        assets: 'RUB',
+        url: 'https://api.frankfurter.dev/v2/rate/USD/RUB',
+      },
+    });
   });
 });

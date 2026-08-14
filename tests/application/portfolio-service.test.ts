@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type {
+  DiagnosticEntry,
+  DiagnosticEvent,
+  DiagnosticLog,
   EntityByStore,
   FileTransfer,
   PortfolioRepository,
@@ -91,16 +94,38 @@ class FixedPrices implements PriceProvider {
   }
 }
 
+class MemoryDiagnostics implements DiagnosticLog {
+  readonly entries: DiagnosticEntry[] = [];
+
+  record(event: DiagnosticEvent): void {
+    this.entries.unshift({
+      ...structuredClone(event),
+      id: `log-${this.entries.length + 1}`,
+      createdAt: 1_700_000_000_000,
+    });
+  }
+
+  list(): DiagnosticEntry[] {
+    return structuredClone(this.entries);
+  }
+
+  clear(): void {
+    this.entries.length = 0;
+  }
+}
+
 describe('PortfolioService', () => {
   let repository: MemoryRepository;
   let settings: MemorySettings;
   let files: CapturingFiles;
+  let diagnostics: MemoryDiagnostics;
   let nextId: number;
 
   beforeEach(() => {
     repository = new MemoryRepository();
     settings = new MemorySettings();
     files = new CapturingFiles();
+    diagnostics = new MemoryDiagnostics();
     nextId = 1;
   });
 
@@ -115,6 +140,7 @@ describe('PortfolioService', () => {
       repository,
       settings,
       files,
+      diagnostics,
       prices,
       clock: {
         now: () => 1_700_000_000_000,
@@ -244,5 +270,14 @@ describe('PortfolioService', () => {
       priceUpdatedAt: 1_700_000_000_000,
     });
     expect(app.data.assets.find(({ id }) => id === 'eur')?.price).toBe(1.1);
+    expect(app.getDiagnostics()[0]).toMatchObject({
+      level: 'warn',
+      scope: 'prices',
+      event: 'refresh.completed',
+      context: { requested: 2, updated: 1, failed: 1, skipped: 0 },
+    });
+
+    app.clearDiagnostics();
+    expect(app.getDiagnostics()).toEqual([]);
   });
 });

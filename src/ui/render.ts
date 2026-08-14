@@ -1,4 +1,5 @@
 import type { PortfolioService } from '../application/portfolio-service';
+import type { DiagnosticEntry } from '../application/ports';
 import type {
   Account,
   Asset,
@@ -117,6 +118,21 @@ export class WorthRenderer {
         return `<section class="quick-asset-card"><div class="quick-asset-head"><span class="quick-asset-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><div class="quick-asset-meta"><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(asset.code)} · ${this.money(this.assetTotal(asset.id))}</small></div></div><label class="quick-price-row"><span><strong>${this.t('unitPriceLabel')}</strong><small>${this.t('basePrice')}</small></span><div class="quick-price-entry"><input type="text" inputmode="decimal" autocomplete="off" data-asset-price="${asset.id}" value="${inputDecimal(asset.price, this.language)}" aria-label="${escapeHtml(this.t('priceUsd', asset.code))}"><select data-asset-price-currency="${asset.id}" class="price-currency-select">${this.currencySelectOptions('USD')}</select></div></label><div class="quick-positions-block"><div class="quick-block-title">${this.t('balances')}</div>${rows}</div></section>`;
       })
       .join('');
+  }
+
+  renderDiagnostics(): void {
+    const entries = this.service.getDiagnostics();
+    const container = this.element('diagnosticsList');
+    container.innerHTML = entries.length
+      ? entries.map((entry) => this.diagnosticEntryHtml(entry)).join('')
+      : `<div class="empty-state">${this.t('noDiagnosticEvents')}</div>`;
+  }
+
+  diagnosticsText(): string {
+    return this.service
+      .getDiagnostics()
+      .map((entry) => this.diagnosticEntryText(entry))
+      .join('\n');
   }
 
   renderCurrencyOptions(): void {
@@ -241,6 +257,38 @@ export class WorthRenderer {
 
   private element(id: string): HTMLElement {
     return requiredElement(id, HTMLElement, this.documentRef);
+  }
+
+  private diagnosticEntryText(entry: DiagnosticEntry): string {
+    const timestamp = new Date(entry.createdAt).toISOString();
+    const context = entry.context
+      ? Object.entries(entry.context)
+          .map(([key, value]) => `${key}=${String(value)}`)
+          .join(' · ')
+      : '';
+    return [
+      timestamp,
+      entry.level.toUpperCase(),
+      `${entry.scope}.${entry.event}`,
+      entry.message,
+      context,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+  }
+
+  private diagnosticEntryHtml(entry: DiagnosticEntry): string {
+    const text = this.diagnosticEntryText(entry);
+    const [headline = '', ...details] = text.split(' | ');
+    return `<article class="diagnostic-entry diagnostic-${entry.level}"><time>${escapeHtml(headline)}</time><strong>${escapeHtml(`${entry.scope}.${entry.event}`)}</strong>${entry.message ? `<p>${escapeHtml(entry.message)}</p>` : ''}${
+      entry.context
+        ? `<code>${escapeHtml(
+            Object.entries(entry.context)
+              .map(([key, value]) => `${key}=${String(value)}`)
+              .join(' · '),
+          )}</code>`
+        : ''
+    }<span class="sr-only">${escapeHtml(details.join(' | '))}</span></article>`;
   }
 
   private applyLanguage(): void {

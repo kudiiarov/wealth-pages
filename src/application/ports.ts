@@ -28,6 +28,33 @@ export interface SettingsStore {
   save(settings: Partial<AppSettings>): void;
 }
 
+export type DiagnosticLevel = 'info' | 'warn' | 'error';
+export type DiagnosticValue = string | number | boolean | null;
+
+export interface DiagnosticEntry {
+  id: string;
+  createdAt: number;
+  level: DiagnosticLevel;
+  scope: string;
+  event: string;
+  message?: string;
+  context?: Record<string, DiagnosticValue>;
+}
+
+export type DiagnosticEvent = Omit<DiagnosticEntry, 'id' | 'createdAt'>;
+
+export interface DiagnosticLog {
+  record(event: DiagnosticEvent): void;
+  list(): DiagnosticEntry[];
+  clear(): void;
+}
+
+export const NOOP_DIAGNOSTIC_LOG: DiagnosticLog = {
+  record: () => undefined,
+  list: () => [],
+  clear: () => undefined,
+};
+
 export interface FileTransfer {
   downloadJson(filename: string, payload: unknown): void;
 }

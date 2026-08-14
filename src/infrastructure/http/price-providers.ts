@@ -1,9 +1,11 @@
 import type {
+  DiagnosticLog,
   PriceBatch,
   PriceFailure,
   PriceProvider,
   PriceQuote,
 } from '../../application/ports';
+import { NOOP_DIAGNOSTIC_LOG } from '../../application/ports';
 import type { Asset, UnknownRecord } from '../../domain/models';
 
 export const CRYPTO_PRICE_IDS: Readonly<Record<string, string>> = {
@@ -51,6 +53,7 @@ export class HttpPriceProvider implements PriceProvider {
   constructor(
     private readonly fetcher: typeof fetch = fetch,
     private readonly now: () => number = Date.now,
+    private readonly diagnostics: DiagnosticLog = NOOP_DIAGNOSTIC_LOG,
   ) {}
 
   async getUsdPrices(assets: readonly Asset[]): Promise<PriceBatch> {
@@ -66,9 +69,31 @@ export class HttpPriceProvider implements PriceProvider {
       } else if (asset.autoUpdateSource === 'coingecko') {
         const providerId = CRYPTO_PRICE_IDS[asset.code.toUpperCase()];
         if (providerId) cryptoTargets.push({ asset, providerId });
-        else skipped.push(asset.id);
+        else {
+          skipped.push(asset.id);
+          this.diagnostics.record({
+            level: 'warn',
+            scope: 'prices',
+            event: 'asset.skipped',
+            context: {
+              asset: asset.code,
+              provider: 'coingecko',
+              reason: 'unsupported-code',
+            },
+          });
+        }
       } else {
         skipped.push(asset.id);
+        this.diagnostics.record({
+          level: 'info',
+          scope: 'prices',
+          event: 'asset.skipped',
+          context: {
+            asset: asset.code,
+            provider: 'none',
+            reason: 'unconfigured',
+          },
+        });
       }
     }
 
@@ -96,22 +121,67 @@ export class HttpPriceProvider implements PriceProvider {
   }
 
   private async fetchFiatUnitsPerUsd(code: string): Promise<number> {
-    if (code === 'USD') return 1;
+    if (code === 'USD') {
+      this.diagnostics.record({
+        level: 'info',
+        scope: 'prices',
+        event: 'price.local',
+        context: { provider: 'frankfurter', assets: code },
+      });
+      return 1;
+    }
     const cached = this.fiatCache.get(code);
-    if (cached && this.now() - cached.cachedAt < 60_000)
+    if (cached && this.now() - cached.cachedAt < 60_000) {
+      this.diagnostics.record({
+        level: 'info',
+        scope: 'prices',
+        event: 'cache.hit',
+        context: { provider: 'frankfurter', assets: code },
+      });
       return cached.unitsPerUsd;
+    }
 
-    // Request.cache can trigger a rejected CORS preflight in WebKit PWAs.
-    const response = await this.fetcher(
-      `https://api.frankfurter.dev/v2/rate/USD/${encodeURIComponent(code)}`,
-    );
-    if (!response.ok) throw new Error(`Frankfurter ${response.status}`);
-    const payload: unknown = await response.json();
-    const unitsPerUsd = isRecord(payload) ? Number(payload.rate) : Number.NaN;
-    if (!(unitsPerUsd > 0)) throw new Error('Frankfurter invalid rate');
+    const url = `https://api.frankfurter.dev/v2/rate/USD/${encodeURIComponent(code)}`;
+    this.diagnostics.record({
+      level: 'info',
+      scope: 'prices',
+      event: 'request.started',
+      context: { provider: 'frankfurter', assets: code, url },
+    });
+    let status: number | undefined;
+    try {
+      // Request.cache can trigger a rejected CORS preflight in WebKit PWAs.
+      const response = await this.fetcher(url);
+      status = response.status;
+      if (!response.ok) throw new Error(`Frankfurter ${response.status}`);
+      const payload: unknown = await response.json();
+      const unitsPerUsd = isRecord(payload) ? Number(payload.rate) : Number.NaN;
+      if (!(unitsPerUsd > 0)) throw new Error('Frankfurter invalid rate');
 
-    this.fiatCache.set(code, { unitsPerUsd, cachedAt: this.now() });
-    return unitsPerUsd;
+      this.diagnostics.record({
+        level: 'info',
+        scope: 'prices',
+        event: 'request.succeeded',
+        context: { provider: 'frankfurter', assets: code, status, url },
+      });
+
+      this.fiatCache.set(code, { unitsPerUsd, cachedAt: this.now() });
+      return unitsPerUsd;
+    } catch (error) {
+      this.diagnostics.record({
+        level: 'error',
+        scope: 'prices',
+        event: 'request.failed',
+        message: error instanceof Error ? error.message : String(error),
+        context: {
+          provider: 'frankfurter',
+          assets: code,
+          ...(status === undefined ? {} : { status }),
+          url,
+        },
+      });
+      throw error;
+    }
   }
 
   private async fetchCryptoQuotes(
@@ -125,12 +195,32 @@ export class HttpPriceProvider implements PriceProvider {
     const url =
       'https://api.coingecko.com/api/v3/simple/price' +
       `?ids=${encodeURIComponent(providerIds.join(','))}&vs_currencies=usd`;
+    const assetCodes = targets.map(({ asset }) => asset.code).join(',');
+    this.diagnostics.record({
+      level: 'info',
+      scope: 'prices',
+      event: 'request.started',
+      context: { provider: 'coingecko', assets: assetCodes, url },
+    });
+    let status: number | undefined;
 
     try {
       // Keep this a simple CORS request for installed Safari PWAs.
       const response = await this.fetcher(url);
+      status = response.status;
       if (!response.ok) throw new Error(`CoinGecko ${response.status}`);
       const payload: unknown = await response.json();
+      this.diagnostics.record({
+        level: 'info',
+        scope: 'prices',
+        event: 'request.succeeded',
+        context: {
+          provider: 'coingecko',
+          assets: assetCodes,
+          status,
+          url,
+        },
+      });
 
       for (const { asset, providerId } of targets) {
         const record = isRecord(payload) ? payload[providerId] : undefined;
@@ -143,9 +233,31 @@ export class HttpPriceProvider implements PriceProvider {
           });
         } else {
           failures.push({ assetId: asset.id, provider: 'coingecko' });
+          this.diagnostics.record({
+            level: 'warn',
+            scope: 'prices',
+            event: 'quote.missing',
+            context: {
+              asset: asset.code,
+              provider: 'coingecko',
+              providerId,
+            },
+          });
         }
       }
-    } catch {
+    } catch (error) {
+      this.diagnostics.record({
+        level: 'error',
+        scope: 'prices',
+        event: 'request.failed',
+        message: error instanceof Error ? error.message : String(error),
+        context: {
+          provider: 'coingecko',
+          assets: assetCodes,
+          ...(status === undefined ? {} : { status }),
+          url,
+        },
+      });
       failures.push(
         ...targets.map(({ asset }) => ({
           assetId: asset.id,

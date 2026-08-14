@@ -127,6 +127,11 @@
 <span><strong data-i18n="refreshPrices">Обновить цены активов</strong><small data-i18n="refreshPricesSub">Автоматически обновить доступные валюты и криптоактивы</small></span><span>↻</span>
 </button>
 </section>
+<section class="settings-list settings-diagnostics-section">
+<button class="settings-row" id="diagnosticsBtn" type="button">
+<span><strong data-i18n="diagnosticLog">Журнал событий</strong><small data-i18n="diagnosticLogSub">Техническая информация об ошибках и операциях</small></span><span>›</span>
+</button>
+</section>
 <section class="settings-list settings-data-section">
 <button class="settings-row" id="exportBtn" type="button">
 <span><strong data-i18n="exportData">Экспорт данных</strong><small data-i18n="downloadJson">Скачать резервную копию JSON</small></span><span>›</span>
@@ -139,7 +144,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 3.0.1-final</div>
+<div class="build-note">Worth · 3.1-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">
@@ -255,6 +260,18 @@
 <div class="sheet-head"><div><div class="section-kicker" data-i18n="displayTitle">Отображение</div><h2 data-i18n="displayCurrencyHeading">Валюта цен</h2></div><button class="close-button" data-close="currencyModal" type="button">×</button></div>
 <p class="sheet-note" data-i18n="displayCurrencyNote">USD остаётся базовой валютой хранения. Выбор ниже меняет только отображение сумм на всех экранах.</p>
 <div class="currency-options" id="currencyOptions"></div>
+</div>
+</dialog>
+<dialog class="modal" id="diagnosticsModal">
+<div class="sheet tall-sheet diagnostics-sheet">
+<div class="sheet-handle"></div>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="diagnostics">Диагностика</div><h2 data-i18n="diagnosticLogTitle">Журнал событий</h2></div><button class="close-button" data-close="diagnosticsModal" type="button">×</button></div>
+<p class="sheet-note" data-i18n="diagnosticLogNote">Последние 100 локальных событий. Журнал не содержит балансы и количества активов.</p>
+<div class="diagnostics-list" id="diagnosticsList"></div>
+<div class="diagnostics-actions">
+<button class="text-button" data-i18n="copyLog" id="copyDiagnosticsBtn" type="button">Скопировать</button>
+<button class="text-button danger-text" data-i18n="clearLog" id="clearDiagnosticsBtn" type="button">Очистить</button>
+</div>
 </div>
 </dialog>
 <dialog class="action-modal" id="actionMenuModal">

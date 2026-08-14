@@ -256,6 +256,19 @@ export class WorthController {
       'click',
       () => void this.refreshPrices(),
     );
+    this.element('diagnosticsBtn').addEventListener('click', () => {
+      this.renderer.renderDiagnostics();
+      this.openDialog('diagnosticsModal');
+    });
+    this.element('copyDiagnosticsBtn').addEventListener(
+      'click',
+      () => void this.copyDiagnostics(),
+    );
+    this.element('clearDiagnosticsBtn').addEventListener('click', () => {
+      this.service.clearDiagnostics();
+      this.renderer.renderDiagnostics();
+      this.toast(this.renderer.t('logCleared'));
+    });
     this.element('exportBtn').addEventListener('click', () => {
       this.service.exportBackup();
       this.toast(this.renderer.t('backupCreated'));
@@ -676,6 +689,13 @@ export class WorthController {
     } finally {
       input.value = '';
     }
+  }
+
+  private async copyDiagnostics(): Promise<void> {
+    const text = this.renderer.diagnosticsText();
+    if (!text || !this.windowRef.navigator.clipboard) return;
+    await this.windowRef.navigator.clipboard.writeText(text);
+    this.toast(this.renderer.t('logCopied'));
   }
 
   private async reset(): Promise<void> {
