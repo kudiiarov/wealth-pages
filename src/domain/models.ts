@@ -2,6 +2,8 @@ export type EntityId = string;
 export type Language = 'ru' | 'en';
 export type Theme = 'light' | 'dark';
 export type PnlPeriod = 'all' | 'last';
+export type AutomationInterval = 1 | 3 | 6 | 12 | 24;
+export type PositionGrouping = 'accounts' | 'assets';
 export type AutoUpdateSource = 'none' | 'coingecko' | 'frankfurter';
 
 export interface Account {
@@ -103,7 +105,13 @@ export interface AppSettings {
   theme: Theme;
   displayCurrency: string;
   pnlPeriod: PnlPeriod;
-  autoRefreshOnLaunch: boolean;
+  autoPriceRefresh: boolean;
+  priceRefreshIntervalHours: AutomationInterval;
+  lastPriceRefreshAt?: number;
+  autoSnapshot: boolean;
+  snapshotIntervalHours: AutomationInterval;
+  lastSnapshotAt?: number;
+  positionGrouping: PositionGrouping;
 }
 
 export type StoreName = keyof PortfolioData;

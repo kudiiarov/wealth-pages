@@ -219,7 +219,7 @@ export class WorthController {
     ).addEventListener('change', (event) => {
       const input = event.currentTarget;
       if (input instanceof HTMLInputElement) {
-        this.service.saveSettings({ autoRefreshOnLaunch: input.checked });
+        this.service.saveSettings({ autoPriceRefresh: input.checked });
       }
     });
     requiredElement(

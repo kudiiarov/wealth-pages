@@ -40,7 +40,7 @@ async function start(): Promise<void> {
     controller.bind();
     renderer.renderAll();
 
-    if (service.settings.autoRefreshOnLaunch) {
+    if (service.settings.autoPriceRefresh) {
       await service.refreshPrices();
       renderer.renderAll();
     }

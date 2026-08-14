@@ -1,8 +1,13 @@
-import type { AppSettings, PortfolioData, UnknownRecord } from './models';
+import type {
+  AppSettings,
+  AutomationInterval,
+  PortfolioData,
+  UnknownRecord,
+} from './models';
 import { normalizeData } from './normalize';
 
-export const BACKUP_VERSION = 14;
-export const APP_VERSION = '3.1.1-final';
+export const BACKUP_VERSION = 15;
+export const APP_VERSION = '3.2.0-final';
 
 export interface ValidatedBackup {
   version: number;
@@ -10,9 +15,9 @@ export interface ValidatedBackup {
   settings?: Partial<AppSettings>;
 }
 
-export interface BackupV14 extends PortfolioData {
+export interface BackupV15 extends PortfolioData {
   app: 'Worth';
-  version: 14;
+  version: 15;
   appVersion: typeof APP_VERSION;
   baseCurrency: 'USD';
   exportedAt: string;
@@ -31,6 +36,16 @@ function text(value: unknown): string {
 
 function finiteNumber(value: unknown): boolean {
   return value !== '' && Number.isFinite(Number(value));
+}
+
+function automationInterval(value: unknown): value is AutomationInterval {
+  return (
+    value === 1 || value === 3 || value === 6 || value === 12 || value === 24
+  );
+}
+
+function validTimestamp(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
 function records(value: unknown, section: string): UnknownRecord[] {
@@ -57,8 +72,25 @@ function parseSettings(value: unknown): Partial<AppSettings> | undefined {
   if (value.pnlPeriod === 'all' || value.pnlPeriod === 'last')
     settings.pnlPeriod = value.pnlPeriod;
   if (typeof value.autoRefreshOnLaunch === 'boolean') {
-    settings.autoRefreshOnLaunch = value.autoRefreshOnLaunch;
+    settings.autoPriceRefresh = value.autoRefreshOnLaunch;
   }
+  if (typeof value.autoPriceRefresh === 'boolean')
+    settings.autoPriceRefresh = value.autoPriceRefresh;
+  if (automationInterval(value.priceRefreshIntervalHours))
+    settings.priceRefreshIntervalHours = value.priceRefreshIntervalHours;
+  if (validTimestamp(value.lastPriceRefreshAt))
+    settings.lastPriceRefreshAt = value.lastPriceRefreshAt;
+  if (typeof value.autoSnapshot === 'boolean')
+    settings.autoSnapshot = value.autoSnapshot;
+  if (automationInterval(value.snapshotIntervalHours))
+    settings.snapshotIntervalHours = value.snapshotIntervalHours;
+  if (validTimestamp(value.lastSnapshotAt))
+    settings.lastSnapshotAt = value.lastSnapshotAt;
+  if (
+    value.positionGrouping === 'accounts' ||
+    value.positionGrouping === 'assets'
+  )
+    settings.positionGrouping = value.positionGrouping;
   return Object.keys(settings).length > 0 ? settings : undefined;
 }
 
@@ -157,7 +189,7 @@ export function createBackup(
   data: PortfolioData,
   settings: AppSettings,
   exportedAt: string,
-): BackupV14 {
+): BackupV15 {
   return {
     app: 'Worth',
     version: BACKUP_VERSION,

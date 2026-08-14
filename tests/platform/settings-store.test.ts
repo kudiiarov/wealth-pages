@@ -48,36 +48,71 @@ describe('BrowserSettingsStore', () => {
       theme: 'light',
       displayCurrency: 'USD',
       pnlPeriod: 'all',
-      autoRefreshOnLaunch: false,
+      autoPriceRefresh: false,
+      priceRefreshIntervalHours: 3,
+      autoSnapshot: false,
+      snapshotIntervalHours: 6,
+      positionGrouping: 'accounts',
     });
   });
 
-  it('reads the exact legacy localStorage keys', () => {
+  it('migrates the legacy launch-refresh key when the new key is absent', () => {
     storage.setItem(SETTINGS_KEYS.language, 'en');
     storage.setItem(SETTINGS_KEYS.theme, 'dark');
     storage.setItem(SETTINGS_KEYS.displayCurrency, 'EUR');
     storage.setItem(SETTINGS_KEYS.pnlPeriod, 'last');
     storage.setItem(SETTINGS_KEYS.autoRefreshOnLaunch, '1');
 
-    expect(store.load()).toEqual({
+    expect(store.load()).toMatchObject({
       language: 'en',
       theme: 'dark',
       displayCurrency: 'EUR',
       pnlPeriod: 'last',
-      autoRefreshOnLaunch: true,
+      autoPriceRefresh: true,
     });
   });
 
-  it('rejects invalid enum values and persists partial updates', () => {
+  it('round-trips scheduling preferences and completion timestamps', () => {
+    store.save({
+      autoPriceRefresh: true,
+      priceRefreshIntervalHours: 12,
+      lastPriceRefreshAt: 1_700_000_000_000,
+      autoSnapshot: true,
+      snapshotIntervalHours: 24,
+      lastSnapshotAt: 1_700_000_100_000,
+      positionGrouping: 'assets',
+    });
+
+    expect(store.load()).toMatchObject({
+      autoPriceRefresh: true,
+      priceRefreshIntervalHours: 12,
+      lastPriceRefreshAt: 1_700_000_000_000,
+      autoSnapshot: true,
+      snapshotIntervalHours: 24,
+      lastSnapshotAt: 1_700_000_100_000,
+      positionGrouping: 'assets',
+    });
+  });
+
+  it('normalizes invalid scheduling values and persists partial updates', () => {
     storage.setItem(SETTINGS_KEYS.language, 'de');
     storage.setItem(SETTINGS_KEYS.theme, 'neon');
-    store.save({ theme: 'dark', autoRefreshOnLaunch: true });
+    storage.setItem(SETTINGS_KEYS.priceRefreshIntervalHours, '2');
+    storage.setItem(SETTINGS_KEYS.snapshotIntervalHours, 'forever');
+    storage.setItem(SETTINGS_KEYS.lastPriceRefreshAt, '-1');
+    storage.setItem(SETTINGS_KEYS.lastSnapshotAt, 'tomorrow');
+    storage.setItem(SETTINGS_KEYS.positionGrouping, 'brokers');
+    store.save({ theme: 'dark', autoPriceRefresh: true });
 
     expect(store.load()).toMatchObject({
       language: 'ru',
       theme: 'dark',
-      autoRefreshOnLaunch: true,
+      autoPriceRefresh: true,
+      priceRefreshIntervalHours: 3,
+      snapshotIntervalHours: 6,
+      positionGrouping: 'accounts',
     });
-    expect(storage.getItem(SETTINGS_KEYS.autoRefreshOnLaunch)).toBe('1');
+    expect(store.load()).not.toHaveProperty('lastPriceRefreshAt');
+    expect(store.load()).not.toHaveProperty('lastSnapshotAt');
   });
 });

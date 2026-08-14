@@ -24,7 +24,11 @@ const defaults: AppSettings = {
   theme: 'light',
   displayCurrency: 'USD',
   pnlPeriod: 'all',
-  autoRefreshOnLaunch: false,
+  autoPriceRefresh: false,
+  priceRefreshIntervalHours: 3,
+  autoSnapshot: false,
+  snapshotIntervalHours: 6,
+  positionGrouping: 'accounts',
 };
 
 class MemoryRepository implements PortfolioRepository {
@@ -206,10 +210,16 @@ describe('PortfolioService', () => {
 
     expect(repository.replacements).toBe(1);
     expect(app.data.assets[0]?.code).toBe('USD');
-    expect(settings.settings).toEqual(currentV14.appSettings);
+    expect(settings.settings).toMatchObject({
+      language: 'en',
+      theme: 'dark',
+      displayCurrency: 'USD',
+      pnlPeriod: 'last',
+      autoPriceRefresh: true,
+    });
   });
 
-  it('exports schema 14 through the file port', async () => {
+  it('exports schema 15 through the file port', async () => {
     const app = service();
     await app.initialize();
 
@@ -217,7 +227,7 @@ describe('PortfolioService', () => {
 
     expect(files.downloads[0]?.filename).toBe('worth-backup-2026-08-14.json');
     expect(files.downloads[0]?.payload).toMatchObject({
-      version: 14,
+      version: 15,
       app: 'Worth',
     });
   });

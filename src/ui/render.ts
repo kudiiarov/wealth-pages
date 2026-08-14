@@ -326,7 +326,7 @@ export class WorthRenderer {
       HTMLInputElement,
       this.documentRef,
     );
-    autoRefresh.checked = this.service.settings.autoRefreshOnLaunch;
+    autoRefresh.checked = this.service.settings.autoPriceRefresh;
     const currencyButton = this.element('displayCurrencyBtn');
     currencyButton.setAttribute('aria-label', this.t('displayCurrencyAria'));
     currencyButton.setAttribute('title', this.t('displayCurrencyTitle'));
