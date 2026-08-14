@@ -146,3 +146,11 @@ python3 -m http.server 8080
 - The currently selected mode is shown as a small caption under the row.
 - Renamed the launch auto-refresh setting to clearer user-facing wording.
 - JSON schema remains version 14; no data migration required.
+
+
+## 2.5.1-final
+- Fixed missing translation keys that exposed internal identifiers such as autoRefreshOnLaunch and pnlVsLast.
+- P&L captions are user-facing: `За всё время` / `С последнего снапшота` and `All time` / `Since last snapshot`.
+- Snapshot creation is explicit via `buildSnapshot()`: every current position is copied into `snapshot.positions`.
+- Each snapshot position includes stable positionId, accountId, assetId, comment, quantity, asset price and value.
+- Added translation coverage regression checks for RU and EN.
