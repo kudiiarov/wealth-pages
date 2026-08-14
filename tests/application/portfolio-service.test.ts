@@ -1,0 +1,248 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import type {
+  EntityByStore,
+  FileTransfer,
+  PortfolioRepository,
+  PriceBatch,
+  PriceProvider,
+  SettingsStore,
+} from '../../src/application/ports';
+import { PortfolioService } from '../../src/application/portfolio-service';
+import type {
+  AppSettings,
+  PortfolioData,
+  StoreName,
+} from '../../src/domain/models';
+import { currentV14 } from '../fixtures/legacy-backups';
+
+const defaults: AppSettings = {
+  language: 'ru',
+  theme: 'light',
+  displayCurrency: 'USD',
+  pnlPeriod: 'all',
+  autoRefreshOnLaunch: false,
+};
+
+class MemoryRepository implements PortfolioRepository {
+  data: PortfolioData = {
+    accounts: [],
+    assets: [],
+    positions: [],
+    snapshots: [],
+  };
+  replacements = 0;
+
+  load(): Promise<PortfolioData> {
+    return Promise.resolve(structuredClone(this.data));
+  }
+
+  put<K extends StoreName>(store: K, value: EntityByStore[K]): Promise<void> {
+    const values = this.data[store] as EntityByStore[K][];
+    const index = values.findIndex(({ id }) => id === value.id);
+    if (index >= 0) values[index] = structuredClone(value);
+    else values.push(structuredClone(value));
+    return Promise.resolve();
+  }
+
+  delete(store: StoreName, id: string): Promise<void> {
+    const index = this.data[store].findIndex((entity) => entity.id === id);
+    if (index >= 0) this.data[store].splice(index, 1);
+    return Promise.resolve();
+  }
+
+  replaceAll(data: PortfolioData): Promise<void> {
+    this.replacements += 1;
+    this.data = structuredClone(data);
+    return Promise.resolve();
+  }
+
+  clearAll(): Promise<void> {
+    this.data = { accounts: [], assets: [], positions: [], snapshots: [] };
+    return Promise.resolve();
+  }
+}
+
+class MemorySettings implements SettingsStore {
+  constructor(public settings: AppSettings = { ...defaults }) {}
+
+  load(): AppSettings {
+    return { ...this.settings };
+  }
+
+  save(settings: Partial<AppSettings>): void {
+    this.settings = { ...this.settings, ...settings };
+  }
+}
+
+class CapturingFiles implements FileTransfer {
+  downloads: Array<{ filename: string; payload: unknown }> = [];
+
+  downloadJson(filename: string, payload: unknown): void {
+    this.downloads.push({ filename, payload });
+  }
+}
+
+class FixedPrices implements PriceProvider {
+  constructor(private readonly batch: PriceBatch) {}
+
+  getUsdPrices(): Promise<PriceBatch> {
+    return Promise.resolve(structuredClone(this.batch));
+  }
+}
+
+describe('PortfolioService', () => {
+  let repository: MemoryRepository;
+  let settings: MemorySettings;
+  let files: CapturingFiles;
+  let nextId: number;
+
+  beforeEach(() => {
+    repository = new MemoryRepository();
+    settings = new MemorySettings();
+    files = new CapturingFiles();
+    nextId = 1;
+  });
+
+  function service(
+    prices: PriceProvider = new FixedPrices({
+      quotes: [],
+      failures: [],
+      skipped: [],
+    }),
+  ) {
+    return new PortfolioService({
+      repository,
+      settings,
+      files,
+      prices,
+      clock: {
+        now: () => 1_700_000_000_000,
+        isoNow: () => '2026-08-14T00:00:00.000Z',
+      },
+      ids: { next: () => `id-${nextId++}` },
+    });
+  }
+
+  it('allows multiple positions for one account and asset', async () => {
+    const app = service();
+    await app.initialize();
+    const account = await app.createAccount({
+      name: 'Cash',
+      type: 'cash',
+      icon: '$',
+      color: '#17181b',
+    });
+    const asset = await app.createAsset({
+      name: 'Dollar',
+      code: 'USD',
+      icon: '$',
+      color: '#5667ff',
+      price: 1,
+      autoUpdateSource: 'none',
+    });
+
+    await app.savePosition({
+      accountId: account.id,
+      assetId: asset.id,
+      quantity: 2,
+      comment: 'one',
+    });
+    await app.savePosition({
+      accountId: account.id,
+      assetId: asset.id,
+      quantity: 3,
+      comment: 'two',
+    });
+
+    expect(app.data.positions).toHaveLength(2);
+    expect(app.data.positions.map(({ quantity }) => quantity)).toEqual([2, 3]);
+  });
+
+  it('validates a backup before replacing any stored data', async () => {
+    repository.data.accounts = [
+      { id: 'old', name: 'Old', type: 'cash', icon: '$', color: '#17181b' },
+    ];
+    const app = service();
+    await app.initialize();
+
+    await expect(app.importBackup('{"bad":true}')).rejects.toThrow();
+
+    expect(repository.replacements).toBe(0);
+    expect(repository.data.accounts[0]?.id).toBe('old');
+  });
+
+  it('atomically imports valid data and compatible settings', async () => {
+    const app = service();
+    await app.initialize();
+
+    await app.importBackup(JSON.stringify(currentV14));
+
+    expect(repository.replacements).toBe(1);
+    expect(app.data.assets[0]?.code).toBe('USD');
+    expect(settings.settings).toEqual(currentV14.appSettings);
+  });
+
+  it('exports schema 14 through the file port', async () => {
+    const app = service();
+    await app.initialize();
+
+    app.exportBackup();
+
+    expect(files.downloads[0]?.filename).toBe('worth-backup-2026-08-14.json');
+    expect(files.downloads[0]?.payload).toMatchObject({
+      version: 14,
+      app: 'Worth',
+    });
+  });
+
+  it('persists successful price quotes while preserving failed assets', async () => {
+    repository.data.assets = [
+      {
+        id: 'rub',
+        name: 'Ruble',
+        code: 'RUB',
+        icon: '₽',
+        color: '#5667ff',
+        price: 0.02,
+        autoUpdateSource: 'frankfurter',
+      },
+      {
+        id: 'eur',
+        name: 'Euro',
+        code: 'EUR',
+        icon: '€',
+        color: '#5667ff',
+        price: 1.1,
+        autoUpdateSource: 'frankfurter',
+      },
+    ];
+    const app = service(
+      new FixedPrices({
+        quotes: [
+          {
+            assetId: 'rub',
+            usdPrice: 0.01,
+            source: { type: 'fiat', code: 'RUB' },
+          },
+        ],
+        failures: [{ assetId: 'eur', provider: 'frankfurter' }],
+        skipped: [],
+      }),
+    );
+    await app.initialize();
+
+    const result = await app.refreshPrices();
+
+    expect(result).toEqual({
+      updated: 1,
+      skipped: 0,
+      failures: [{ assetId: 'eur', provider: 'frankfurter' }],
+    });
+    expect(app.data.assets.find(({ id }) => id === 'rub')).toMatchObject({
+      price: 0.01,
+      priceUpdatedAt: 1_700_000_000_000,
+    });
+    expect(app.data.assets.find(({ id }) => id === 'eur')?.price).toBe(1.1);
+  });
+});

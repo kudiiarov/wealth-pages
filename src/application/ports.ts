@@ -42,10 +42,22 @@ export interface IdGenerator {
 }
 
 export interface PriceQuote {
+  assetId: string;
   usdPrice: number;
   source: { type: 'fiat' | 'crypto'; code?: string; id?: string };
 }
 
+export interface PriceFailure {
+  assetId: string;
+  provider: 'frankfurter' | 'coingecko';
+}
+
+export interface PriceBatch {
+  quotes: PriceQuote[];
+  failures: PriceFailure[];
+  skipped: string[];
+}
+
 export interface PriceProvider {
-  getUsdPrice(asset: Asset): Promise<PriceQuote | null>;
+  getUsdPrices(assets: readonly Asset[]): Promise<PriceBatch>;
 }
