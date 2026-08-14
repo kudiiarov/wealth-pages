@@ -1815,6 +1815,141 @@ html[data-theme='dark'] .quick-position-row > input {
   margin-bottom: 14px;
 }
 
+.disclosure-more {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  border: 0;
+  background: var(--surface-soft);
+  color: var(--blue);
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.section-disclosure {
+  min-height: 44px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.section-disclosure span {
+  display: grid;
+  gap: 2px;
+}
+.section-disclosure h2 {
+  margin: 0;
+}
+.section-disclosure small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.section-disclosure b {
+  transition: transform 180ms ease-out;
+}
+.section-disclosure[aria-expanded='true'] b {
+  transform: rotate(180deg);
+}
+.grouping-segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin: 16px 0;
+  background: var(--surface-soft);
+  border-radius: 15px;
+}
+.grouping-segment button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.grouping-segment button.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 2px 10px rgba(18, 20, 24, 0.06);
+}
+.position-group {
+  display: grid;
+  gap: 8px;
+}
+.position-group-head {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 19px;
+  padding: 8px 13px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  text-align: left;
+}
+.position-group-head span:nth-child(2) {
+  display: grid;
+  gap: 2px;
+}
+.position-group-head small {
+  color: var(--muted);
+}
+.position-group-head i {
+  font-style: normal;
+  transition: transform 180ms ease-out;
+}
+.position-group-head[aria-expanded='true'] i {
+  transform: rotate(180deg);
+}
+.position-group-rows {
+  display: grid;
+  gap: 8px;
+  padding-left: 10px;
+}
+.automation-controls {
+  display: flex !important;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 10px !important;
+}
+.automation-controls select {
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 8px;
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+.automation-controls input[type='checkbox'] {
+  width: 44px;
+  height: 26px;
+  accent-color: var(--blue);
+}
+.tab-bar {
+  height: calc(58px + var(--safe-bottom));
+  padding: 3px 12px var(--safe-bottom);
+  grid-template-columns: repeat(3, 1fr);
+}
+.tab {
+  min-height: 44px;
+  gap: 1px;
+}
+.tab svg {
+  width: 20px;
+  height: 20px;
+}
+.app-shell {
+  padding-bottom: calc(72px + var(--safe-bottom));
+}
+
 /* 2.5-final */
 .pnl-summary-row {
   display: flex;

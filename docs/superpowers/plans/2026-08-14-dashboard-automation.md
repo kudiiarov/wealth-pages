@@ -24,6 +24,7 @@
 ### Task 1: Settings and backup schema 15
 
 **Files:**
+
 - Modify: `src/domain/models.ts`
 - Modify: `src/platform/browser/settings-store.ts`
 - Modify: `src/domain/backup.ts`
@@ -32,6 +33,7 @@
 - Modify: `tests/fixtures/legacy-backups.ts`
 
 **Interfaces:**
+
 - Produces: `AutomationInterval = 1 | 3 | 6 | 12 | 24`, `PositionGrouping = 'accounts' | 'assets'`.
 - Produces on `AppSettings`: `autoPriceRefresh`, `priceRefreshIntervalHours`, `lastPriceRefreshAt`, `autoSnapshot`, `snapshotIntervalHours`, `lastSnapshotAt`, and `positionGrouping`.
 - Removes runtime use of `autoRefreshOnLaunch`; schema 1–14 imports still migrate it.
@@ -55,7 +57,10 @@ export type AutomationInterval = 1 | 3 | 6 | 12 | 24;
 export type PositionGrouping = 'accounts' | 'assets';
 
 const AUTOMATION_INTERVALS = [1, 3, 6, 12, 24] as const;
-function interval(value: string | null, fallback: AutomationInterval): AutomationInterval;
+function interval(
+  value: string | null,
+  fallback: AutomationInterval,
+): AutomationInterval;
 function timestamp(value: string | null): number | undefined;
 ```
 
@@ -90,6 +95,7 @@ Commit: `feat: add automation schedule settings`
 ### Task 2: Launch automation coordinator
 
 **Files:**
+
 - Create: `src/application/launch-automation.ts`
 - Create: `tests/application/launch-automation.test.ts`
 - Modify: `src/application/portfolio-service.ts`
@@ -97,6 +103,7 @@ Commit: `feat: add automation schedule settings`
 - Modify: `src/main.ts`
 
 **Interfaces:**
+
 - Consumes: scheduling fields from Task 1.
 - Produces: `LaunchAutomation.run(): Promise<void>` with an internal in-flight guard.
 - Produces: service methods `refreshPrices(options?: { recordCompletion?: boolean })` and `saveSnapshot(options?: { recordCompletion?: boolean })`, with manual operations recording completion by default.
@@ -167,6 +174,7 @@ Commit: `feat: automate prices and snapshots on launch`
 ### Task 3: Automation settings UI
 
 **Files:**
+
 - Modify: `index.html`
 - Modify: `src/i18n/messages.ts`
 - Modify: `src/ui/render.ts`
@@ -177,6 +185,7 @@ Commit: `feat: automate prices and snapshots on launch`
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Consumes: Task 1 settings.
 - Produces controls `autoPriceRefresh`, `priceRefreshIntervalHours`, `autoSnapshot`, `snapshotIntervalHours`.
 
@@ -207,6 +216,7 @@ Commit: `feat: add automation controls to settings`
 ### Task 4: Dashboard progressive disclosure
 
 **Files:**
+
 - Create: `src/ui/portfolio-view-model.ts`
 - Create: `tests/ui/portfolio-view-model.test.ts`
 - Modify: `index.html`
@@ -218,6 +228,7 @@ Commit: `feat: add automation controls to settings`
 - Modify: `tests/legacy/static-shell.characterization.test.ts`
 
 **Interfaces:**
+
 - Produces: `allocationRows(data): AllocationRow[]`, sorted by descending absolute value.
 - Adds ephemeral renderer state `allocationExpanded`, `accountsSectionExpanded`, and `assetsSectionExpanded`.
 
@@ -256,6 +267,7 @@ Commit: `feat: simplify portfolio dashboard`
 ### Task 5: Grouped Positions
 
 **Files:**
+
 - Create: `src/ui/position-groups.ts`
 - Create: `tests/ui/position-groups.test.ts`
 - Modify: `index.html`
@@ -266,6 +278,7 @@ Commit: `feat: simplify portfolio dashboard`
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `PositionGrouping` from Task 1.
 - Produces: `buildPositionGroups(data, grouping): PositionGroup[]` with group identity, title, total, count, and sorted rows.
 - Adds ephemeral renderer state `collapsedPositionGroups: Set<string>`.
@@ -301,10 +314,12 @@ Commit: `feat: group positions by account or asset`
 ### Task 6: Compact responsive navigation
 
 **Files:**
+
 - Modify: `src/styles/app.css`
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Consumes: existing `.tab-bar` and `.tab` markup.
 - Produces: navigation with reduced visual height and >=44-pixel tab hit areas.
 
@@ -331,6 +346,7 @@ Commit: `style: compact mobile navigation`
 ### Task 7: Release 3.2.0 and full verification
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `package-lock.json`
 - Modify: `src/domain/backup.ts`
@@ -339,6 +355,7 @@ Commit: `style: compact mobile navigation`
 - Modify: version assertions in tests
 
 **Interfaces:**
+
 - Produces version `3.2.0`, UI/backup label `3.2.0-final`, backup schema 15.
 
 - [ ] **Step 1: Update version references and compatibility documentation**
@@ -368,4 +385,3 @@ Commit: `release: Worth 3.2.0`
 - [ ] **Step 4: Push and verify remote main**
 
 Run: `git push origin main` and compare `git rev-parse HEAD` with `git ls-remote origin refs/heads/main`.
-

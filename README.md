@@ -68,5 +68,5 @@ On iOS, open the HTTPS Pages URL in Safari and choose **Share → Add to Home Sc
 - existing IndexedDB store names and database identity are preserved;
 - legacy records are normalized on read;
 - backup schemas 1–14 remain importable;
-- exports use schema 14 and include application settings;
-- the current product version is `3.1.1` (`3.1.1-final` in the UI and backups).
+- exports use schema 15 and include application settings;
+- the current product version is `3.2.0` (`3.2.0-final` in the UI and backups).

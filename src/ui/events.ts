@@ -1,5 +1,10 @@
 import type { PortfolioService } from '../application/portfolio-service';
-import type { Account, Asset, Position } from '../domain/models';
+import type {
+  Account,
+  Asset,
+  AutomationInterval,
+  Position,
+} from '../domain/models';
 import {
   convertPriceCurrencyToUsd,
   convertUsdToPriceCurrency,
@@ -84,6 +89,33 @@ export class WorthController {
       this.service.saveSettings({
         language: language.dataset.langChoice === 'en' ? 'en' : 'ru',
       });
+      this.renderer.renderAll();
+      return;
+    }
+    const grouping = closestElement<HTMLElement>(
+      event.target,
+      '[data-grouping]',
+    );
+    if (
+      grouping?.dataset.grouping === 'accounts' ||
+      grouping?.dataset.grouping === 'assets'
+    ) {
+      this.service.saveSettings({
+        positionGrouping: grouping.dataset.grouping,
+      });
+      this.renderer.ui.collapsedPositionGroups.clear();
+      this.renderer.renderAll();
+      return;
+    }
+    const positionGroup = closestElement<HTMLElement>(
+      event.target,
+      '[data-position-group]',
+    );
+    if (positionGroup?.dataset.positionGroup) {
+      this.toggleSet(
+        this.renderer.ui.collapsedPositionGroups,
+        positionGroup.dataset.positionGroup,
+      );
       this.renderer.renderAll();
       return;
     }
@@ -213,14 +245,48 @@ export class WorthController {
       this.renderer.renderAll();
     });
     requiredElement(
-      'autoRefreshOnLaunch',
+      'autoPriceRefresh',
       HTMLInputElement,
       this.documentRef,
     ).addEventListener('change', (event) => {
       const input = event.currentTarget;
       if (input instanceof HTMLInputElement) {
         this.service.saveSettings({ autoPriceRefresh: input.checked });
+        this.renderer.renderAll();
       }
+    });
+    requiredElement(
+      'priceRefreshIntervalHours',
+      HTMLSelectElement,
+      this.documentRef,
+    ).addEventListener('change', (event) => {
+      const input = event.currentTarget;
+      if (input instanceof HTMLSelectElement)
+        this.service.saveSettings({
+          priceRefreshIntervalHours: Number(input.value) as AutomationInterval,
+        });
+    });
+    requiredElement(
+      'autoSnapshot',
+      HTMLInputElement,
+      this.documentRef,
+    ).addEventListener('change', (event) => {
+      const input = event.currentTarget;
+      if (input instanceof HTMLInputElement) {
+        this.service.saveSettings({ autoSnapshot: input.checked });
+        this.renderer.renderAll();
+      }
+    });
+    requiredElement(
+      'snapshotIntervalHours',
+      HTMLSelectElement,
+      this.documentRef,
+    ).addEventListener('change', (event) => {
+      const input = event.currentTarget;
+      if (input instanceof HTMLSelectElement)
+        this.service.saveSettings({
+          snapshotIntervalHours: Number(input.value) as AutomationInterval,
+        });
     });
     requiredElement(
       'historyScope',
@@ -233,17 +299,24 @@ export class WorthController {
         this.renderer.renderAll();
       }
     });
-    this.element('saveSnapshotBtn').addEventListener(
-      'click',
-      () => void this.saveSnapshot(),
-    );
     this.element('saveSnapshotBtnHistory').addEventListener(
       'click',
       () => void this.saveSnapshot(),
     );
-    this.element('openQuickUpdate').addEventListener('click', () => {
-      this.renderer.renderQuickUpdate();
-      this.openDialog('quickUpdateModal');
+    this.element('allocationToggle').addEventListener('click', () => {
+      this.renderer.ui.allocationExpanded =
+        !this.renderer.ui.allocationExpanded;
+      this.renderer.renderAll();
+    });
+    this.element('accountsSectionToggle').addEventListener('click', () => {
+      this.renderer.ui.accountsSectionExpanded =
+        !this.renderer.ui.accountsSectionExpanded;
+      this.renderer.renderAll();
+    });
+    this.element('assetsSectionToggle').addEventListener('click', () => {
+      this.renderer.ui.assetsSectionExpanded =
+        !this.renderer.ui.assetsSectionExpanded;
+      this.renderer.renderAll();
     });
     this.element('displayCurrencyBtn').addEventListener('click', () => {
       this.renderer.renderCurrencyOptions();

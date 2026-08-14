@@ -41,6 +41,8 @@ import {
 import { drawHistoryChart, type HistoryDatum } from './chart';
 import { all, escapeHtml, requiredElement } from './dom';
 import { formControl } from './forms';
+import { allocationRows } from './portfolio-view-model';
+import { buildPositionGroups } from './position-groups';
 
 const palette = [
   '#17181b',
@@ -57,6 +59,10 @@ export interface UiState {
   historyScope: string;
   expandedAccounts: Set<string>;
   expandedAssets: Set<string>;
+  allocationExpanded: boolean;
+  accountsSectionExpanded: boolean;
+  assetsSectionExpanded: boolean;
+  collapsedPositionGroups: Set<string>;
 }
 
 interface HistoryItem {
@@ -70,6 +76,10 @@ export class WorthRenderer {
     historyScope: 'portfolio',
     expandedAccounts: new Set(),
     expandedAssets: new Set(),
+    allocationExpanded: false,
+    accountsSectionExpanded: false,
+    assetsSectionExpanded: false,
+    collapsedPositionGroups: new Set(),
   };
 
   constructor(
@@ -322,11 +332,35 @@ export class WorthRenderer {
       ),
     );
     const autoRefresh = requiredElement(
-      'autoRefreshOnLaunch',
+      'autoPriceRefresh',
       HTMLInputElement,
       this.documentRef,
     );
     autoRefresh.checked = this.service.settings.autoPriceRefresh;
+    const priceInterval = requiredElement(
+      'priceRefreshIntervalHours',
+      HTMLSelectElement,
+      this.documentRef,
+    );
+    priceInterval.value = String(
+      this.service.settings.priceRefreshIntervalHours,
+    );
+    priceInterval.disabled = !this.service.settings.autoPriceRefresh;
+    const autoSnapshot = requiredElement(
+      'autoSnapshot',
+      HTMLInputElement,
+      this.documentRef,
+    );
+    autoSnapshot.checked = this.service.settings.autoSnapshot;
+    const snapshotInterval = requiredElement(
+      'snapshotIntervalHours',
+      HTMLSelectElement,
+      this.documentRef,
+    );
+    snapshotInterval.value = String(
+      this.service.settings.snapshotIntervalHours,
+    );
+    snapshotInterval.disabled = !this.service.settings.autoSnapshot;
     const currencyButton = this.element('displayCurrencyBtn');
     currencyButton.setAttribute('aria-label', this.t('displayCurrencyAria'));
     currencyButton.setAttribute('title', this.t('displayCurrencyTitle'));
@@ -388,14 +422,7 @@ export class WorthRenderer {
   }
 
   private renderAllocation(): void {
-    const rows = this.service.data.assets
-      .map((asset) => ({
-        asset,
-        value: this.assetTotal(asset.id),
-        quantity: assetQuantity(asset.id, this.service.data.positions),
-      }))
-      .filter(({ value }) => value !== 0)
-      .sort((left, right) => right.value - left.value);
+    const rows = allocationRows(this.service.data);
     const gross = rows.reduce((total, { value }) => total + Math.abs(value), 0);
     this.element('assetsCount').textContent = this.t(
       'assetsCount',
@@ -414,16 +441,30 @@ export class WorthRenderer {
       )
       .join('');
     this.element('allocationList').innerHTML = rows
-      .slice(0, 6)
+      .slice(0, this.ui.allocationExpanded ? undefined : 3)
       .map(({ asset, value, quantity }) => {
         const pnl = this.pnl((position) => position.assetId === asset.id);
         return `<div class="allocation-row"><span class="asset-badge ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><div class="allocation-meta"><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(asset.code)} · ${formatNumber(quantity, this.language)} · ${((Math.abs(value) / gross) * 100).toFixed(1)}%</small></div><div class="allocation-value"><strong>${this.money(value)}</strong><small>${this.money(asset.price)} / ${this.t('unitShort')}</small><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div></div>`;
       })
       .join('');
+    const toggle = this.element('allocationToggle');
+    toggle.classList.toggle('hidden', rows.length <= 3);
+    toggle.textContent = this.ui.allocationExpanded
+      ? this.t('showLess')
+      : this.t('showMore', rows.length - 3);
+    toggle.setAttribute('aria-expanded', String(this.ui.allocationExpanded));
   }
 
   private renderAccounts(): void {
     const list = this.element('accountsList');
+    list.classList.toggle('hidden', !this.ui.accountsSectionExpanded);
+    const toggle = this.element('accountsSectionToggle');
+    toggle.setAttribute(
+      'aria-expanded',
+      String(this.ui.accountsSectionExpanded),
+    );
+    this.element('accountsSectionMeta').textContent =
+      `${this.service.data.accounts.length} · ${this.money(portfolioTotal({ ...this.service.data, positions: this.service.data.positions }))}`;
     if (!this.service.data.accounts.length) {
       list.innerHTML = `<div class="empty-state">${this.t('emptyAccounts')}</div>`;
       return;
@@ -453,6 +494,11 @@ export class WorthRenderer {
 
   private renderAssets(): void {
     const list = this.element('assetsList');
+    list.classList.toggle('hidden', !this.ui.assetsSectionExpanded);
+    const toggle = this.element('assetsSectionToggle');
+    toggle.setAttribute('aria-expanded', String(this.ui.assetsSectionExpanded));
+    this.element('assetsSectionMeta').textContent =
+      `${this.service.data.assets.length} · ${this.money(portfolioTotal(this.service.data))}`;
     if (!this.service.data.assets.length) {
       list.innerHTML = `<div class="empty-state">${this.t('emptyAssets')}</div>`;
       return;
@@ -485,31 +531,42 @@ export class WorthRenderer {
   }
 
   private renderPositions(): void {
-    this.element('positionsSummary').innerHTML = this.service.data.accounts
-      .map(
-        (account) =>
-          `<div class="summary-pill"><span class="summary-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)};color:#fff">${escapeHtml(this.accountIcon(account))}</span><span><small>${escapeHtml(account.name)}</small><strong>${this.money(accountTotal(account.id, this.service.data))}</strong></span></div>`,
-      )
-      .join('');
+    all<HTMLElement>('[data-grouping]', this.documentRef).forEach((button) => {
+      const active =
+        button.dataset.grouping === this.service.settings.positionGrouping;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
     const list = this.element('positionsList');
     if (!this.service.data.positions.length) {
       list.innerHTML = `<div class="empty-state">${this.t('emptyPositions')}</div>`;
       return;
     }
-    list.innerHTML = [...this.service.data.positions]
-      .sort(
-        (left, right) =>
-          positionValue(right, this.service.data.assets) -
-          positionValue(left, this.service.data.assets),
-      )
-      .map((position) => {
-        const asset = this.assetBy(position.assetId);
-        const account = this.accountBy(position.accountId);
-        const comment = position.comment
-          ? `<span class="position-comment">• ${escapeHtml(position.comment)}</span>`
-          : '';
-        const pnl = this.pnl((record) => record.positionId === position.id);
-        return `<div class="list-card"><div class="list-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)};color:#fff">${escapeHtml(this.assetIcon(asset))}</div><div class="list-main"><div class="position-title-line"><strong>${escapeHtml(asset?.code || asset?.name || this.t('asset'))}</strong>${comment}</div><small>${escapeHtml(account?.name || this.t('deletedAccount'))} · ${formatNumber(position.quantity, this.language)} ${this.t('unitShort')} · ${escapeHtml(asset?.name || '')}</small></div><div class="list-value"><strong>${this.money(positionValue(position, this.service.data.assets))}</strong><small>${asset ? this.money(asset.price) : '—'} / ${this.t('unitShort')}</small><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div><button class="menu-button" data-position-menu="${position.id}" aria-label="${this.t('actions')}">···</button></div>`;
+    list.innerHTML = buildPositionGroups(
+      this.service.data,
+      this.service.settings.positionGrouping,
+    )
+      .map((group) => {
+        const collapsed = this.ui.collapsedPositionGroups.has(group.id);
+        const identity = group.account ?? group.asset;
+        const icon = group.account
+          ? this.accountIcon(group.account)
+          : this.assetIcon(group.asset);
+        const color = group.account
+          ? this.accountColor(group.account)
+          : this.assetColor(group.asset);
+        const rows = group.positions
+          .map((position) => {
+            const asset = this.assetBy(position.assetId);
+            const account = this.accountBy(position.accountId);
+            const comment = position.comment
+              ? `<span class="position-comment">• ${escapeHtml(position.comment)}</span>`
+              : '';
+            const pnl = this.pnl((record) => record.positionId === position.id);
+            return `<div class="list-card"><div class="list-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)};color:#fff">${escapeHtml(this.assetIcon(asset))}</div><div class="list-main"><div class="position-title-line"><strong>${escapeHtml(asset?.code || asset?.name || this.t('asset'))}</strong>${comment}</div><small>${escapeHtml(account?.name || this.t('deletedAccount'))} · ${formatNumber(position.quantity, this.language)} ${this.t('unitShort')} · ${escapeHtml(asset?.name || '')}</small></div><div class="list-value"><strong>${this.money(positionValue(position, this.service.data.assets))}</strong><small>${asset ? this.money(asset.price) : '—'} / ${this.t('unitShort')}</small><small class="pnl-inline ${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div><button class="menu-button" data-position-menu="${position.id}" aria-label="${this.t('actions')}">···</button></div>`;
+          })
+          .join('');
+        return `<section class="position-group"><button class="position-group-head" data-position-group="${group.id}" aria-expanded="${String(!collapsed)}"><span class="list-icon ${this.iconLengthClass(icon)}" style="background:${color};color:#fff">${escapeHtml(icon)}</span><span><strong>${escapeHtml(identity?.name || '')}</strong><small>${group.positions.length} ${this.t('positionsShort')}</small></span><b>${this.money(group.total)}</b><i>⌄</i></button><div class="position-group-rows ${collapsed ? 'hidden' : ''}">${rows}</div></section>`;
       })
       .join('');
   }

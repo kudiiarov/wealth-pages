@@ -22,7 +22,8 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
     .getByRole('button', { name: 'Создать актив' })
     .click();
 
-  await page.locator('[data-open="positionModal"]').first().click();
+  await page.locator('[data-nav="positionsView"]').click();
+  await page.locator('#positionsView [data-open="positionModal"]').click();
   await page.locator('#positionForm [name="quantity"]').fill('100');
   await page.locator('#positionForm [name="comment"]').fill('Резерв');
   await page
@@ -31,7 +32,9 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
     .click();
 
   await expect(page.locator('#homeTitle')).toHaveText('$100.00');
-  await page.locator('#saveSnapshotBtn').click();
+  await expect(page.locator('#positionsList')).toContainText('Основной счёт');
+  await page.locator('[data-nav="historyView"]').click();
+  await page.locator('#saveSnapshotBtnHistory').click();
   await expect(page.locator('#toast')).toContainText('Снимок');
 
   await page.reload();
