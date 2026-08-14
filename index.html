@@ -9,7 +9,7 @@
 <meta content="default" name="apple-mobile-web-app-status-bar-style"/>
 <meta content="Worth" name="apple-mobile-web-app-title"/>
 <meta content="telephone=no" name="format-detection"/>
-<title>Worth — личный портфель</title>
+<title data-i18n="appTitle">Worth — личный портфель</title>
 <link href="./manifest.json" rel="manifest"/>
 <link href="./icon.svg" rel="icon" type="image/svg+xml"/>
 <link href="./styles.css" rel="stylesheet"/>
@@ -30,7 +30,7 @@
 <div class="balance-block">
 <div class="overline" data-i18n="totalBalance">Общий баланс</div>
 <h1 class="balance" data-money-hidden="false" id="homeTitle">$0.00</h1>
-<div class="balance-delta" id="balanceDelta">Сохраните первый снимок</div>
+<div class="balance-delta" data-i18n="saveFirst" id="balanceDelta">Сохраните первый снимок</div>
 </div>
 <div aria-label="Быстрые действия" class="quick-actions">
 <button class="quick-action" data-open="positionModal">
@@ -46,7 +46,7 @@
 <section aria-label="Распределение портфеля" class="surface hero-surface">
 <div class="surface-head">
 <div><div class="section-kicker" data-i18n="portfolio">Портфель</div><h2 data-i18n="allocation">Распределение</h2></div>
-<span class="soft-label" id="assetsCount">0 активов</span>
+<span class="soft-label" data-i18n="zeroAssets" id="assetsCount">0 активов</span>
 </div>
 <div aria-hidden="true" class="allocation-bar" id="allocationBar"></div>
 <div class="allocation-list" id="allocationList"></div>
@@ -77,16 +77,16 @@
 </div>
 <div class="history-filter-wrap">
 <select aria-label="Что показывать в истории" class="history-filter" id="historyScope">
-<option value="portfolio">Весь портфель</option>
+<option data-i18n="wholePortfolio" value="portfolio">Весь портфель</option>
 </select>
 </div>
 <section class="surface chart-surface">
 <div class="chart-stat">
-<span id="historyRangeLabel">Вся история</span>
+<span data-i18n="allHistory" id="historyRangeLabel">Вся история</span>
 <strong id="historyChange">—</strong>
 </div>
 <canvas aria-label="График стоимости портфеля" id="historyChart"></canvas>
-<div class="empty-state overlay-empty" id="historyEmpty">Нужно минимум два снимка для графика.</div>
+<div class="empty-state overlay-empty" data-i18n="needTwo" id="historyEmpty">Нужно минимум два снимка для графика.</div>
 <div class="chart-dates" id="chartDates"><span></span><span></span></div>
 </section>
 <div class="card-list history-list" id="historyList"></div>
@@ -111,6 +111,11 @@
 </div>
 </div>
 </section>
+<section class="settings-list settings-price-section">
+<button class="settings-row" id="refreshPricesBtn" type="button">
+<span><strong data-i18n="refreshPrices">Обновить цены активов</strong><small data-i18n="refreshPricesSub">Автоматически обновить доступные валюты и криптоактивы</small></span><span>↻</span>
+</button>
+</section>
 <section class="settings-list settings-data-section">
 <button class="settings-row" id="exportBtn" type="button">
 <span><strong data-i18n="exportData">Экспорт данных</strong><small data-i18n="downloadJson">Скачать резервную копию JSON</small></span><span>›</span>
@@ -123,7 +128,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 2.0.1-final</div>
+<div class="build-note">Worth · 2.1-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">
@@ -135,12 +140,12 @@
 <dialog class="modal" id="accountModal">
 <form class="sheet" id="accountForm">
 <div class="sheet-handle"></div>
-<div class="sheet-head"><div><div class="section-kicker">Новый</div><h2>Счёт</h2></div><button class="close-button" data-close="accountModal" type="button">×</button></div>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="new">Новый</div><h2 data-i18n="account">Счёт</h2></div><button class="close-button" data-close="accountModal" type="button">×</button></div>
 <label class="field"><span data-i18n="name">Название</span><input autocomplete="off" data-i18n-placeholder="cashExample" maxlength="50" name="name" placeholder="Например, Наличные" required=""/></label>
-<label class="field"><span data-i18n="type">Тип</span><select name="type"><option>Наличные</option><option>Банк</option><option>Биржа</option><option>Криптокошелёк</option><option>Долг</option><option>Другое</option></select></label>
+<label class="field"><span data-i18n="type">Тип</span><select name="type"><option data-i18n="cash" data-type-key="cash" value="cash">Наличные</option><option data-i18n="bank" data-type-key="bank" value="bank">Банк</option><option data-i18n="exchange" data-type-key="exchange" value="exchange">Биржа</option><option data-i18n="cryptoWallet" data-type-key="cryptoWallet" value="cryptoWallet">Криптокошелёк</option><option data-i18n="debt" data-type-key="debt" value="debt">Долг</option><option data-i18n="other" data-type-key="other" value="other">Другое</option></select></label>
 <div class="appearance-grid">
 <label class="field"><span data-i18n="icon">Иконка · 1–5 символов</span><input autocomplete="off" maxlength="5" name="icon" placeholder="$"/></label>
-<label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color" value="#17181b"/><b>Выбрать</b></span></label>
+<label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color" value="#17181b"/><b data-i18n="choose">Выбрать</b></span></label>
 </div>
 <button class="sheet-primary" data-i18n="createAccount" type="submit">Создать счёт</button>
 </form>
@@ -148,12 +153,12 @@
 <dialog class="modal" id="assetModal">
 <form class="sheet" id="assetForm">
 <div class="sheet-handle"></div>
-<div class="sheet-head"><div><div class="section-kicker">Новый</div><h2>Актив</h2></div><button class="close-button" data-close="assetModal" type="button">×</button></div>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="new">Новый</div><h2 data-i18n="asset">Актив</h2></div><button class="close-button" data-close="assetModal" type="button">×</button></div>
 <label class="field"><span data-i18n="name">Название</span><input autocomplete="off" data-i18n-placeholder="tetherExample" maxlength="50" name="name" placeholder="Например, Tether" required=""/></label>
 <label class="field"><span data-i18n="assetCode">Код актива · уникальный</span><input autocapitalize="characters" autocomplete="off" maxlength="12" name="code" placeholder="USDT" required=""/></label>
 <div class="appearance-grid">
 <label class="field"><span data-i18n="icon">Иконка · 1–5 символов</span><input autocomplete="off" maxlength="5" name="icon" placeholder="₮"/></label>
-<label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color" value="#5667ff"/><b>Выбрать</b></span></label>
+<label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color" value="#5667ff"/><b data-i18n="choose">Выбрать</b></span></label>
 </div>
 <label class="field"><span data-i18n="currentPrice">Текущая цена за единицу, $</span><input autocomplete="off" inputmode="decimal" name="price" placeholder="1,00" required="" type="text"/></label>
 <button class="sheet-primary" data-i18n="createAsset" type="submit">Создать актив</button>
@@ -162,8 +167,8 @@
 <dialog class="modal" id="positionModal">
 <form class="sheet" id="positionForm">
 <div class="sheet-handle"></div>
-<div class="sheet-head"><div><div class="section-kicker" id="positionModeLabel">Новая</div><h2>Позиция</h2></div><button class="close-button" data-close="positionModal" type="button">×</button></div>
-<div class="inline-warning hidden" id="positionPrerequisite">Сначала создайте хотя бы один счёт и один актив.</div>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="newPos" id="positionModeLabel">Новая</div><h2 data-i18n="position">Позиция</h2></div><button class="close-button" data-close="positionModal" type="button">×</button></div>
+<div class="inline-warning hidden" data-i18n="createAccountAssetFirst" id="positionPrerequisite">Сначала создайте хотя бы один счёт и один актив.</div>
 <label class="field"><span data-i18n="account">Счёт</span><select name="accountId" required=""></select></label>
 <label class="field"><span data-i18n="asset">Актив</span><select name="assetId" required=""></select></label>
 <label class="field"><span data-i18n="quantity">Количество</span><input autocomplete="off" inputmode="decimal" name="quantity" placeholder="1000" required="" type="text"/></label>
@@ -174,7 +179,7 @@
 <dialog class="modal" id="priceModal">
 <form class="sheet compact-sheet" id="priceForm">
 <div class="sheet-handle"></div>
-<div class="sheet-head"><div><div class="section-kicker">Цена</div><h2 id="priceAssetTitle">Актив</h2></div><button class="close-button" data-close="priceModal" type="button">×</button></div>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="price">Цена</div><h2 id="priceAssetTitle">Актив</h2></div><button class="close-button" data-close="priceModal" type="button">×</button></div>
 <input name="assetId" type="hidden"/>
 <label class="field"><span data-i18n="unitPrice">Цена за единицу, $</span><input autocomplete="off" inputmode="decimal" name="price" required="" type="text"/></label>
 <button class="sheet-primary" data-i18n="updatePrice" type="submit">Обновить цену</button>
@@ -183,8 +188,8 @@
 <dialog class="modal" id="quickUpdateModal">
 <form class="sheet tall-sheet" id="quickUpdateForm">
 <div class="sheet-handle"></div>
-<div class="sheet-head"><div><div class="section-kicker">Массовое изменение</div><h2>Обновить портфель</h2></div><button class="close-button" data-close="quickUpdateModal" type="button">×</button></div>
-<p class="sheet-note">Измените только нужные значения. Цены применяются ко всем счетам с этим активом.</p>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="bulkChange">Массовое изменение</div><h2 data-i18n="updatePortfolio">Обновить портфель</h2></div><button class="close-button" data-close="quickUpdateModal" type="button">×</button></div>
+<p class="sheet-note" data-i18n="changeOnlyNeeded">Измените только нужные значения. Цены применяются ко всем счетам с этим активом.</p>
 <div class="quick-update-fields" id="quickUpdateFields"></div>
 <button class="sheet-primary" data-i18n="saveChanges" type="submit">Сохранить изменения</button>
 </form>
@@ -192,13 +197,13 @@
 <dialog class="modal" id="accountEditModal">
 <form class="sheet compact-sheet" id="accountEditForm">
 <div class="sheet-handle"></div>
-<div class="sheet-head"><div><div class="section-kicker">Счёт</div><h2>Настроить счёт</h2></div><button class="close-button" data-close="accountEditModal" type="button">×</button></div>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="account">Счёт</div><h2 data-i18n="configureAccount">Настроить счёт</h2></div><button class="close-button" data-close="accountEditModal" type="button">×</button></div>
 <input name="accountId" type="hidden"/>
 <label class="field"><span data-i18n="name">Название</span><input autocomplete="off" maxlength="50" name="name" required=""/></label>
-<label class="field"><span data-i18n="type">Тип</span><select name="type"><option>Наличные</option><option>Банк</option><option>Биржа</option><option>Криптокошелёк</option><option>Долг</option><option>Другое</option></select></label>
+<label class="field"><span data-i18n="type">Тип</span><select name="type"><option data-i18n="cash" data-type-key="cash" value="cash">Наличные</option><option data-i18n="bank" data-type-key="bank" value="bank">Банк</option><option data-i18n="exchange" data-type-key="exchange" value="exchange">Биржа</option><option data-i18n="cryptoWallet" data-type-key="cryptoWallet" value="cryptoWallet">Криптокошелёк</option><option data-i18n="debt" data-type-key="debt" value="debt">Долг</option><option data-i18n="other" data-type-key="other" value="other">Другое</option></select></label>
 <div class="appearance-grid">
 <label class="field"><span data-i18n="icon">Иконка · 1–5 символов</span><input autocomplete="off" maxlength="5" name="icon"/></label>
-<label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color"/><b>Выбрать</b></span></label>
+<label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color"/><b data-i18n="choose">Выбрать</b></span></label>
 </div>
 <button class="sheet-primary" data-i18n="save" type="submit">Сохранить</button>
 </form>
@@ -206,13 +211,13 @@
 <dialog class="modal" id="assetEditModal">
 <form class="sheet compact-sheet" id="assetEditForm">
 <div class="sheet-handle"></div>
-<div class="sheet-head"><div><div class="section-kicker">Актив</div><h2>Настроить актив</h2></div><button class="close-button" data-close="assetEditModal" type="button">×</button></div>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="asset">Актив</div><h2 data-i18n="configureAsset">Настроить актив</h2></div><button class="close-button" data-close="assetEditModal" type="button">×</button></div>
 <input name="assetId" type="hidden"/>
 <label class="field"><span data-i18n="fullName">Полное название</span><input autocomplete="off" maxlength="50" name="name" required=""/></label>
 <label class="field"><span data-i18n="assetCode">Код актива · уникальный</span><input autocapitalize="characters" autocomplete="off" maxlength="12" name="code" required=""/></label>
 <div class="appearance-grid">
 <label class="field"><span data-i18n="icon">Иконка · 1–5 символов</span><input autocomplete="off" maxlength="5" name="icon"/></label>
-<label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color"/><b>Выбрать</b></span></label>
+<label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color"/><b data-i18n="choose">Выбрать</b></span></label>
 </div>
 <button class="sheet-primary" data-i18n="save" type="submit">Сохранить</button>
 </form>
@@ -220,15 +225,15 @@
 <dialog class="modal" id="currencyModal">
 <div class="sheet compact-sheet">
 <div class="sheet-handle"></div>
-<div class="sheet-head"><div><div class="section-kicker">Отображение</div><h2>Валюта цен</h2></div><button class="close-button" data-close="currencyModal" type="button">×</button></div>
-<p class="sheet-note">USD остаётся базовой валютой хранения. Выбор ниже меняет только отображение сумм на всех экранах.</p>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="displayTitle">Отображение</div><h2 data-i18n="displayCurrencyHeading">Валюта цен</h2></div><button class="close-button" data-close="currencyModal" type="button">×</button></div>
+<p class="sheet-note" data-i18n="displayCurrencyNote">USD остаётся базовой валютой хранения. Выбор ниже меняет только отображение сумм на всех экранах.</p>
 <div class="currency-options" id="currencyOptions"></div>
 </div>
 </dialog>
 <dialog class="action-modal" id="actionMenuModal">
 <div class="action-sheet">
 <div class="sheet-handle"></div>
-<div class="action-title" id="actionMenuTitle">Действия</div>
+<div class="action-title" data-i18n="actions" id="actionMenuTitle">Действия</div>
 <div class="action-items" id="actionMenuItems"></div>
 <button class="action-cancel" data-close="actionMenuModal" data-i18n="cancel" type="button">Отмена</button>
 </div>

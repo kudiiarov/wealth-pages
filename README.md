@@ -93,3 +93,13 @@ python3 -m http.server 8080
 - Editing updates only the selected position by its existing `positionId`.
 - Position-level history remains independent for each position.
 - JSON schema version 9; old backups remain compatible.
+
+
+## 2.1-final
+- Added “Refresh asset prices” to Settings and each asset action menu.
+- Fiat prices use Frankfurter latest rates with USD base; stored asset price is USD per 1 asset unit.
+- Supported crypto codes use CoinGecko keyless simple price API.
+- Unknown asset codes are skipped rather than guessed.
+- Automatic updates persist `priceSource` and `priceUpdatedAt` in the asset JSON automatically.
+- Completed additional EN localization, including the display-currency selector and dynamic option labels.
+- JSON schema version 10; old backups remain compatible.

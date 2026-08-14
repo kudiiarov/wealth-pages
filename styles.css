@@ -180,3 +180,9 @@ html[data-theme="dark"] .quick-price-input,html[data-theme="dark"] .quick-positi
 
 /* 2.0-final */
 .language-row{margin-top:1px}.language-row .theme-segment button{min-width:42px}
+
+/* 2.1-final */
+.settings-price-section{margin-bottom:14px}
+#refreshPricesBtn.loading{opacity:.65;pointer-events:none}
+#refreshPricesBtn.loading>span:last-child{animation:worth-spin .8s linear infinite}
+@keyframes worth-spin{to{transform:rotate(360deg)}}

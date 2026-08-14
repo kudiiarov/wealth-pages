@@ -15,7 +15,7 @@ configureAccount:'Настроить счёт',deleteAccount:'Удалить с�
 accountCreated:'Счёт создан',accountUpdated:'Счёт обновлён',accountDeleted:'Счёт удалён',assetCreated:'Актив создан',assetUpdated:'Актив обновлён',assetDeleted:'Актив удалён',positionSaved:'Позиция сохранена',positionDeleted:'Позиция удалена',priceUpdated:'Цена обновлена',snapshotSaved:'Снимок сохранён',snapshotDeleted:'Снимок удалён',changesSaved:'Изменения сохранены',backupCreated:'Резервная копия создана',dataRestored:'Данные восстановлены',allDeleted:'Все данные удалены',
 confirmDeletePosition:'Удалить эту позицию?',confirmDeleteSnapshot:'Удалить этот снимок из истории?',confirmImport:'Импорт полностью заменит текущие локальные данные. Продолжить?',confirmDeleteAll:'Удалить все счета, активы, позиции и историю с этого устройства?',duplicateCode:'Актив с таким кодом уже существует. Код актива должен быть уникальным.',importFailed:'Не удалось импортировать резервную копию',unsupported:'неподдерживаемый формат',
 emptyAccounts:'Например: Наличные, банк, биржа или деньги, которые вам должны.',emptyAccount:'На этом счёте пока нет активов',emptyAssets:'Актив — это валюта, металл, криптовалюта, акция или другое имущество с базовой ценой в долларах.',emptyAsset:'Этот актив пока не добавлен ни в одну позицию',emptyPositions:'Позиция связывает актив со счётом и хранит его количество.',deletedAccount:'Удалённый счёт',emptyAllocation:'Добавьте счёт, актив и первый остаток — здесь появится структура портфеля.',noPositions:'Нет позиций с этим активом',unitPriceLabel:'Цена за единицу',basePrice:'Базовая цена в USD',balances:'Остатки по счетам',editing:'Редактирование',newPos:'Новая',displayName:'US Dollar',base:'базовая',
-confirmDeleteAccount:n=>`Удалить счёт «${n}» и все позиции на нём?`,confirmDeleteAsset:(n,c)=>`Удалить ${n} (${c}) и все позиции с этим активом?`,assetsCount:n=>`${n} ${decl(n,'актив','актива','активов')}`,qtyCode:c=>`Количество ${c}`,qtyAccount:(c,n)=>`Количество ${c} на счёте ${n}`,priceUsd:c=>`Цена ${c} в долларах`
+confirmDeleteAccount:n=>`Удалить счёт «${n}» и все позиции на нём?`,confirmDeleteAsset:(n,c)=>`Удалить ${n} (${c}) и все позиции с этим активом?`,assetsCount:n=>`${n} ${decl(n,'актив','актива','активов')}`,qtyCode:c=>`Количество ${c}`,qtyAccount:(c,n)=>`Количество ${c} на счёте ${n}`,priceUsd:c=>`Цена ${c} в долларах`,refreshPrices:'Обновить цены активов',refreshPricesSub:'Автоматически обновить доступные валюты и криптоактивы',refreshAssetPrice:'Обновить цену автоматически',pricesUpdated:n=>`Цены обновлены: ${n}`,priceUpdatedAuto:'Цена обновлена автоматически',noAutoPrices:'Нет активов с доступным автоматическим источником цены',priceSourceUnavailable:'Автоматическая цена для этого актива недоступна',priceUpdateFailed:'Не удалось обновить цены',updatingPrices:'Обновление цен…',displayCurrencyAria:'Валюта отображения',displayCurrencyTitle:'Валюта отображения',displayTitle:'Отображение',displayCurrencyHeading:'Валюта цен',displayCurrencyNote:'USD остаётся базовой валютой хранения. Выбор ниже меняет только отображение сумм на всех экранах.',baseLabel:'базовая',unitLabel:'за ед.',cash:'Наличные',bank:'Банк',exchange:'Биржа',cryptoWallet:'Криптокошелёк',debt:'Долг',other:'Другое',unitShort:'ед.',positionsShort:'поз.',appTitle:'Worth — личный портфель',zeroAssets:'0 активов',allHistory:'Вся история',new:'Новый',newPos:'Новая',position:'Позиция',price:'Цена',bulkChange:'Массовое изменение',updatePortfolio:'Обновить портфель',changeOnlyNeeded:'Измените только нужные значения. Цены применяются ко всем счетам с этим активом.',configureAccount:'Настроить счёт',configureAsset:'Настроить актив',choose:'Выбрать',createAccountAssetFirst:'Сначала создайте хотя бы один счёт и один актив.'
 },
 en:{
 totalBalance:'Total balance',position:'Position',update:'Update',snapshot:'Snapshot',portfolio:'Portfolio',allocation:'Allocation',accounts:'Accounts',assets:'Assets',add:'Add',addPlus:'+ Add',byAccounts:'By account',positions:'Positions',trend:'Performance',history:'History',app:'App',settings:'Settings',home:'Home',theme:'Theme',lightOrDark:'Light or dark',light:'Light',dark:'Dark',language:'Language',interfaceLanguage:'Interface language',exportData:'Export data',downloadJson:'Download JSON backup',importData:'Import data',restoreJson:'Restore JSON backup',deleteAll:'Delete all data',deleteAllSub:'Accounts, assets, positions and history',cancel:'Cancel',name:'Name',type:'Type',icon:'Icon · 1–5 characters',color:'Color',assetCode:'Asset code · unique',currentPrice:'Current unit price, $',account:'Account',asset:'Asset',quantity:'Quantity',unitPrice:'Unit price, $',fullName:'Full name',commentOptional:'Comment <em>optional</em>',createAccount:'Create account',createAsset:'Create asset',save:'Save',updatePrice:'Update price',saveChanges:'Save changes',cashExample:'For example, Cash',tetherExample:'For example, Tether',commentExample:'Car fund, reserve, vacation…',
@@ -24,17 +24,109 @@ configureAccount:'Edit account',deleteAccount:'Delete account',configureAsset:'E
 accountCreated:'Account created',accountUpdated:'Account updated',accountDeleted:'Account deleted',assetCreated:'Asset created',assetUpdated:'Asset updated',assetDeleted:'Asset deleted',positionSaved:'Position saved',positionDeleted:'Position deleted',priceUpdated:'Price updated',snapshotSaved:'Snapshot saved',snapshotDeleted:'Snapshot deleted',changesSaved:'Changes saved',backupCreated:'Backup created',dataRestored:'Data restored',allDeleted:'All data deleted',
 confirmDeletePosition:'Delete this position?',confirmDeleteSnapshot:'Delete this snapshot from history?',confirmImport:'Import will completely replace your current local data. Continue?',confirmDeleteAll:'Delete all accounts, assets, positions and history from this device?',duplicateCode:'An asset with this code already exists. Asset codes must be unique.',importFailed:'Could not import the backup',unsupported:'unsupported format',
 emptyAccounts:'For example: cash, bank, exchange, or money someone owes you.',emptyAccount:'There are no assets in this account yet.',emptyAssets:'An asset can be a currency, metal, crypto, stock or anything else with a USD base price.',emptyAsset:'This asset is not used in any position yet.',emptyPositions:'A position links an asset to an account and stores its quantity.',deletedAccount:'Deleted account',emptyAllocation:'Add an account, an asset and your first position to see the portfolio structure here.',noPositions:'No positions with this asset',unitPriceLabel:'Unit price',basePrice:'Base price in USD',balances:'Balances by account',editing:'Editing',newPos:'New',displayName:'US Dollar',base:'base',
-confirmDeleteAccount:n=>`Delete account “${n}” and all positions in it?`,confirmDeleteAsset:(n,c)=>`Delete ${n} (${c}) and all positions using this asset?`,assetsCount:n=>`${n} asset${n===1?'':'s'}`,qtyCode:c=>`${c} quantity`,qtyAccount:(c,n)=>`${c} quantity in ${n}`,priceUsd:c=>`${c} price in USD`
+confirmDeleteAccount:n=>`Delete account “${n}” and all positions in it?`,confirmDeleteAsset:(n,c)=>`Delete ${n} (${c}) and all positions using this asset?`,assetsCount:n=>`${n} asset${n===1?'':'s'}`,qtyCode:c=>`${c} quantity`,qtyAccount:(c,n)=>`${c} quantity in ${n}`,priceUsd:c=>`${c} price in USD`,refreshPrices:'Refresh asset prices',refreshPricesSub:'Automatically update supported currencies and crypto assets',refreshAssetPrice:'Refresh price automatically',pricesUpdated:n=>`Prices updated: ${n}`,priceUpdatedAuto:'Price updated automatically',noAutoPrices:'No assets have an available automatic price source',priceSourceUnavailable:'Automatic pricing is not available for this asset',priceUpdateFailed:'Could not update prices',updatingPrices:'Updating prices…',displayCurrencyAria:'Display currency',displayCurrencyTitle:'Display currency',displayTitle:'Display',displayCurrencyHeading:'Display currency',displayCurrencyNote:'USD remains the base storage currency. This setting only changes how amounts are displayed across the app.',baseLabel:'base',unitLabel:'per unit',cash:'Cash',bank:'Bank',exchange:'Exchange',cryptoWallet:'Crypto wallet',debt:'Debt',other:'Other',unitShort:'units',positionsShort:'pos.',appTitle:'Worth — personal portfolio',zeroAssets:'0 assets',allHistory:'All history',new:'New',newPos:'New',position:'Position',price:'Price',bulkChange:'Bulk update',updatePortfolio:'Update portfolio',changeOnlyNeeded:'Change only the values you need. Asset prices apply to every account holding that asset.',configureAccount:'Edit account',configureAsset:'Edit asset',choose:'Choose',createAccountAssetFirst:'Create at least one account and one asset first.'
 }}
 function t(k,...a){const v=(I18N[state.lang]||I18N.ru)[k]??I18N.ru[k]??k;return typeof v==='function'?v(...a):v}
 function applyLanguage(){
  document.documentElement.lang=state.lang;
- $$('[data-i18n]').forEach(el=>{const v=t(el.dataset.i18n);if(typeof v==='string')el.textContent=v});
+ $$('[data-i18n]').forEach(el=>{const v=t(el.dataset.i18n);if(typeof v==='string')el.textContent=v});document.title=t('appTitle');
  $$('[data-i18n-html]').forEach(el=>el.innerHTML=t(el.dataset.i18nHtml));
  $$('[data-i18n-placeholder]').forEach(el=>el.placeholder=t(el.dataset.i18nPlaceholder));
  $$('[data-lang-choice]').forEach(b=>b.classList.toggle('active',b.dataset.langChoice===state.lang));
+ const qu=byId('quickUpdateModal');if(qu){
+   const kicker=qu.querySelector('.section-kicker'),h=qu.querySelector('h2'),note=qu.querySelector('.sheet-note'),save=qu.querySelector('.quick-save');
+   if(kicker)kicker.textContent=t('bulkChange');
+   if(h)h.textContent=t('updatePortfolio');
+   if(note)note.textContent=t('changeOnlyNeeded');
+   if(save)save.textContent=t('saveChanges');
+ }
+ const cb=byId('displayCurrencyBtn');if(cb){cb.setAttribute('aria-label',t('displayCurrencyAria'));cb.setAttribute('title',t('displayCurrencyTitle'))}
+ const typeMap={'Наличные':'cash','Банк':'bank','Биржа':'exchange','Криптокошелёк':'cryptoWallet','Долг':'debt','Другое':'other','Cash':'cash','Bank':'bank','Exchange':'exchange','Crypto wallet':'cryptoWallet','Debt':'debt','Other':'other'};
+ $$('select[name="type"] option').forEach(o=>{const key=o.dataset.typeKey||o.value||typeMap[o.textContent.trim()];if(I18N[state.lang]?.[key]){o.dataset.typeKey=key;o.textContent=t(key)}});
+ const cm=byId('currencyModal');if(cm){
+   const kicker=cm.querySelector('.section-kicker'),h=cm.querySelector('h2'),note=cm.querySelector('.sheet-note');
+   if(kicker)kicker.textContent=t('displayTitle');if(h)h.textContent=t('displayCurrencyHeading');if(note)note.textContent=t('displayCurrencyNote');
+ }
 }
 function setLanguage(lang){state.lang=lang==='en'?'en':'ru';localStorage.setItem('worth-language',state.lang);applyLanguage();renderAll()}
+
+const CRYPTO_PRICE_IDS={
+ BTC:'bitcoin',ETH:'ethereum',SOL:'solana',USDT:'tether',USDC:'usd-coin',XAUT:'tether-gold',
+ BNB:'binancecoin',XRP:'ripple',DOGE:'dogecoin',ADA:'cardano',TON:'the-open-network',TRX:'tron',
+ DOT:'polkadot',LINK:'chainlink',LTC:'litecoin',BCH:'bitcoin-cash',AVAX:'avalanche-2',
+ UNI:'uniswap',DAI:'dai',SHIB:'shiba-inu',APT:'aptos',SUI:'sui'
+};
+let fiatRateCache=null,fiatRateCacheAt=0;
+async function fetchFiatRates(){
+  if(fiatRateCache&&Date.now()-fiatRateCacheAt<60000)return fiatRateCache;
+  const r=await fetch('https://api.frankfurter.dev/v1/latest?base=USD',{cache:'no-store'});
+  if(!r.ok)throw new Error(`Frankfurter ${r.status}`);
+  const data=await r.json();
+  fiatRateCache={USD:1,...(data.rates||{})};fiatRateCacheAt=Date.now();
+  return fiatRateCache;
+}
+async function fetchCryptoUsdByIds(ids){
+  const unique=[...new Set(ids.filter(Boolean))];
+  if(!unique.length)return {};
+  const url=`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(unique.join(','))}&vs_currencies=usd`;
+  const r=await fetch(url,{cache:'no-store'});
+  if(!r.ok)throw new Error(`CoinGecko ${r.status}`);
+  return await r.json();
+}
+function inferredPriceSource(asset,fiatRates){
+  const code=String(asset?.code||'').toUpperCase();
+  if(code==='USD')return {type:'base'};
+  if(fiatRates&&Number(fiatRates[code])>0)return {type:'fiat',code};
+  const id=CRYPTO_PRICE_IDS[code];
+  if(id)return {type:'crypto',id};
+  return null;
+}
+async function refreshAssetPrices(targetAssetId=null){
+  const targets=targetAssetId?state.assets.filter(a=>a.id===targetAssetId):state.assets.slice();
+  if(!targets.length)return {updated:0,skipped:0};
+  let fiatRates={};
+  try{fiatRates=await fetchFiatRates()}catch(e){console.warn('Frankfurter unavailable',e)}
+  const cryptoTargets=targets.map(a=>({a,source:inferredPriceSource(a,fiatRates)})).filter(x=>x.source?.type==='crypto');
+  let cryptoData={};
+  try{cryptoData=await fetchCryptoUsdByIds(cryptoTargets.map(x=>x.source.id))}catch(e){console.warn('CoinGecko unavailable',e)}
+  let updated=0,skipped=0;
+  for(const asset of targets){
+    const source=inferredPriceSource(asset,fiatRates);
+    let newPrice=null;
+    if(source?.type==='base')newPrice=1;
+    else if(source?.type==='fiat'){
+      const unitsPerUsd=Number(fiatRates[source.code]);
+      if(unitsPerUsd>0)newPrice=1/unitsPerUsd;
+    }else if(source?.type==='crypto'){
+      const p=Number(cryptoData[source.id]?.usd);
+      if(p>0)newPrice=p;
+    }
+    if(Number.isFinite(newPrice)&&newPrice>0){
+      asset.price=newPrice;
+      asset.priceSource=source;
+      asset.priceUpdatedAt=Date.now();
+      await dbPut('assets',asset);
+      updated++;
+    }else skipped++;
+  }
+  await reload();
+  return {updated,skipped};
+}
+async function runPriceRefresh(targetAssetId=null){
+  const button=targetAssetId?null:byId('refreshPricesBtn');
+  if(button){button.disabled=true;button.classList.add('loading')}
+  try{
+    const result=await refreshAssetPrices(targetAssetId);
+    if(result.updated>0)toast(targetAssetId?t('priceUpdatedAuto'):t('pricesUpdated',result.updated));
+    else toast(targetAssetId?t('priceSourceUnavailable'):t('noAutoPrices'));
+    return result;
+  }catch(e){
+    console.error(e);toast(t('priceUpdateFailed'));return {updated:0,skipped:0,error:e}
+  }finally{
+    if(button){button.disabled=false;button.classList.remove('loading')}
+  }
+}
+
 
 const usd=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2});
 function locale(){return state.lang==='en'?'en-US':'ru-RU'}
@@ -106,7 +198,7 @@ function renderAllocation(){
   byId('assetsCount').textContent=t('assetsCount',rows.length);
   if(!rows.length||gross===0){bar.innerHTML='';list.innerHTML=`<div class="empty-state">${t('emptyAllocation')}</div>`;return}
   bar.innerHTML=rows.map(x=>`<span class="allocation-segment" style="width:${Math.abs(x.value)/gross*100}%;background:${assetColor(x.asset)}"></span>`).join('');
-  list.innerHTML=rows.slice(0,6).map(x=>`<div class="allocation-row"><span class="asset-badge ${iconLenClass(assetIcon(x.asset))}" style="background:${assetColor(x.asset)}">${escapeHTML(assetIcon(x.asset))}</span><div class="allocation-meta"><strong>${escapeHTML(x.asset.name)}</strong><small>${escapeHTML(x.asset.code)} · ${number(x.qty)} · ${(Math.abs(x.value)/gross*100).toFixed(1)}%</small></div><div class="allocation-value"><strong>${visibleMoney(x.value)}</strong><small>${visibleMoney(x.asset.price)} / ед.</small></div></div>`).join('');
+  list.innerHTML=rows.slice(0,6).map(x=>`<div class="allocation-row"><span class="asset-badge ${iconLenClass(assetIcon(x.asset))}" style="background:${assetColor(x.asset)}">${escapeHTML(assetIcon(x.asset))}</span><div class="allocation-meta"><strong>${escapeHTML(x.asset.name)}</strong><small>${escapeHTML(x.asset.code)} · ${number(x.qty)} · ${(Math.abs(x.value)/gross*100).toFixed(1)}%</small></div><div class="allocation-value"><strong>${visibleMoney(x.value)}</strong><small>${visibleMoney(x.asset.price)} / ${t('unitShort')}</small></div></div>`).join('');
 }
 function renderAccounts(){
   const list=byId('accountsList');
@@ -114,13 +206,13 @@ function renderAccounts(){
   list.innerHTML=state.accounts.map(a=>{
     const open=state.expandedAccounts.has(a.id);
     const positions=state.positions.filter(p=>p.accountId===a.id);
-    const details=positions.length?positions.map(p=>{const asset=assetBy(p.assetId),comment=p.comment?`<span class="account-position-comment">• ${escapeHTML(p.comment)}</span>`:'';return `<div class="account-asset-row"><span class="mini-asset-icon ${iconLenClass(assetIcon(asset))}" style="background:${assetColor(asset)}">${escapeHTML(assetIcon(asset))}</span><div><div class="account-position-title"><strong>${escapeHTML(asset?.code||asset?.name||'Актив')}</strong>${comment}</div><small>${escapeHTML(asset?.name||'')} · ${number(p.quantity)} ед.</small></div><b>${money(positionValue(p))}</b></div>`}).join(''):`<div class="account-empty">${t('emptyAccount')}</div>`;
+    const details=positions.length?positions.map(p=>{const asset=assetBy(p.assetId),comment=p.comment?`<span class="account-position-comment">• ${escapeHTML(p.comment)}</span>`:'';return `<div class="account-asset-row"><span class="mini-asset-icon ${iconLenClass(assetIcon(asset))}" style="background:${assetColor(asset)}">${escapeHTML(assetIcon(asset))}</span><div><div class="account-position-title"><strong>${escapeHTML(asset?.code||asset?.name||t('asset'))}</strong>${comment}</div><small>${escapeHTML(asset?.name||'')} · ${number(p.quantity)} ${t('unitShort')}</small></div><b>${money(positionValue(p))}</b></div>`}).join(''):`<div class="account-empty">${t('emptyAccount')}</div>`;
     return `<div class="account-expand-card ${open?'expanded':''}">
       <div class="list-card account-toggle" data-account-toggle="${a.id}">
         <div class="list-icon ${iconLenClass(accountIcon(a))}" style="background:${accountColor(a)};color:#fff">${escapeHTML(accountIcon(a))}</div>
-        <div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.type)} · ${positions.length} поз.</small></div>
+        <div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(accountTypeLabel(a.type))} · ${positions.length} ${t('positionsShort')}</small></div>
         <div class="list-value"><strong>${money(accountTotal(a.id))}</strong></div>
-        <button class="menu-button" data-account-menu="${a.id}" aria-label="Действия со счётом">···</button>
+        <button class="menu-button" data-account-menu="${a.id}" aria-label="${t('actions')}">···</button>
       </div>
       <div class="account-assets ${open?'':'hidden'}">${details}</div>
     </div>`;
@@ -131,15 +223,15 @@ function renderAssets(){
   if(!state.assets.length){list.innerHTML=`<div class="empty-state">${t('emptyAssets')}</div>`;return}
   list.innerHTML=state.assets.map(a=>{
     const open=state.expandedAssets.has(a.id),positions=state.positions.filter(p=>p.assetId===a.id);
-    const details=positions.length?positions.map(p=>{const acc=accountBy(p.accountId),comment=p.comment?`<small class="asset-position-comment">• ${escapeHTML(p.comment)}</small>`:'';return `<div class="account-asset-row"><span class="mini-asset-icon ${iconLenClass(accountIcon(acc))}" style="background:${accountColor(acc)}">${escapeHTML(accountIcon(acc))}</span><div><strong>${escapeHTML(acc?.name||'Счёт')}</strong><small>${number(p.quantity)} ${escapeHTML(a.code)}</small>${comment}</div><b>${money(positionValue(p))}</b></div>`}).join(''):`<div class="account-empty">${t('emptyAsset')}</div>`;
-    return `<div class="account-expand-card ${open?'expanded':''}"><div class="list-card asset-toggle" data-asset-toggle="${a.id}"><div class="list-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)};color:#fff">${escapeHTML(assetIcon(a))}</div><div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)} · ${number(assetQuantity(a.id))} ед. · ${money(a.price)} / ед.</small></div><div class="list-value"><strong>${money(assetTotal(a.id))}</strong></div><button class="menu-button" data-asset-menu="${a.id}" aria-label="Действия с активом">···</button></div><div class="account-assets ${open?'':'hidden'}">${details}</div></div>`;
+    const details=positions.length?positions.map(p=>{const acc=accountBy(p.accountId),comment=p.comment?`<small class="asset-position-comment">• ${escapeHTML(p.comment)}</small>`:'';return `<div class="account-asset-row"><span class="mini-asset-icon ${iconLenClass(accountIcon(acc))}" style="background:${accountColor(acc)}">${escapeHTML(accountIcon(acc))}</span><div><strong>${escapeHTML(acc?.name||t('account'))}</strong><small>${number(p.quantity)} ${escapeHTML(a.code)}</small>${comment}</div><b>${money(positionValue(p))}</b></div>`}).join(''):`<div class="account-empty">${t('emptyAsset')}</div>`;
+    return `<div class="account-expand-card ${open?'expanded':''}"><div class="list-card asset-toggle" data-asset-toggle="${a.id}"><div class="list-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)};color:#fff">${escapeHTML(assetIcon(a))}</div><div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)} · ${number(assetQuantity(a.id))} ${t('unitShort')} · ${money(a.price)} / ${t('unitShort')}</small></div><div class="list-value"><strong>${money(assetTotal(a.id))}</strong></div><button class="menu-button" data-asset-menu="${a.id}" aria-label="${t('actions')}">···</button></div><div class="account-assets ${open?'':'hidden'}">${details}</div></div>`;
   }).join('');
 }
 function renderPositions(){
   const summary=byId('positionsSummary'),list=byId('positionsList');
   summary.innerHTML=state.accounts.map(a=>`<div class="summary-pill"><span class="summary-icon ${iconLenClass(accountIcon(a))}" style="background:${accountColor(a)};color:#fff">${escapeHTML(accountIcon(a))}</span><span><small>${escapeHTML(a.name)}</small><strong>${money(accountTotal(a.id))}</strong></span></div>`).join('');
   if(!state.positions.length){list.innerHTML=`<div class="empty-state">${t('emptyPositions')}</div>`;return}
-  list.innerHTML=state.positions.slice().sort((a,b)=>positionValue(b)-positionValue(a)).map(p=>{const a=assetBy(p.assetId),acc=accountBy(p.accountId),comment=p.comment?`<span class="position-comment">• ${escapeHTML(p.comment)}</span>`:'';return `<div class="list-card"><div class="list-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)};color:#fff">${escapeHTML(assetIcon(a))}</div><div class="list-main"><div class="position-title-line"><strong>${escapeHTML(a?.code||a?.name||'Актив')}</strong>${comment}</div><small>${escapeHTML(acc?.name||t('deletedAccount'))} · ${number(p.quantity)} ед. · ${escapeHTML(a?.name||'')}</small></div><div class="list-value"><strong>${money(positionValue(p))}</strong><small>${a?money(a.price):'—'} / ед.</small></div><button class="menu-button" data-position-menu="${p.id}" aria-label="Действия с позицией">···</button></div>`}).join('');
+  list.innerHTML=state.positions.slice().sort((a,b)=>positionValue(b)-positionValue(a)).map(p=>{const a=assetBy(p.assetId),acc=accountBy(p.accountId),comment=p.comment?`<span class="position-comment">• ${escapeHTML(p.comment)}</span>`:'';return `<div class="list-card"><div class="list-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)};color:#fff">${escapeHTML(assetIcon(a))}</div><div class="list-main"><div class="position-title-line"><strong>${escapeHTML(a?.code||a?.name||t('asset'))}</strong>${comment}</div><small>${escapeHTML(acc?.name||t('deletedAccount'))} · ${number(p.quantity)} ${t('unitShort')} · ${escapeHTML(a?.name||'')}</small></div><div class="list-value"><strong>${money(positionValue(p))}</strong><small>${a?money(a.price):'—'} / ${t('unitShort')}</small></div><button class="menu-button" data-position-menu="${p.id}" aria-label="${t('actions')}">···</button></div>`}).join('');
 }
 function positionLabel(p){const a=assetBy(p.assetId),acc=accountBy(p.accountId),comment=p.comment?` · ${p.comment}`:'';return `${acc?.name||t('account')} · ${a?.code||t('asset')}${comment}`}
 function historicalPositionOptions(){const map=new Map();for(const p of state.positions)map.set(p.id,{positionId:p.id,label:positionLabel(p)});for(const s of state.snapshots)for(const p of (Array.isArray(s.positions)?s.positions:[]))if(!map.has(p.positionId))map.set(p.positionId,{positionId:p.positionId,label:`${p.accountName||t('account')} · ${p.assetCode||t('asset')}${p.comment?` · ${p.comment}`:''}`});return [...map.values()].sort((a,b)=>a.label.localeCompare(b.label,locale()))}
@@ -169,7 +261,10 @@ function drawChart(){
   dateRow.children[0].textContent=shortDate(data[0].snapshot.createdAt);dateRow.children[1].textContent=shortDate(data.at(-1).snapshot.createdAt);
 }
 function refreshPositionForm(){const f=byId('positionForm');f.elements.accountId.innerHTML=state.accounts.map(a=>`<option value="${a.id}">${escapeHTML(a.name)}</option>`).join('');f.elements.assetId.innerHTML=state.assets.map(a=>`<option value="${a.id}">${escapeHTML(a.name)} · ${escapeHTML(a.code)}</option>`).join('');const disabled=!state.accounts.length||!state.assets.length;byId('positionPrerequisite').classList.toggle('hidden',!disabled);f.querySelector('.sheet-primary').disabled=disabled}
-function decl(n,o,f,m){const x=Math.abs(n)%100,y=x%10;if(x>10&&x<20)return m;if(y>1&&y<5)return f;if(y===1)return o;return m} function accountGlyph(t=''){if(t.includes('Банк'))return '▥';if(t.includes('Бирж'))return '↗';if(t.includes('Долг'))return '↔';if(t.includes('Крипто'))return '◇';if(t.includes('Налич'))return '$';return '•'}
+function decl(n,o,f,m){const x=Math.abs(n)%100,y=x%10;if(x>10&&x<20)return m;if(y>1&&y<5)return f;if(y===1)return o;return m}
+function accountTypeKey(v=''){const s=String(v).toLowerCase();if(s.includes('банк')||s==='bank')return 'bank';if(s.includes('бирж')||s==='exchange')return 'exchange';if(s.includes('долг')||s==='debt')return 'debt';if(s.includes('крипто')||s==='crypto wallet')return 'cryptoWallet';if(s.includes('налич')||s==='cash')return 'cash';return 'other'}
+function accountTypeLabel(v=''){return t(accountTypeKey(v))}
+function accountGlyph(v=''){const k=accountTypeKey(v);if(k==='bank')return '▥';if(k==='exchange')return '↗';if(k==='debt')return '↔';if(k==='cryptoWallet')return '◇';if(k==='cash')return '$';return '•'}
 function formatDate(ts){return new Intl.DateTimeFormat(locale(),{day:'numeric',month:'long',year:'numeric'}).format(new Date(ts))} function shortDate(ts){return new Intl.DateTimeFormat(locale(),{day:'numeric',month:'short'}).format(new Date(ts))} function formatTime(ts){return new Intl.DateTimeFormat(locale(),{hour:'2-digit',minute:'2-digit'}).format(new Date(ts))}
 function syncDisplayCurrency(){
   if(state.displayCurrency!=='USD'&&!state.assets.some(a=>a.code===state.displayCurrency&&Number(a.price)>0)){
@@ -183,8 +278,8 @@ function renderCurrencyButton(){
 }
 function renderCurrencyOptions(){
   const box=byId('currencyOptions');
-  const items=[{code:'USD',name:'US Dollar',icon:'$',color:'#17181b'},...state.assets.filter(a=>Number(a.price)>0)];
-  box.innerHTML=items.map(a=>`<button type="button" class="currency-option ${state.displayCurrency===a.code?'selected':''}" data-currency-code="${escapeHTML(a.code)}"><span class="currency-option-icon ${iconLenClass(a.icon||'$')}" style="background:${a.color||'#17181b'}">${escapeHTML(a.icon||'$')}</span><span><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)}${a.code==='USD'?' · базовая':` · ${usd.format(Number(a.price))} / ед.`}</small></span><b>${state.displayCurrency===a.code?'✓':''}</b></button>`).join('');
+  const items=[{code:'USD',name:t('displayName'),icon:'$',color:'#17181b'},...state.assets.filter(a=>Number(a.price)>0)];
+  box.innerHTML=items.map(a=>`<button type="button" class="currency-option ${state.displayCurrency===a.code?'selected':''}" data-currency-code="${escapeHTML(a.code)}"><span class="currency-option-icon ${iconLenClass(a.icon||'$')}" style="background:${a.color||'#17181b'}">${escapeHTML(a.icon||'$')}</span><span><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)}${a.code==='USD'?` · ${t('baseLabel')}`:` · ${usd.format(Number(a.price))} / ${t('unitLabel')}`}</small></span><b>${state.displayCurrency===a.code?'✓':''}</b></button>`).join('');
 }
 function setDisplayCurrency(code){
   state.displayCurrency=code;localStorage.setItem('worth-display-currency',code);closeDialog('currencyModal');renderAll();
@@ -201,9 +296,9 @@ function toast(t){const el=byId('toast');el.textContent=t;el.classList.add('show
 function showActionMenu(title,actions){pendingActions=actions;byId('actionMenuTitle').textContent=title;byId('actionMenuItems').innerHTML=actions.map((a,i)=>`<button type="button" class="action-item ${a.danger?'danger':''}" data-action-index="${i}">${escapeHTML(a.label)}</button>`).join('');openDialog('actionMenuModal')}
 async function saveSnapshot(){await dbPut('snapshots',{id:uid(),createdAt:Date.now(),total:portfolioTotal(),accounts:state.accounts.map(a=>({accountId:a.id,name:a.name,total:accountTotal(a.id)})),assets:state.assets.map(a=>({assetId:a.id,code:a.code,name:a.name,icon:a.icon,color:a.color,price:Number(a.price),quantity:assetQuantity(a.id),value:assetTotal(a.id)})),positions:state.positions.map(p=>{const a=assetBy(p.assetId),acc=accountBy(p.accountId);return {positionId:p.id,accountId:p.accountId,accountName:acc?.name||'',assetId:p.assetId,assetCode:a?.code||'',assetName:a?.name||'',comment:p.comment||'',quantity:Number(p.quantity)||0,price:Number(a?.price)||0,value:positionValue(p)}})});await reload();toast(t('snapshotSaved'))}
 
-function accountMenu(id){const a=accountBy(id);if(!a)return;showActionMenu(a.name,[{label:t('configureAccount'),run:()=>{const f=byId('accountEditForm');f.elements.accountId.value=a.id;f.elements.name.value=a.name;f.elements.type.value=a.type;f.elements.icon.value=a.icon;f.elements.color.value=a.color;openDialog('accountEditModal')}},{label:t('deleteAccount'),danger:true,run:async()=>{if(!confirm(t('confirmDeleteAccount',a.name)))return;for(const p of state.positions.filter(p=>p.accountId===id))await dbDelete('positions',p.id);await dbDelete('accounts',id);await reload();toast(t('accountDeleted'))}}])}
+function accountMenu(id){const a=accountBy(id);if(!a)return;showActionMenu(a.name,[{label:t('configureAccount'),run:()=>{const f=byId('accountEditForm');f.elements.accountId.value=a.id;f.elements.name.value=a.name;f.elements.type.value=accountTypeKey(a.type);f.elements.icon.value=a.icon;f.elements.color.value=a.color;openDialog('accountEditModal')}},{label:t('deleteAccount'),danger:true,run:async()=>{if(!confirm(t('confirmDeleteAccount',a.name)))return;for(const p of state.positions.filter(p=>p.accountId===id))await dbDelete('positions',p.id);await dbDelete('accounts',id);await reload();toast(t('accountDeleted'))}}])}
 
-function assetMenu(id){const a=assetBy(id);if(!a)return;showActionMenu(`${a.name} · ${a.code}`,[{label:t('configureAsset'),run:()=>{const f=byId('assetEditForm');f.elements.assetId.value=a.id;f.elements.name.value=a.name;f.elements.code.value=a.code;f.elements.icon.value=a.icon;f.elements.color.value=a.color;openDialog('assetEditModal')}},{label:t('changePrice'),run:()=>{const f=byId('priceForm');f.elements.assetId.value=a.id;f.elements.price.value=inputDecimal(a.price);byId('priceAssetTitle').textContent=`${a.name} · ${a.code}`;openDialog('priceModal')}},{label:t('deleteAsset'),danger:true,run:async()=>{if(!confirm(t('confirmDeleteAsset',a.name,a.code)))return;for(const p of state.positions.filter(p=>p.assetId===id))await dbDelete('positions',p.id);await dbDelete('assets',id);await reload();toast(t('assetDeleted'))}}])}
+function assetMenu(id){const a=assetBy(id);if(!a)return;showActionMenu(`${a.name} · ${a.code}`,[{label:t('refreshAssetPrice'),run:async()=>{await runPriceRefresh(a.id)}},{label:t('configureAsset'),run:()=>{const f=byId('assetEditForm');f.elements.assetId.value=a.id;f.elements.name.value=a.name;f.elements.code.value=a.code;f.elements.icon.value=a.icon;f.elements.color.value=a.color;openDialog('assetEditModal')}},{label:t('changePrice'),run:()=>{const f=byId('priceForm');f.elements.assetId.value=a.id;f.elements.price.value=inputDecimal(a.price);byId('priceAssetTitle').textContent=`${a.name} · ${a.code}`;openDialog('priceModal')}},{label:t('deleteAsset'),danger:true,run:async()=>{if(!confirm(t('confirmDeleteAsset',a.name,a.code)))return;for(const p of state.positions.filter(p=>p.assetId===id))await dbDelete('positions',p.id);await dbDelete('assets',id);await reload();toast(t('assetDeleted'))}}])}
 
 function positionMenu(id){const p=state.positions.find(x=>x.id===id),a=p&&assetBy(p.assetId);if(!p)return;showActionMenu(a?.name||t('position'),[{label:t('showPositionHistory'),run:()=>{state.historyScope=`position:${p.id}`;navigate('historyView');refreshHistoryScope();renderHistory()}},{label:t('editPosition'),run:()=>{openDialog('positionModal');const f=byId('positionForm');f.dataset.editId=p.id;f.elements.accountId.value=p.accountId;f.elements.assetId.value=p.assetId;f.elements.quantity.value=inputDecimal(p.quantity);f.elements.comment.value=p.comment||'';byId('positionModeLabel').textContent=t('editing')}},{label:t('deletePosition'),danger:true,run:async()=>{if(!confirm(t('confirmDeletePosition')))return;await dbDelete('positions',id);await reload();toast(t('positionDeleted'))}}])}
 
@@ -211,13 +306,14 @@ function snapshotMenu(id){showActionMenu(t('snapshot'),[{label:t('deleteSnapshot
 
 function renderQuickUpdate(){const c=byId('quickUpdateFields');if(!state.assets.length){c.innerHTML=`<div class="empty-state">${t('emptyAssets')}</div>`;return}c.innerHTML=state.assets.map(a=>{const positions=state.positions.filter(p=>p.assetId===a.id);const rows=positions.length?positions.map(p=>{const acc=accountBy(p.accountId);return `<label class="quick-position-row"><span class="quick-position-account"><span class="quick-account-icon ${iconLenClass(accountIcon(acc))}" style="background:${accountColor(acc)}">${escapeHTML(accountIcon(acc))}</span><span><strong>${escapeHTML(acc?.name||t('account'))}</strong><small>${escapeHTML(t('qtyCode',a.code))}</small></span></span><input type="text" inputmode="decimal" autocomplete="off" data-position-qty="${p.id}" value="${inputDecimal(p.quantity)}" aria-label="${escapeHTML(t('qtyAccount',a.code,acc?.name||t('account')))}"></label>`}).join(''):`<div class="quick-no-positions">${t('noPositions')}</div>`;return `<section class="quick-asset-card"><div class="quick-asset-head"><span class="quick-asset-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)}">${escapeHTML(assetIcon(a))}</span><div class="quick-asset-meta"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)} · ${money(assetTotal(a.id))}</small></div></div><label class="quick-price-row"><span><strong>${t('unitPriceLabel')}</strong><small>${t('basePrice')}</small></span><div class="quick-price-input"><span>$</span><input type="text" inputmode="decimal" autocomplete="off" data-asset-price="${a.id}" value="${inputDecimal(a.price)}" aria-label="${escapeHTML(t('priceUsd',a.code))}"></div></label><div class="quick-positions-block"><div class="quick-block-title">${t('balances')}</div>${rows}</div></section>`}).join('')}
 
-function exportData(){const payload={app:'Worth',version:9,appVersion:'2.0.1-final',baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast(t('backupCreated'))}
+function exportData(){const payload={app:'Worth',version:10,appVersion:'2.1-final',baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast(t('backupCreated'))}
 
 function validateImport(data){return WorthCore.validateImport(data)}
 async function importData(file){try{const raw=JSON.parse(await file.text()),data=validateImport(raw);if(!confirm(t('confirmImport')))return;for(const n of STORE_NAMES){await dbClear(n);for(const item of data[n])await dbPut(n,item)}await reload();toast(t('dataRestored'))}catch(e){console.error(e);alert(`${t('importFailed')}: ${e.message||t('unsupported')}`)}}
 
 function bindEvents(){document.addEventListener('click',async e=>{const currency=e.target.closest('[data-currency-code]');if(currency){setDisplayCurrency(currency.dataset.currencyCode);return}const theme=e.target.closest('[data-theme-choice]');if(theme){setTheme(theme.dataset.themeChoice);return}const lang=e.target.closest('[data-lang-choice]');if(lang){setLanguage(lang.dataset.langChoice);return}const accountToggle=e.target.closest('[data-account-toggle]');if(accountToggle&&!e.target.closest('[data-account-menu]')){const id=accountToggle.dataset.accountToggle;state.expandedAccounts.has(id)?state.expandedAccounts.delete(id):state.expandedAccounts.add(id);renderAccounts();return}const assetToggle=e.target.closest('[data-asset-toggle]');if(assetToggle&&!e.target.closest('[data-asset-menu]')){const id=assetToggle.dataset.assetToggle;state.expandedAssets.has(id)?state.expandedAssets.delete(id):state.expandedAssets.add(id);renderAssets();return}const open=e.target.closest('[data-open]');if(open){openDialog(open.dataset.open);return}const close=e.target.closest('[data-close]');if(close){closeDialog(close.dataset.close);return}const nav=e.target.closest('[data-nav]');if(nav){navigate(nav.dataset.nav);return}const am=e.target.closest('[data-account-menu]');if(am){accountMenu(am.dataset.accountMenu);return}const asm=e.target.closest('[data-asset-menu]');if(asm){assetMenu(asm.dataset.assetMenu);return}const pm=e.target.closest('[data-position-menu]');if(pm){positionMenu(pm.dataset.positionMenu);return}const sm=e.target.closest('[data-snapshot-menu]');if(sm){snapshotMenu(sm.dataset.snapshotMenu);return}const ai=e.target.closest('[data-action-index]');if(ai){const action=pendingActions[Number(ai.dataset.actionIndex)];closeDialog('actionMenuModal');if(action)await action.run();return}});
 byId('historyScope').addEventListener('change',e=>{state.historyScope=e.target.value;renderHistory()});byId('saveSnapshotBtn').addEventListener('click',saveSnapshot);byId('saveSnapshotBtnHistory').addEventListener('click',saveSnapshot);byId('openQuickUpdate').addEventListener('click',()=>{renderQuickUpdate();openDialog('quickUpdateModal')});byId('displayCurrencyBtn').addEventListener('click',()=>{renderCurrencyOptions();openDialog('currencyModal')});byId('settingsShortcut').addEventListener('click',()=>navigate('settingsView'));
+byId('refreshPricesBtn').addEventListener('click',async()=>{await runPriceRefresh()});
 byId('exportBtn').addEventListener('click',exportData);
 byId('importInput').addEventListener('change',async e=>{const f=e.target.files?.[0];if(f)await importData(f);e.target.value=''});
 byId('resetBtn').addEventListener('click',async()=>{if(!confirm(t('confirmDeleteAll')))return;for(const n of STORE_NAMES)await dbClear(n);await reload();toast(t('allDeleted'))});
