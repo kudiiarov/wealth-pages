@@ -25,7 +25,7 @@ async function start(): Promise<void> {
     settings,
     files: new BrowserFileTransfer(),
     diagnostics,
-    prices: new HttpPriceProvider(fetch, Date.now, diagnostics),
+    prices: new HttpPriceProvider({ diagnostics }),
     clock: {
       now: Date.now,
       isoNow: () => new Date().toISOString(),

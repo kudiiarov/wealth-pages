@@ -2,7 +2,7 @@ import type { AppSettings, PortfolioData, UnknownRecord } from './models';
 import { normalizeData } from './normalize';
 
 export const BACKUP_VERSION = 14;
-export const APP_VERSION = '3.1-final';
+export const APP_VERSION = '3.1.1-final';
 
 export interface ValidatedBackup {
   version: number;

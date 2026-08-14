@@ -47,9 +47,37 @@ describe('HttpPriceProvider', () => {
     fetchMock = vi.fn<typeof fetch>();
   });
 
+  it('calls the default fetch with its global Window receiver', async () => {
+    const originalFetch = globalThis.fetch;
+    const strictWindowFetch = vi.fn(function (this: unknown) {
+      if (this !== globalThis) {
+        return Promise.reject(
+          new TypeError('Can only call Window.fetch on instances of Window'),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ bitcoin: { usd: 100_000 } })),
+      );
+    }) as typeof fetch;
+    globalThis.fetch = strictWindowFetch;
+
+    try {
+      const provider = new HttpPriceProvider();
+      const result = await provider.getUsdPrices([asset('BTC', 'coingecko')]);
+
+      expect(result.quotes[0]?.usdPrice).toBe(100_000);
+      expect(result.failures).toEqual([]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('converts Frankfurter units-per-USD into USD per asset unit', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ rate: 90 })));
-    const provider = new HttpPriceProvider(fetchMock, () => 10_000);
+    const provider = new HttpPriceProvider({
+      fetcher: fetchMock,
+      now: () => 10_000,
+    });
 
     const result = await provider.getUsdPrices([asset('RUB', 'frankfurter')]);
 
@@ -69,7 +97,10 @@ describe('HttpPriceProvider', () => {
         JSON.stringify({ bitcoin: { usd: 100_000 }, ethereum: { usd: 4_000 } }),
       ),
     );
-    const provider = new HttpPriceProvider(fetchMock, () => 10_000);
+    const provider = new HttpPriceProvider({
+      fetcher: fetchMock,
+      now: () => 10_000,
+    });
 
     const result = await provider.getUsdPrices([
       asset('BTC', 'coingecko'),
@@ -90,11 +121,11 @@ describe('HttpPriceProvider', () => {
 
   it('skips unknown and unconfigured assets instead of guessing', async () => {
     const diagnostics = new CapturingDiagnosticLog();
-    const provider = new HttpPriceProvider(
-      fetchMock,
-      () => 10_000,
+    const provider = new HttpPriceProvider({
+      fetcher: fetchMock,
+      now: () => 10_000,
       diagnostics,
-    );
+    });
 
     const result = await provider.getUsdPrices([
       asset('UNKNOWN', 'coingecko'),
@@ -137,7 +168,10 @@ describe('HttpPriceProvider', () => {
       );
     });
     let now = 10_000;
-    const provider = new HttpPriceProvider(fetchMock, () => now);
+    const provider = new HttpPriceProvider({
+      fetcher: fetchMock,
+      now: () => now,
+    });
 
     const first = await provider.getUsdPrices([
       asset('RUB', 'frankfurter'),
@@ -157,11 +191,11 @@ describe('HttpPriceProvider', () => {
   it('records provider, assets, URL, status, and error for diagnostics', async () => {
     fetchMock.mockResolvedValue(new Response('rate limited', { status: 429 }));
     const diagnostics = new CapturingDiagnosticLog();
-    const provider = new HttpPriceProvider(
-      fetchMock,
-      () => 10_000,
+    const provider = new HttpPriceProvider({
+      fetcher: fetchMock,
+      now: () => 10_000,
       diagnostics,
-    );
+    });
 
     await provider.getUsdPrices([asset('BTC', 'coingecko')]);
 
@@ -194,11 +228,11 @@ describe('HttpPriceProvider', () => {
   it('records a network exception when WebKit returns no HTTP response', async () => {
     fetchMock.mockRejectedValue(new TypeError('Load failed'));
     const diagnostics = new CapturingDiagnosticLog();
-    const provider = new HttpPriceProvider(
-      fetchMock,
-      () => 10_000,
+    const provider = new HttpPriceProvider({
+      fetcher: fetchMock,
+      now: () => 10_000,
       diagnostics,
-    );
+    });
 
     await provider.getUsdPrices([asset('RUB', 'frankfurter')]);
 

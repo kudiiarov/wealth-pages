@@ -43,18 +43,28 @@ interface CryptoTarget {
   providerId: string;
 }
 
+interface HttpPriceProviderOptions {
+  fetcher?: typeof fetch;
+  now?: () => number;
+  diagnostics?: DiagnosticLog;
+}
+
 function isRecord(value: unknown): value is UnknownRecord {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 export class HttpPriceProvider implements PriceProvider {
   private readonly fiatCache = new Map<string, FiatCacheEntry>();
+  private readonly fetcher: typeof fetch;
+  private readonly now: () => number;
+  private readonly diagnostics: DiagnosticLog;
 
-  constructor(
-    private readonly fetcher: typeof fetch = fetch,
-    private readonly now: () => number = Date.now,
-    private readonly diagnostics: DiagnosticLog = NOOP_DIAGNOSTIC_LOG,
-  ) {}
+  constructor(options: HttpPriceProviderOptions = {}) {
+    this.fetcher =
+      options.fetcher ?? ((input, init) => globalThis.fetch(input, init));
+    this.now = options.now ?? Date.now;
+    this.diagnostics = options.diagnostics ?? NOOP_DIAGNOSTIC_LOG;
+  }
 
   async getUsdPrices(assets: readonly Asset[]): Promise<PriceBatch> {
     const quotes: PriceQuote[] = [];
