@@ -24,6 +24,44 @@ function value(form: HTMLFormElement, name: string): string {
   return control(form, name).value;
 }
 
+function optionalValue(form: HTMLFormElement, name: string): string {
+  const element = form.elements.namedItem(name);
+  return element instanceof HTMLInputElement ||
+    element instanceof HTMLSelectElement
+    ? element.value
+    : '';
+}
+
+function taxonomy(form: HTMLFormElement): {
+  category: string;
+  tags: string[];
+} {
+  const selectedCategory = optionalValue(form, 'category');
+  const category = (
+    selectedCategory === '__custom__'
+      ? optionalValue(form, 'customCategory')
+      : selectedCategory
+  ).trim();
+  const selectedTags = Array.from(
+    form.querySelectorAll<HTMLInputElement>('input[name="tags"]:checked'),
+    ({ value: tag }) => tag,
+  );
+  const customTags = optionalValue(form, 'customTags')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+  const tags = Array.from(
+    [...selectedTags, ...customTags]
+      .reduce<Map<string, string>>((unique, tag) => {
+        const key = tag.toLocaleLowerCase();
+        if (!unique.has(key)) unique.set(key, tag);
+        return unique;
+      }, new Map())
+      .values(),
+  );
+  return { category, tags };
+}
+
 function autoUpdateSource(value: string): AutoUpdateSource {
   if (value === 'coingecko' || value === 'frankfurter') return value;
   return 'none';
@@ -44,7 +82,15 @@ export function readAssetForm(form: HTMLFormElement): AssetInput | null {
   const name = value(form, 'name').trim();
   const code = cleanCode(value(form, 'code'));
   const price = parseDecimal(value(form, 'price'));
-  if (!name || !code || !Number.isFinite(price) || price < 0) return null;
+  const metadata = taxonomy(form);
+  if (
+    !name ||
+    !code ||
+    !metadata.category ||
+    !Number.isFinite(price) ||
+    price < 0
+  )
+    return null;
   return {
     name,
     code,
@@ -52,6 +98,7 @@ export function readAssetForm(form: HTMLFormElement): AssetInput | null {
     color: value(form, 'color'),
     price,
     autoUpdateSource: autoUpdateSource(value(form, 'autoUpdateSource')),
+    ...metadata,
   };
 }
 
@@ -61,7 +108,14 @@ export function readAssetEditForm(
 ): AssetInput | null {
   const name = value(form, 'name').trim();
   const code = cleanCode(value(form, 'code'));
-  if (!name || !code || !Number.isFinite(currentPrice) || currentPrice < 0) {
+  const metadata = taxonomy(form);
+  if (
+    !name ||
+    !code ||
+    !metadata.category ||
+    !Number.isFinite(currentPrice) ||
+    currentPrice < 0
+  ) {
     return null;
   }
   return {
@@ -71,6 +125,7 @@ export function readAssetEditForm(
     color: value(form, 'color'),
     price: currentPrice,
     autoUpdateSource: autoUpdateSource(value(form, 'autoUpdateSource')),
+    ...metadata,
   };
 }
 

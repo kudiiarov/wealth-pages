@@ -5,8 +5,7 @@ export type PnlPeriod = 'all' | 'last';
 export type AutomationInterval = 1 | 3 | 6 | 12 | 24;
 export type PositionGrouping = 'accounts' | 'assets';
 export type AutoUpdateSource = 'none' | 'coingecko' | 'frankfurter';
-export type AssetCategory =
-  'cash-currencies' | 'crypto' | 'precious-metals' | 'other';
+export type AssetCategory = string;
 
 export interface Account {
   [key: string]: unknown;

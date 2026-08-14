@@ -28,6 +28,14 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
   await page.locator('#assetForm [name="code"]').fill('USD');
   await page.locator('#assetForm [name="price"]').fill('1');
   await page
+    .locator('#assetForm [name="category"]')
+    .selectOption('cash-currencies');
+  await page
+    .locator('#assetForm .taxonomy-tag')
+    .filter({ hasText: 'Валюты' })
+    .click();
+  await page.locator('#assetForm [name="customTags"]').fill('Резерв');
+  await page
     .locator('#assetForm')
     .getByRole('button', { name: 'Создать актив' })
     .click();
@@ -67,12 +75,21 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
     .locator('#positionForm')
     .getByRole('button', { name: 'Сохранить' })
     .click();
-  await expect(page.locator('#positionsList')).toContainText('Резерв обновлён');
+  await page.locator('#positionsList .portfolio-position-row').click();
+  await page
+    .locator('#actionMenuItems')
+    .getByText('Изменить позицию', { exact: true })
+    .click();
+  await expect(page.locator('#positionForm [name="comment"]')).toHaveValue(
+    'Резерв обновлён',
+  );
+  await page.locator('[data-close="positionModal"]').click();
   await page.locator('#portfolioSearch').fill('USD');
   await expect(page.locator('#positionsList .portfolio-row')).toHaveCount(1);
   await page.locator('#portfolioSearch').fill('');
   await page.locator('[data-portfolio-filter="currency"]').click();
   await expect(page.locator('#positionsList')).toContainText('Доллар');
+  await expect(page.locator('[data-portfolio-filter="Резерв"]')).toBeVisible();
   await page.locator('#portfolioSearch').fill('BTC');
   await page.locator('[data-nav="homeView"]').click();
   await expect(page.locator('#categoryAllocationList')).toContainText(
@@ -99,6 +116,20 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
   await page.locator('.tab[data-nav="positionsView"]').click();
   await page.locator('[data-portfolio-mode="accounts"]').click();
   await expect(page.locator('#positionsList')).toContainText('Основной счёт');
+
+  const accountGroup = page
+    .locator('#positionsList .portfolio-explorer-group')
+    .filter({ hasText: 'Основной счёт' });
+  await accountGroup.locator('.portfolio-row').click();
+  await expect(accountGroup.locator('.portfolio-position-icon')).toHaveText(
+    'USD',
+  );
+  await expect(accountGroup.locator('.portfolio-position-row')).toContainText(
+    '100 USD',
+  );
+  await expect(
+    accountGroup.locator('.portfolio-position-row'),
+  ).not.toContainText('$100.00');
 
   await page.locator('#settingsShortcut').click();
   await page.locator('#refreshPricesBtn').click();
@@ -174,4 +205,87 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
     'aria-label',
     'Add to portfolio',
   );
+});
+
+test('shows exact portfolio values while inspecting both charts', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const now = Date.now();
+  await page.evaluate(
+    ({ currentTime }) =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 1);
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction(
+            ['accounts', 'assets', 'positions', 'snapshots'],
+            'readwrite',
+          );
+          transaction.objectStore('accounts').put({
+            id: 'account',
+            name: 'Vault',
+            type: 'bank',
+            icon: 'V',
+            color: '#17181b',
+          });
+          transaction.objectStore('assets').put({
+            id: 'usd',
+            name: 'Dollar',
+            code: 'USD',
+            icon: '$',
+            color: '#5667ff',
+            price: 1,
+            autoUpdateSource: 'none',
+            category: 'cash-currencies',
+            tags: ['currency'],
+          });
+          transaction.objectStore('positions').put({
+            id: 'position',
+            accountId: 'account',
+            assetId: 'usd',
+            quantity: 123.45,
+            comment: '',
+          });
+          transaction.objectStore('snapshots').put({
+            id: 'first',
+            createdAt: currentTime - 7_200_000,
+            total: 100.12,
+          });
+          transaction.objectStore('snapshots').put({
+            id: 'second',
+            createdAt: currentTime - 3_600_000,
+            total: 123.45,
+          });
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not seed portfolio'));
+        };
+      }),
+    { currentTime: now },
+  );
+  await page.reload();
+
+  const homeCanvas = page.locator('#homeChart');
+  const homeBox = await homeCanvas.boundingBox();
+  if (!homeBox) throw new Error('Home chart is not visible');
+  await page.mouse.move(homeBox.x + 6, homeBox.y + homeBox.height / 2);
+  await expect(page.locator('#homeChartTooltip')).toBeVisible();
+  await expect(page.locator('#homeChartTooltip')).toContainText('$100.12');
+
+  await page.locator('[data-nav="historyView"]').click();
+  const historyCanvas = page.locator('#historyChart');
+  const historyBox = await historyCanvas.boundingBox();
+  if (!historyBox) throw new Error('History chart is not visible');
+  await page.mouse.move(
+    historyBox.x + historyBox.width - 10,
+    historyBox.y + historyBox.height / 2,
+  );
+  await expect(page.locator('#historyChartTooltip')).toBeVisible();
+  await expect(page.locator('#historyChartTooltip')).toContainText('$123.45');
 });

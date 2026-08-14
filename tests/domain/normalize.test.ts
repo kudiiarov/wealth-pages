@@ -74,4 +74,23 @@ describe('domain normalization', () => {
     expect(account.name).toBe(' Cash ');
     expect(normalized).not.toBe(account);
   });
+
+  it('preserves a custom category and custom tags while removing duplicates', () => {
+    expect(
+      normalizeAsset({
+        id: 'oil',
+        name: 'Brent',
+        code: 'brent',
+        icon: 'B',
+        color: '#17181b',
+        price: 80,
+        autoUpdateSource: 'none',
+        category: ' Commodities ',
+        tags: ['Energy', ' energy ', 'Long term', ''],
+      }),
+    ).toMatchObject({
+      category: 'Commodities',
+      tags: ['Energy', 'Long term'],
+    });
+  });
 });

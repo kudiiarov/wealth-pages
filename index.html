@@ -36,7 +36,7 @@
 <div aria-label="Период доходности" class="home-periods" id="homePeriods" role="group">
 <button data-home-period="1d" type="button">1D</button><button data-home-period="1w" type="button">1W</button><button data-home-period="1m" type="button">1M</button><button data-home-period="1y" type="button">1Y</button><button class="active" data-home-period="all" type="button">ALL</button>
 </div>
-<canvas aria-label="Динамика стоимости портфеля" id="homeChart"></canvas>
+<div class="chart-inspector home-chart-inspector"><canvas aria-label="Динамика стоимости портфеля" id="homeChart"></canvas><output class="chart-tooltip hidden" id="homeChartTooltip"></output></div>
 <button class="price-trust" data-nav="settingsView" id="priceTrust" type="button"><span></span><b id="priceTrustText">—</b></button>
 </div>
 <section class="home-insight-section">
@@ -75,7 +75,7 @@
 <span data-i18n="allHistory" id="historyRangeLabel">Вся история</span>
 <strong id="historyChange">—</strong>
 </div>
-<canvas aria-label="График стоимости портфеля" id="historyChart"></canvas>
+<div class="chart-inspector history-chart-inspector"><canvas aria-label="График стоимости портфеля" id="historyChart"></canvas><output class="chart-tooltip hidden" id="historyChartTooltip"></output></div>
 <div class="empty-state overlay-empty" data-i18n="needTwo" id="historyEmpty">Нужно минимум два снимка для графика.</div>
 <div class="chart-dates" id="chartDates"><span></span><span></span></div>
 </section>
@@ -133,7 +133,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 3.3.0-final</div>
+<div class="build-note">Worth · 3.4.0-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">
@@ -166,6 +166,7 @@
 <label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color" value="#5667ff"/><b data-i18n="choose">Выбрать</b></span></label>
 </div>
 <label class="field"><span data-i18n="currentPrice">Текущая цена за единицу, $</span><input autocomplete="off" inputmode="decimal" name="price" placeholder="1,00" required="" type="text"/></label>
+<div class="asset-taxonomy" data-asset-taxonomy></div>
 <label class="field"><span data-i18n="autoUpdate">Автообновление</span>
 <select name="autoUpdateSource">
 <option value="none" data-i18n="autoNone">Нет</option>
@@ -233,6 +234,7 @@
 <label class="field"><span data-i18n="icon">Иконка · 1–5 символов</span><input autocomplete="off" maxlength="5" name="icon"/></label>
 <label class="field color-field"><span data-i18n="color">Цвет</span><span class="color-control"><input name="color" type="color"/><b data-i18n="choose">Выбрать</b></span></label>
 </div>
+<div class="asset-taxonomy" data-asset-taxonomy></div>
 <label class="field"><span data-i18n="autoUpdate">Автообновление</span>
 <select name="autoUpdateSource">
 <option value="none" data-i18n="autoNone">Нет</option>

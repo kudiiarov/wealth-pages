@@ -76,6 +76,27 @@ export function formatMoney(
   return `${formatted} ${displayAsset.icon || displayAsset.code}`;
 }
 
+export function formatExactMoney(
+  usdValue: number,
+  language: Language,
+  displayAsset?: Asset,
+): string {
+  if (!displayAsset || !(Number(displayAsset.price) > 0)) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(usdValue) || 0);
+  }
+  const amount = convertUsdToDisplay(usdValue, displayAsset);
+  const formatted = new Intl.NumberFormat(locale(language), {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+  return `${formatted} ${displayAsset.icon || displayAsset.code}`;
+}
+
 export function formatNumber(value: number, language: Language): string {
   return new Intl.NumberFormat(locale(language), {
     maximumFractionDigits: 8,

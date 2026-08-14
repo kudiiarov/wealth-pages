@@ -8,6 +8,7 @@ import {
   inferAssetProfile,
   portfolioDrivers,
   portfolioExposures,
+  portfolioTags,
   priceFreshness,
 } from '../../src/ui/portfolio-view-model';
 import type { PortfolioData } from '../../src/domain/models';
@@ -213,6 +214,40 @@ it('aggregates categories without double counting and tags as overlapping exposu
     { tag: 'crypto', value: 300, percentage: 100 },
     { tag: 'gold', value: 100, percentage: 33.33333333333333 },
   ]);
+});
+
+it('builds available filters only from tags that are present on assets', () => {
+  const data: PortfolioData = {
+    accounts: [],
+    assets: [
+      {
+        id: 'oil',
+        name: 'Brent',
+        code: 'BRENT',
+        icon: 'B',
+        color: '#17181b',
+        price: 80,
+        autoUpdateSource: 'none',
+        category: 'Commodities',
+        tags: ['Energy', 'Long term'],
+      },
+      {
+        id: 'cash',
+        name: 'Dollar',
+        code: 'USD',
+        icon: '$',
+        color: '#5667ff',
+        price: 1,
+        autoUpdateSource: 'none',
+        category: 'cash-currencies',
+        tags: ['currency', 'Long term'],
+      },
+    ],
+    positions: [],
+    snapshots: [],
+  };
+
+  expect(portfolioTags(data)).toEqual(['currency', 'Energy', 'Long term']);
 });
 
 it('ranks flow-adjusted asset drivers without treating deposits as gains', () => {

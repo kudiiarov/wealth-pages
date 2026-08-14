@@ -80,7 +80,7 @@ describe('backup validation and serialization', () => {
     expect(backup).toMatchObject({
       app: 'Worth',
       version: 15,
-      appVersion: '3.3.0-final',
+      appVersion: '3.4.0-final',
       baseCurrency: 'USD',
       exportedAt: '2026-08-14T00:00:00.000Z',
       appSettings: settings,

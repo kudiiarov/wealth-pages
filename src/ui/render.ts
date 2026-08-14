@@ -9,7 +9,7 @@ import type {
   SnapshotPosition,
 } from '../domain/models';
 import { validColor } from '../domain/normalize';
-import { assetTotal, portfolioTotal, positionValue } from '../domain/portfolio';
+import { assetTotal, portfolioTotal } from '../domain/portfolio';
 import {
   flowAdjustedPnl,
   selectPnlSeriesSince,
@@ -19,6 +19,7 @@ import {
 import {
   convertUsdToDisplay,
   formatDate,
+  formatExactMoney,
   formatMoney,
   formatNumber,
   formatRelativeTime,
@@ -32,7 +33,12 @@ import {
   type MessageArguments,
   type MessageKey,
 } from '../i18n/messages';
-import { drawHistoryChart, type HistoryDatum } from './chart';
+import {
+  drawHistoryChart,
+  nearestChartPointIndex,
+  type ChartGeometry,
+  type HistoryDatum,
+} from './chart';
 import { all, escapeHtml, requiredElement } from './dom';
 import { formControl } from './forms';
 import {
@@ -42,6 +48,7 @@ import {
   inferAssetProfile,
   portfolioDrivers,
   portfolioExposures,
+  portfolioTags,
   priceFreshness,
 } from './portfolio-view-model';
 import { drawPortfolioSparkline } from './chart';
@@ -61,8 +68,7 @@ export interface UiState {
   historyScope: string;
   homePeriod: '1d' | '1w' | '1m' | '1y' | 'all';
   portfolioMode: 'assets' | 'accounts';
-  portfolioFilter:
-    'all' | 'crypto' | 'currency' | 'gold' | 'stablecoin' | 'other';
+  portfolioFilter: string;
   portfolioQuery: string;
   expandedPortfolioRows: Set<string>;
 }
@@ -74,6 +80,10 @@ interface HistoryItem {
 }
 
 export class WorthRenderer {
+  private homeChartGeometry: ChartGeometry | undefined;
+  private historyChartGeometry: ChartGeometry | undefined;
+  private homeChartSelection: number | undefined;
+  private historyChartSelection: number | undefined;
   readonly ui: UiState = {
     historyScope: 'portfolio',
     homePeriod: 'all',
@@ -103,6 +113,47 @@ export class WorthRenderer {
     this.refreshHistoryScope();
     this.renderHistory();
     this.refreshPositionForm();
+    this.refreshAssetTaxonomyForms();
+  }
+
+  prepareAssetTaxonomyForm(form: HTMLFormElement, asset?: Asset): void {
+    const container = form.querySelector<HTMLElement>('[data-asset-taxonomy]');
+    if (!container) return;
+    const defaultCategories = [
+      'cash-currencies',
+      'crypto',
+      'precious-metals',
+      'other',
+    ];
+    const categories = Array.from(
+      new Set([
+        ...defaultCategories,
+        ...this.service.data.assets.flatMap((item) =>
+          item.category ? [item.category] : [],
+        ),
+      ]),
+    );
+    const selectedCategory = asset?.category ?? '';
+    const selectedTags = new Set(asset?.tags ?? []);
+    const tags = Array.from(
+      new Set([
+        'crypto',
+        'currency',
+        'gold',
+        'stablecoin',
+        ...portfolioTags(this.service.data),
+      ]),
+    );
+    container.innerHTML = `<label class="field"><span>${escapeHtml(this.t('category'))}</span><select name="category" required><option value="">${escapeHtml(this.t('chooseCategory'))}</option>${categories.map((category) => `<option value="${escapeHtml(category)}" ${category === selectedCategory ? 'selected' : ''}>${escapeHtml(this.categoryLabel(category))}</option>`).join('')}<option value="__custom__">${escapeHtml(this.t('newCategory'))}</option></select></label><label class="field custom-category-field hidden"><span>${escapeHtml(this.t('categoryName'))}</span><input autocomplete="off" maxlength="40" name="customCategory" placeholder="${escapeHtml(this.t('categoryExample'))}"></label><fieldset class="taxonomy-tags"><legend>${escapeHtml(this.t('tags'))}</legend><p>${escapeHtml(this.t('tagsHint'))}</p><div class="taxonomy-tag-list">${tags.map((tag) => `<label class="taxonomy-tag"><input type="checkbox" name="tags" value="${escapeHtml(tag)}" ${selectedTags.has(tag) ? 'checked' : ''}><span>${escapeHtml(this.tagLabel(tag))}</span></label>`).join('')}</div><label class="field"><span>${escapeHtml(this.t('customTags'))}</span><input autocomplete="off" maxlength="120" name="customTags" placeholder="${escapeHtml(this.t('tagsExample'))}"></label></fieldset>`;
+  }
+
+  private refreshAssetTaxonomyForms(): void {
+    this.prepareAssetTaxonomyForm(
+      requiredElement('assetForm', HTMLFormElement, this.documentRef),
+    );
+    this.prepareAssetTaxonomyForm(
+      requiredElement('assetEditForm', HTMLFormElement, this.documentRef),
+    );
   }
 
   redrawHomeChart(): void {
@@ -113,7 +164,11 @@ export class WorthRenderer {
       this.documentRef,
     );
     canvas.classList.toggle('empty', series.length < 2);
-    drawPortfolioSparkline(canvas, series);
+    this.homeChartGeometry = drawPortfolioSparkline(
+      canvas,
+      series,
+      this.homeChartSelection,
+    );
   }
 
   renderQuickUpdate(): void {
@@ -175,7 +230,7 @@ export class WorthRenderer {
   }
 
   redrawChart(): void {
-    drawHistoryChart(
+    this.historyChartGeometry = drawHistoryChart(
       requiredElement('historyChart', HTMLCanvasElement, this.documentRef),
       this.element('historyEmpty'),
       this.element('chartDates'),
@@ -191,7 +246,58 @@ export class WorthRenderer {
         money: (value) => this.money(value),
         language: this.language,
       },
+      this.historyChartSelection,
     );
+  }
+
+  inspectChart(kind: 'home' | 'history', clientX: number): void {
+    const canvas = requiredElement(
+      kind === 'home' ? 'homeChart' : 'historyChart',
+      HTMLCanvasElement,
+      this.documentRef,
+    );
+    const geometry =
+      kind === 'home' ? this.homeChartGeometry : this.historyChartGeometry;
+    if (!geometry) return;
+    const index = nearestChartPointIndex(
+      geometry.points,
+      clientX - canvas.getBoundingClientRect().left,
+    );
+    if (index === undefined) return;
+    if (kind === 'home') {
+      this.homeChartSelection = index;
+      this.redrawHomeChart();
+    } else {
+      this.historyChartSelection = index;
+      this.redrawChart();
+    }
+    const currentGeometry =
+      kind === 'home' ? this.homeChartGeometry : this.historyChartGeometry;
+    const datum = currentGeometry?.data[index];
+    const point = currentGeometry?.points[index];
+    if (!datum || !point) return;
+    const tooltip = this.element(
+      kind === 'home' ? 'homeChartTooltip' : 'historyChartTooltip',
+    );
+    const exactValue = this.service.settings.balancesHidden
+      ? '••••'
+      : formatExactMoney(datum.value, this.language, this.displayAsset());
+    tooltip.innerHTML = `<strong>${escapeHtml(exactValue)}</strong><small>${escapeHtml(formatDate(datum.createdAt, this.language))} · ${escapeHtml(formatTime(datum.createdAt, this.language))}</small>`;
+    tooltip.style.left = `${Math.min(Math.max(point.x, 58), Math.max(58, canvas.clientWidth - 58))}px`;
+    tooltip.classList.remove('hidden');
+  }
+
+  clearChartInspection(kind: 'home' | 'history'): void {
+    if (kind === 'home') {
+      this.homeChartSelection = undefined;
+      this.redrawHomeChart();
+    } else {
+      this.historyChartSelection = undefined;
+      this.redrawChart();
+    }
+    this.element(
+      kind === 'home' ? 'homeChartTooltip' : 'historyChartTooltip',
+    ).classList.add('hidden');
   }
 
   refreshPositionForm(): void {
@@ -474,23 +580,17 @@ export class WorthRenderer {
       : `<div class="empty-state compact-empty">${this.t('pnlNoBaseline')}</div>`;
 
     const categories = categoryAllocationRows(this.service.data);
-    const colors: Record<string, string> = {
-      crypto: '#9cda68',
-      'cash-currencies': '#299bc6',
-      'precious-metals': '#f4ad29',
-      other: '#9298a1',
-    };
     this.element('categoryAllocationBar').innerHTML = categories
       .map(
         ({ category, percentage }) =>
-          `<span class="allocation-segment" style="width:${percentage}%;background:${colors[category]}"></span>`,
+          `<span class="allocation-segment" style="width:${percentage}%;background:${this.categoryColor(category)}"></span>`,
       )
       .join('');
     this.element('categoryAllocationList').innerHTML = categories.length
       ? categories
           .map(
             ({ category, percentage }) =>
-              `<button class="category-row" data-nav="positionsView" data-category-filter="${category}" type="button"><span style="background:${colors[category]}"></span><strong>${escapeHtml(this.categoryLabel(category))}</strong><b>${percentage.toFixed(0)}%</b></button>`,
+              `<button class="category-row" data-nav="positionsView" data-category-filter="${escapeHtml(category)}" type="button"><span style="background:${this.categoryColor(category)}"></span><strong>${escapeHtml(this.categoryLabel(category))}</strong><b>${percentage.toFixed(0)}%</b></button>`,
           )
           .join('')
       : `<div class="empty-state compact-empty">${this.t('emptyAllocation')}</div>`;
@@ -532,6 +632,9 @@ export class WorthRenderer {
   }
 
   renderPortfolioExplorer(): void {
+    const filters = this.element('portfolioFilters');
+    const tags = portfolioTags(this.service.data);
+    filters.innerHTML = `<button data-portfolio-filter="all" type="button">${escapeHtml(this.t('all'))}</button>${tags.map((tag) => `<button data-portfolio-filter="${escapeHtml(tag)}" type="button">${escapeHtml(this.tagLabel(tag))}</button>`).join('')}`;
     all<HTMLElement>('[data-portfolio-mode]', this.documentRef).forEach(
       (button) => {
         const active = button.dataset.portfolioMode === this.ui.portfolioMode;
@@ -547,7 +650,6 @@ export class WorthRenderer {
         button.setAttribute('aria-pressed', String(active));
       },
     );
-    const filters = this.element('portfolioFilters');
     filters.classList.toggle('hidden', this.ui.portfolioMode === 'accounts');
     const search = requiredElement(
       'portfolioSearch',
@@ -603,7 +705,7 @@ export class WorthRenderer {
               const details = positions
                 .map((position) => {
                   const asset = this.assetBy(position.assetId);
-                  return `<button class="portfolio-position-row" data-position-menu="${position.id}" type="button"><span><strong>${escapeHtml(asset?.name || this.t('asset'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset?.code || '')}${position.comment ? ` · ${escapeHtml(position.comment)}` : ''}</small></span><b>${this.money(positionValue(position, this.service.data.assets))}</b><i>›</i></button>`;
+                  return `<button class="portfolio-position-row" data-position-menu="${position.id}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span><strong>${escapeHtml(asset?.name || this.t('asset'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset?.code || '')}</small></span><i>›</i></button>`;
                 })
                 .join('');
               return `<section class="portfolio-explorer-group ${expanded ? 'expanded' : ''}"><button class="portfolio-row" data-portfolio-expand="account:${account.id}" aria-expanded="${String(expanded)}" type="button"><span class="portfolio-row-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span class="portfolio-row-main"><strong>${escapeHtml(account.name)}</strong><small>${escapeHtml(this.accountTypeLabel(account.type))} · ${positions.length} ${this.t('positionsShort')}</small></span><span class="portfolio-row-value"><strong>${this.money(value)}</strong><small class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></span><i>⌄</i></button><div class="portfolio-position-list ${expanded ? '' : 'hidden'}">${details || `<div class="account-empty">${this.t('emptyAccount')}</div>`}<button class="portfolio-manage" data-account-menu="${account.id}" type="button">${this.t('manageAccount')}</button></div></section>`;
@@ -622,10 +724,9 @@ export class WorthRenderer {
         asset.code.toLocaleLowerCase(locale(this.language)).includes(query);
       const matchesFilter =
         filter === 'all' ||
-        profile.tags.includes(filter) ||
-        (filter === 'currency' && profile.category === 'cash-currencies') ||
-        (filter === 'gold' && profile.category === 'precious-metals') ||
-        (filter === 'other' && profile.category === 'other');
+        profile.tags.some(
+          (tag) => tag.toLocaleLowerCase() === filter.toLocaleLowerCase(),
+        );
       return matchesQuery && matchesFilter;
     });
     this.element('portfolioSummary').textContent =
@@ -651,7 +752,7 @@ export class WorthRenderer {
             const details = positions
               .map((position) => {
                 const account = this.accountBy(position.accountId);
-                return `<button class="portfolio-position-row" data-position-menu="${position.id}" type="button"><span><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}${position.comment ? ` · ${escapeHtml(position.comment)}` : ''}</small></span><b>${this.money(positionValue(position, this.service.data.assets))}</b><i>›</i></button>`;
+                return `<button class="portfolio-position-row" data-position-menu="${position.id}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}</small></span><i>›</i></button>`;
               })
               .join('');
             return `<section class="portfolio-explorer-group ${expanded ? 'expanded' : ''} ${stale ? 'stale-price' : ''}"><button class="portfolio-row" data-portfolio-expand="asset:${asset.id}" aria-expanded="${String(expanded)}" type="button"><span class="portfolio-row-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span class="portfolio-row-main"><strong>${escapeHtml(asset.name)} <em>${escapeHtml(asset.code)}</em></strong><small>${escapeHtml(this.categoryLabel(inferAssetProfile(asset).category))}${stale ? `<b class="stale-label">${this.t('stalePrice')}</b>` : ''}</small></span><span class="portfolio-row-value"><strong>${this.money(value)}</strong><small>${allocation.toFixed(1)}% <b class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</b></small></span><i>⌄</i></button><div class="portfolio-position-list ${expanded ? '' : 'hidden'}">${details || `<div class="account-empty">${this.t('emptyAsset')}</div>`}<button class="portfolio-manage" data-asset-menu="${asset.id}" type="button">${this.t('manageAsset')}</button></div></section>`;
@@ -857,7 +958,24 @@ export class WorthRenderer {
     if (category === 'crypto') return this.t('crypto');
     if (category === 'cash-currencies') return this.t('cashCurrencies');
     if (category === 'precious-metals') return this.t('preciousMetals');
-    return this.t('other');
+    if (category === 'other') return this.t('other');
+    return category;
+  }
+
+  private categoryColor(category: string): string {
+    const fixed: Record<string, string> = {
+      crypto: '#9cda68',
+      'cash-currencies': '#299bc6',
+      'precious-metals': '#f4ad29',
+      other: '#9298a1',
+    };
+    if (fixed[category]) return fixed[category];
+    const custom = ['#33bfc6', '#9b79d1', '#d58255', '#6aa679', '#7a8395'];
+    const hash = Array.from(category).reduce(
+      (value, character) => value + character.codePointAt(0)!,
+      0,
+    );
+    return custom[hash % custom.length]!;
   }
 
   private tagLabel(tag: string): string {

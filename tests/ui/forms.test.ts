@@ -55,6 +55,10 @@ describe('form readers', () => {
         <input name="code" value="eur">
         <input name="icon" value="€">
         <input name="color" value="#5667ff">
+        <select name="category"><option value="precious-metals" selected>Metals</option></select>
+        <input type="checkbox" name="tags" value="crypto" checked>
+        <input type="checkbox" name="tags" value="gold" checked>
+        <input name="customTags" value="Tokenized, hedge">
         <select name="autoUpdateSource"><option value="frankfurter" selected>Frankfurter</option></select>
       `),
       1.1,
@@ -67,6 +71,36 @@ describe('form readers', () => {
       color: '#5667ff',
       price: 1.1,
       autoUpdateSource: 'frankfurter',
+      category: 'precious-metals',
+      tags: ['crypto', 'gold', 'Tokenized', 'hedge'],
+    });
+  });
+
+  it('creates an asset with a user-defined category and tags', () => {
+    const input = readAssetForm(
+      form(`
+        <input name="name" value="Brent">
+        <input name="code" value="brent">
+        <input name="icon" value="B">
+        <input name="color" value="#17181b">
+        <input name="price" value="80.25">
+        <select name="category"><option value="__custom__" selected>Custom</option></select>
+        <input name="customCategory" value=" Commodities ">
+        <input type="checkbox" name="tags" value="Energy" checked>
+        <input name="customTags" value="Long term, energy">
+        <select name="autoUpdateSource"><option value="none" selected>None</option></select>
+      `),
+    );
+
+    expect(input).toEqual({
+      name: 'Brent',
+      code: 'BRENT',
+      icon: 'B',
+      color: '#17181b',
+      price: 80.25,
+      autoUpdateSource: 'none',
+      category: 'Commodities',
+      tags: ['Energy', 'Long term'],
     });
   });
 

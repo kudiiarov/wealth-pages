@@ -141,6 +141,19 @@ export function portfolioExposures(data: PortfolioData): ExposureRow[] {
   })).sort((left, right) => right.value - left.value);
 }
 
+export function portfolioTags(data: PortfolioData): string[] {
+  return Array.from(
+    data.assets
+      .flatMap((asset) => inferAssetProfile(asset).tags)
+      .reduce<Map<string, string>>((unique, tag) => {
+        const key = tag.toLocaleLowerCase();
+        if (!unique.has(key)) unique.set(key, tag);
+        return unique;
+      }, new Map())
+      .values(),
+  ).sort((left, right) => left.localeCompare(right, 'en'));
+}
+
 export function portfolioDrivers(
   data: PortfolioData,
   points: readonly PnlPoint[],

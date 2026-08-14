@@ -72,32 +72,32 @@ function normalizeAutoUpdateSource(value: unknown): AutoUpdateSource {
 }
 
 function normalizeCategory(value: unknown): AssetCategory | undefined {
-  return value === 'cash-currencies' ||
-    value === 'crypto' ||
-    value === 'precious-metals' ||
-    value === 'other'
-    ? value
-    : undefined;
+  const category = stringValue(value).trim();
+  return category || undefined;
 }
 
 function normalizeTags(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const tags = Array.from(
-    new Set(
-      value
-        .filter((tag): tag is string => typeof tag === 'string')
-        .map((tag) => tag.trim().toLowerCase())
-        .filter(Boolean),
-    ),
+    value
+      .filter((tag): tag is string => typeof tag === 'string')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .reduce<Map<string, string>>((unique, tag) => {
+        const key = tag.toLocaleLowerCase();
+        if (!unique.has(key)) unique.set(key, tag);
+        return unique;
+      }, new Map())
+      .values(),
   );
   return tags.length ? tags : undefined;
 }
 
 export function normalizeAsset(value: UnknownRecord): Asset {
-  const { symbol, ...asset } = value;
+  const { symbol, category: rawCategory, tags: rawTags, ...asset } = value;
   const code = cleanCode(asset.code || symbol || '');
-  const category = normalizeCategory(asset.category);
-  const tags = normalizeTags(asset.tags);
+  const category = normalizeCategory(rawCategory);
+  const tags = normalizeTags(rawTags);
 
   return {
     ...asset,

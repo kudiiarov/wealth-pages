@@ -46,6 +46,7 @@ export class WorthController {
     });
     this.bindDirectActions();
     this.bindForms();
+    this.bindChartInspection();
     this.windowRef.addEventListener(
       'resize',
       () => {
@@ -58,6 +59,38 @@ export class WorthController {
       },
       { passive: true },
     );
+  }
+
+  private bindChartInspection(): void {
+    for (const [id, kind] of [
+      ['homeChart', 'home'],
+      ['historyChart', 'history'],
+    ] as const) {
+      const canvas = requiredElement(id, HTMLCanvasElement, this.documentRef);
+      const inspect = (event: PointerEvent): void => {
+        if (event.pointerType !== 'mouse' && event.buttons === 0) return;
+        this.renderer.inspectChart(kind, event.clientX);
+      };
+      canvas.addEventListener('pointerdown', (event) => {
+        canvas.setPointerCapture(event.pointerId);
+        inspect(event);
+      });
+      canvas.addEventListener('pointermove', inspect);
+      canvas.addEventListener('pointerup', (event) => {
+        if (canvas.hasPointerCapture(event.pointerId)) {
+          canvas.releasePointerCapture(event.pointerId);
+        }
+        this.renderer.clearChartInspection(kind);
+      });
+      canvas.addEventListener('pointercancel', () =>
+        this.renderer.clearChartInspection(kind),
+      );
+      canvas.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'mouse') {
+          this.renderer.clearChartInspection(kind);
+        }
+      });
+    }
   }
 
   private async handleClick(event: MouseEvent): Promise<void> {
@@ -132,12 +165,7 @@ export class WorthController {
       event.target,
       '[data-portfolio-filter]',
     );
-    if (
-      portfolioFilter?.dataset.portfolioFilter === 'all' ||
-      portfolioFilter?.dataset.portfolioFilter === 'crypto' ||
-      portfolioFilter?.dataset.portfolioFilter === 'currency' ||
-      portfolioFilter?.dataset.portfolioFilter === 'gold'
-    ) {
+    if (portfolioFilter?.dataset.portfolioFilter) {
       this.renderer.ui.portfolioFilter =
         portfolioFilter.dataset.portfolioFilter;
       this.renderer.renderAll();
@@ -170,17 +198,7 @@ export class WorthController {
         HTMLInputElement,
         this.documentRef,
       ).value = '';
-      const mapping: Record<
-        string,
-        'all' | 'crypto' | 'currency' | 'gold' | 'stablecoin' | 'other'
-      > = {
-        crypto: 'crypto',
-        'cash-currencies': 'currency',
-        'precious-metals': 'gold',
-        other: 'other',
-      };
-      this.renderer.ui.portfolioFilter =
-        mapping[categoryFilter.dataset.categoryFilter] ?? 'all';
+      this.renderer.ui.portfolioFilter = 'all';
       this.renderer.renderAll();
     }
     const exposureFilter = closestElement<HTMLElement>(
@@ -195,14 +213,7 @@ export class WorthController {
         HTMLInputElement,
         this.documentRef,
       ).value = '';
-      const tag = exposureFilter.dataset.exposureFilter;
-      this.renderer.ui.portfolioFilter =
-        tag === 'crypto' ||
-        tag === 'currency' ||
-        tag === 'gold' ||
-        tag === 'stablecoin'
-          ? tag
-          : 'all';
+      this.renderer.ui.portfolioFilter = exposureFilter.dataset.exposureFilter;
       this.renderer.renderAll();
     }
     const portfolioAdd = closestElement<HTMLElement>(
@@ -441,6 +452,14 @@ export class WorthController {
   }
 
   private bindForms(): void {
+    for (const id of ['assetForm', 'assetEditForm']) {
+      this.form(id).addEventListener('change', (event) => {
+        const target = event.target;
+        if (target instanceof HTMLSelectElement && target.name === 'category') {
+          this.toggleCustomCategory(target.form);
+        }
+      });
+    }
     this.form('accountForm').addEventListener(
       'submit',
       (event) => void this.submitAccount(event),
@@ -744,13 +763,26 @@ export class WorthController {
 
   private openAssetEdit(asset: Asset): void {
     const form = this.form('assetEditForm');
+    this.renderer.prepareAssetTaxonomyForm(form, asset);
     formControl(form, 'assetId').value = asset.id;
     formControl(form, 'name').value = asset.name;
     formControl(form, 'code').value = asset.code;
     formControl(form, 'icon').value = asset.icon;
     formControl(form, 'color').value = asset.color;
     formControl(form, 'autoUpdateSource').value = asset.autoUpdateSource;
+    this.toggleCustomCategory(form);
     this.openDialog('assetEditModal');
+  }
+
+  private toggleCustomCategory(form: HTMLFormElement | null): void {
+    if (!form) return;
+    const select = formControl(form, 'category');
+    const field = form.querySelector<HTMLElement>('.custom-category-field');
+    const input = formControl(form, 'customCategory');
+    const custom = select.value === '__custom__';
+    field?.classList.toggle('hidden', !custom);
+    input.toggleAttribute('required', custom);
+    if (custom) input.focus();
   }
 
   private openPriceEdit(asset: Asset): void {

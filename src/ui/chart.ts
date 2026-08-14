@@ -13,10 +13,64 @@ export interface ChartFormatters {
   language: Language;
 }
 
+export interface ChartPoint {
+  x: number;
+  y: number;
+}
+
+export interface ChartGeometry {
+  points: readonly ChartPoint[];
+  data: readonly HistoryDatum[];
+}
+
+export function nearestChartPointIndex(
+  points: readonly ChartPoint[],
+  x: number,
+): number | undefined {
+  if (!points.length) return undefined;
+  let nearest = 0;
+  let distance = Math.abs(points[0]!.x - x);
+  for (let index = 1; index < points.length; index += 1) {
+    const candidate = Math.abs(points[index]!.x - x);
+    if (candidate < distance) {
+      nearest = index;
+      distance = candidate;
+    }
+  }
+  return nearest;
+}
+
+function drawInspection(
+  context: CanvasRenderingContext2D,
+  point: ChartPoint | undefined,
+  height: number,
+  color: string,
+): void {
+  if (!point) return;
+  context.save();
+  context.setLineDash([3, 4]);
+  context.strokeStyle = 'rgba(146,152,161,.65)';
+  context.lineWidth = 1;
+  context.beginPath();
+  context.moveTo(point.x, 4);
+  context.lineTo(point.x, height - 4);
+  context.stroke();
+  context.setLineDash([]);
+  context.beginPath();
+  context.arc(point.x, point.y, 5.5, 0, Math.PI * 2);
+  context.fillStyle = color;
+  context.fill();
+  context.lineWidth = 2;
+  context.strokeStyle = '#f7f7f8';
+  context.stroke();
+  context.restore();
+}
+
 export function drawPortfolioSparkline(
   canvas: HTMLCanvasElement,
   data: readonly HistoryDatum[],
-): void {
+  selectedIndex?: number,
+): ChartGeometry | undefined {
   const rectangle = canvas.getBoundingClientRect();
   if (rectangle.width < 20) return;
   const context = canvas.getContext('2d');
@@ -74,6 +128,8 @@ export function drawPortfolioSparkline(
   context.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
   context.fillStyle = color;
   context.fill();
+  drawInspection(context, points[selectedIndex ?? -1], height, color);
+  return { points, data };
 }
 
 export function drawHistoryChart(
@@ -83,7 +139,8 @@ export function drawHistoryChart(
   change: HTMLElement,
   data: readonly HistoryDatum[],
   formatting: ChartFormatters,
-): void {
+  selectedIndex?: number,
+): ChartGeometry | undefined {
   const firstDate = dateRow.children.item(0);
   const lastDate = dateRow.children.item(1);
   if (data.length < 2) {
@@ -248,4 +305,6 @@ export function drawHistoryChart(
       data.at(-1)!.createdAt,
       formatting.language,
     );
+  drawInspection(context, points[selectedIndex ?? -1], height, lineColor);
+  return { points, data };
 }

@@ -49,6 +49,8 @@ export interface AssetInput {
   color: string;
   price: number;
   autoUpdateSource: AutoUpdateSource;
+  category?: string;
+  tags?: string[];
 }
 
 export interface PositionInput {
