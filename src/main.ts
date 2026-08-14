@@ -41,16 +41,6 @@ async function start(): Promise<void> {
       await service.refreshPrices();
       renderer.renderAll();
     }
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        void navigator.serviceWorker
-          .register(`${import.meta.env.BASE_URL}sw.js`)
-          .catch((error: unknown) =>
-            console.warn('Service worker registration failed', error),
-          );
-      });
-    }
   } catch (error) {
     console.error(error);
     renderStartupError(document.body, settings.load().language, () =>

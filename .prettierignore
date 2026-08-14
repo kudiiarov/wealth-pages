@@ -1,7 +1,5 @@
 index.html
-manifest.json
 README.md
-sw.js
 tests/fixtures/legacy-core.cjs
 dist
 node_modules
