@@ -198,3 +198,14 @@ html[data-theme="dark"] .quick-price-input,html[data-theme="dark"] .quick-positi
 
 /* 2.3-final */
 .field select[name="autoUpdateSource"]{width:100%}
+
+/* 2.4-final */
+.pnl-period-wrap{margin-top:14px}
+.pnl-period-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pnl-period-label{font-size:11px;color:var(--muted);font-weight:700}
+.pnl-period-select{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:11px;padding:7px 26px 7px 9px;font-size:12px;font-weight:700;max-width:200px}
+.pnl-period-date{color:var(--muted);font-size:10.5px;margin-top:5px}
+.pnl-inline{display:block!important;margin-top:3px!important;font-weight:750!important}
+.pnl-positive{color:var(--green)!important}.pnl-negative{color:var(--red)!important}
+.switch-row{cursor:pointer}.switch-row input[type="checkbox"]{width:46px;height:26px;accent-color:var(--blue)}
+.settings-auto-section{margin-bottom:14px}

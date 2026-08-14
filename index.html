@@ -30,7 +30,16 @@
 <div class="balance-block">
 <div class="overline" data-i18n="totalBalance">Общий баланс</div>
 <h1 class="balance" data-money-hidden="false" id="homeTitle">$0.00</h1>
-<div class="balance-delta" data-i18n="saveFirst" id="balanceDelta">Сохраните первый снимок</div>
+<div class="balance-delta" data-i18n="saveFirst" id="balanceDelta">Сохраните первый снимок</div><div class="pnl-period-wrap">
+<div class="pnl-period-top">
+<span class="pnl-period-label" data-i18n="pnlPeriod">P&amp;L период</span>
+<select class="pnl-period-select" id="pnlPeriod">
+<option data-i18n="pnlAllTime" value="all">За всё время</option>
+<option data-i18n="pnlSinceLast" value="last">С последнего снапшота</option>
+</select>
+</div>
+<div class="pnl-period-date" id="pnlPeriodDate"></div>
+</div>
 </div>
 <div aria-label="Быстрые действия" class="quick-actions">
 <button class="quick-action" data-open="positionModal">
@@ -111,6 +120,12 @@
 </div>
 </div>
 </section>
+<section class="settings-list settings-auto-section">
+<label class="settings-row switch-row">
+<span><strong data-i18n="autoRefreshOnLaunch">Обновлять цены при запуске</strong><small data-i18n="autoRefreshOnLaunchSub">Автоматически обновлять активы с настроенным источником</small></span>
+<input id="autoRefreshOnLaunch" type="checkbox"/>
+</label>
+</section>
 <section class="settings-list settings-price-section">
 <button class="settings-row" id="refreshPricesBtn" type="button">
 <span><strong data-i18n="refreshPrices">Обновить цены активов</strong><small data-i18n="refreshPricesSub">Автоматически обновить доступные валюты и криптоактивы</small></span><span>↻</span>
@@ -128,7 +143,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 2.3.1-final</div>
+<div class="build-note">Worth · 2.4-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">

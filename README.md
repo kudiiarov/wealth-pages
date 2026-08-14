@@ -128,3 +128,13 @@ python3 -m http.server 8080
 - Existing assets can now switch between None / CoinGecko / Frankfurter without recreation.
 - The selected source is preloaded correctly when reopening the edit form.
 - JSON schema version 13; old backups remain compatible.
+
+
+## 2.4-final
+- Added flow-adjusted P&L. Quantity changes are treated as external deposits/withdrawals valued at the later point's asset price.
+- All-time P&L is chained interval-by-interval across compatible snapshots.
+- Global selector: All time / Since last snapshot, with baseline date.
+- Same selected period drives P&L % on portfolio, allocation/assets, accounts, and positions.
+- Added optional automatic price refresh on app launch.
+- Export/import settings include pnlPeriod and autoRefreshOnLaunch.
+- JSON schema version 14.

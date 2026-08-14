@@ -2,7 +2,7 @@
 'use strict';
 const DB_NAME='worth-local-portfolio', DB_VERSION=1;
 const STORE_NAMES=['accounts','assets','positions','snapshots'];
-const state={accounts:[],assets:[],positions:[],snapshots:[],historyScope:'portfolio',displayCurrency:localStorage.getItem('worth-display-currency')||'USD',expandedAccounts:new Set(),expandedAssets:new Set(),theme:localStorage.getItem('worth-theme')||'light',lang:localStorage.getItem('worth-language')||'ru'};
+const state={accounts:[],assets:[],positions:[],snapshots:[],historyScope:'portfolio',displayCurrency:localStorage.getItem('worth-display-currency')||'USD',expandedAccounts:new Set(),expandedAssets:new Set(),theme:localStorage.getItem('worth-theme')||'light',lang:localStorage.getItem('worth-language')||'ru',pnlPeriod:localStorage.getItem('worth-pnl-period')||'all',autoRefreshOnLaunch:localStorage.getItem('worth-auto-refresh-launch')==='1'};
 let db=null, pendingActions=[];
 const $=(sel,root=document)=>root.querySelector(sel), $$=(sel,root=document)=>Array.from(root.querySelectorAll(sel)), byId=id=>document.getElementById(id);
 const palette=['#17181b','#5667ff','#9b63e8','#21c26b','#f5a341','#33bfc6','#ee5264','#7a8395'];
@@ -33,6 +33,7 @@ function applyLanguage(){
  $$('[data-i18n-html]').forEach(el=>el.innerHTML=t(el.dataset.i18nHtml));
  $$('[data-i18n-placeholder]').forEach(el=>el.placeholder=t(el.dataset.i18nPlaceholder));
  $$('[data-lang-choice]').forEach(b=>b.classList.toggle('active',b.dataset.langChoice===state.lang));
+ const ar=byId('autoRefreshOnLaunch');if(ar)ar.checked=!!state.autoRefreshOnLaunch;
  const qu=byId('quickUpdateModal');if(qu){
    const kicker=qu.querySelector('.section-kicker'),h=qu.querySelector('h2'),note=qu.querySelector('.sheet-note'),save=qu.querySelector('.quick-save');
    if(kicker)kicker.textContent=t('bulkChange');
@@ -236,14 +237,78 @@ async function reload(){
   renderAll();
 }
 function assetBy(id){return state.assets.find(x=>x.id===id)} function accountBy(id){return state.accounts.find(x=>x.id===id)}
-function positionValue(p){return WorthCore.positionValue(p,state.assets)} function portfolioTotal(){return WorthCore.portfolioTotal(state.positions,state.assets)} function assetQuantity(id){return WorthCore.assetQuantity(id,state.positions)} function assetTotal(id){return WorthCore.assetTotal(id,state.positions,state.assets)} function accountTotal(id){return WorthCore.accountTotal(id,state.positions,state.assets)} function visibleMoney(v){return money(v)}
-function renderAll(){syncDisplayCurrency();applyTheme();applyLanguage();renderCurrencyButton();renderBalance();renderAllocation();renderAccounts();renderAssets();renderPositions();refreshHistoryScope();renderHistory();refreshPositionForm()}
+function positionValue(p){return WorthCore.positionValue(p,state.assets)} function portfolioTotal(){return WorthCore.portfolioTotal(state.positions,state.assets)} function assetQuantity(id){return WorthCore.assetQuantity(id,state.positions)} function assetTotal(id){return WorthCore.assetTotal(id,state.positions,state.assets)} function accountTotal(id){return WorthCore.accountTotal(id,state.positions,state.assets)}
+
+function compatibleSnapshots(){return state.snapshots.filter(s=>Array.isArray(s.positions))}
+function pnlBaselineSnapshot(){
+  const s=compatibleSnapshots();
+  if(!s.length)return null;
+  return state.pnlPeriod==='last'?s.at(-1):s[0];
+}
+function currentPnlPoint(){
+  return {
+    createdAt:Date.now(),
+    positions:state.positions.map(p=>{const a=assetBy(p.assetId),acc=accountBy(p.accountId);return {positionId:p.id,accountId:p.accountId,accountName:acc?.name||'',assetId:p.assetId,assetCode:a?.code||'',quantity:Number(p.quantity)||0,price:Number(a?.price)||0,value:positionValue(p)}}),
+    assets:state.assets.map(a=>({assetId:a.id,price:Number(a.price)||0}))
+  };
+}
+function pointAssetPrice(point,assetId,fallback=0){
+  const a=(point?.assets||[]).find(x=>x.assetId===assetId);
+  return Number(a?.price)||Number(fallback)||0;
+}
+function pointPositionMap(point){
+  const m=new Map();for(const p of (point?.positions||[]))m.set(p.positionId,p);return m;
+}
+function pnlSeriesPoints(){
+  const snaps=compatibleSnapshots(),base=pnlBaselineSnapshot();
+  if(!base)return [];
+  const idx=snaps.findIndex(s=>s.id===base.id);
+  return [...snaps.slice(idx),currentPnlPoint()];
+}
+function intervalPositionResult(prev,next,positionId){
+  const pm=pointPositionMap(prev),nm=pointPositionMap(next),a=pm.get(positionId),b=nm.get(positionId);
+  if(!a&&!b)return null;
+  const assetId=b?.assetId||a?.assetId;
+  const q0=Number(a?.quantity)||0,q1=Number(b?.quantity)||0;
+  const p0=Number(a?.price)||pointAssetPrice(prev,assetId,0);
+  const p1=Number(b?.price)||pointAssetPrice(next,assetId,p0);
+  const start=q0*p0,end=q1*p1,flow=(q1-q0)*p1,pnl=end-start-flow;
+  return {pnl,flow,start,end,accountId:b?.accountId||a?.accountId,assetId};
+}
+function flowAdjustedPnl(filterFn){
+  const points=pnlSeriesPoints();if(points.length<2)return null;
+  let pnl=0,positiveFlows=0,baseCapital=0,has=false;
+  const firstMap=pointPositionMap(points[0]);
+  for(const p of firstMap.values())if(filterFn(p))baseCapital+=Math.abs((Number(p.quantity)||0)*(Number(p.price)||0));
+  for(let i=1;i<points.length;i++){
+    const prev=points[i-1],next=points[i],ids=new Set([...pointPositionMap(prev).keys(),...pointPositionMap(next).keys()]);
+    for(const id of ids){
+      const probe=pointPositionMap(next).get(id)||pointPositionMap(prev).get(id);
+      if(!probe||!filterFn(probe))continue;
+      const r=intervalPositionResult(prev,next,id);if(!r)continue;has=true;pnl+=r.pnl;if(r.flow>0)positiveFlows+=r.flow;
+    }
+  }
+  if(!has&&baseCapital===0)return null;
+  const denom=baseCapital+positiveFlows,pct=denom>0?pnl/denom*100:null;
+  return {pnl,pct,baseCapital,positiveFlows,baselineAt:points[0].createdAt}
+}
+function portfolioPnl(){return flowAdjustedPnl(()=>true)}
+function accountPnl(id){return flowAdjustedPnl(p=>p.accountId===id)}
+function assetPnl(id){return flowAdjustedPnl(p=>p.assetId===id)}
+function positionPnl(id){return flowAdjustedPnl(p=>p.positionId===id)}
+function pnlPctText(r){if(!r||r.pct===null)return '—';const s=r.pct>0?'+':r.pct<0?'−':'';return `${s}${Math.abs(r.pct).toFixed(1)}%`}
+function pnlMoneyText(r){if(!r)return t('pnlNoBaseline');const s=r.pnl>0?'+':r.pnl<0?'−':'';return `${s}${money(Math.abs(r.pnl))} · ${pnlPctText(r)}`}
+function pnlClass(r){return !r||r.pnl===0?'':r.pnl>0?'pnl-positive':'pnl-negative'}
+ function visibleMoney(v){return money(v)}
+function renderAll(){syncDisplayCurrency();applyTheme();applyLanguage();renderCurrencyButton();renderPnlPeriod();renderBalance();renderAllocation();renderAccounts();renderAssets();renderPositions();refreshHistoryScope();renderHistory();refreshPositionForm()}
+function renderPnlPeriod(){
+  const sel=byId('pnlPeriod');if(!sel)return;sel.value=state.pnlPeriod;
+  const b=pnlBaselineSnapshot(),d=byId('pnlPeriodDate');d.textContent=b?t('pnlFromDate',formatDate(b.createdAt)):t('pnlNoBaseline');
+}
 function renderBalance(){
- const total=portfolioTotal(),el=byId('homeTitle'),delta=byId('balanceDelta'),last=state.snapshots.at(-1);el.textContent=money(total);
- if(!last){delta.textContent=t('saveFirst');delta.style.color='';return}
- const diff=total-Number(last.total||0),pct=last.total?diff/Math.abs(last.total)*100:0;
- if(Math.abs(diff)<.005){delta.textContent=t('noChanges');delta.style.color='';return}
- delta.textContent=`${diff>0?'+':'−'}${money(Math.abs(diff))} · ${diff>0?'+':'−'}${Math.abs(pct).toFixed(1)}%`;delta.style.color=diff>0?'var(--green)':'var(--red)'
+  const total=portfolioTotal(),el=byId('homeTitle'),delta=byId('balanceDelta'),r=portfolioPnl();el.textContent=money(total);
+  if(!r){delta.textContent=t('pnlNoBaseline');delta.style.color='';return}
+  delta.textContent=`${t('pnlLabel')}: ${pnlMoneyText(r)}`;delta.style.color=r.pnl>0?'var(--green)':r.pnl<0?'var(--red)':'';
 }
 function renderAllocation(){
   const rows=state.assets.map(asset=>({asset,value:assetTotal(asset.id),qty:assetQuantity(asset.id)})).filter(x=>x.value!==0).sort((a,b)=>b.value-a.value),
@@ -251,7 +316,7 @@ function renderAllocation(){
   byId('assetsCount').textContent=t('assetsCount',rows.length);
   if(!rows.length||gross===0){bar.innerHTML='';list.innerHTML=`<div class="empty-state">${t('emptyAllocation')}</div>`;return}
   bar.innerHTML=rows.map(x=>`<span class="allocation-segment" style="width:${Math.abs(x.value)/gross*100}%;background:${assetColor(x.asset)}"></span>`).join('');
-  list.innerHTML=rows.slice(0,6).map(x=>`<div class="allocation-row"><span class="asset-badge ${iconLenClass(assetIcon(x.asset))}" style="background:${assetColor(x.asset)}">${escapeHTML(assetIcon(x.asset))}</span><div class="allocation-meta"><strong>${escapeHTML(x.asset.name)}</strong><small>${escapeHTML(x.asset.code)} · ${number(x.qty)} · ${(Math.abs(x.value)/gross*100).toFixed(1)}%</small></div><div class="allocation-value"><strong>${visibleMoney(x.value)}</strong><small>${visibleMoney(x.asset.price)} / ${t('unitShort')}</small></div></div>`).join('');
+  list.innerHTML=rows.slice(0,6).map(x=>`<div class="allocation-row"><span class="asset-badge ${iconLenClass(assetIcon(x.asset))}" style="background:${assetColor(x.asset)}">${escapeHTML(assetIcon(x.asset))}</span><div class="allocation-meta"><strong>${escapeHTML(x.asset.name)}</strong><small>${escapeHTML(x.asset.code)} · ${number(x.qty)} · ${(Math.abs(x.value)/gross*100).toFixed(1)}%</small></div><div class="allocation-value"><strong>${visibleMoney(x.value)}</strong><small>${visibleMoney(x.asset.price)} / ${t('unitShort')}</small><small class="pnl-inline ${pnlClass(assetPnl(x.asset.id))}">${pnlPctText(assetPnl(x.asset.id))}</small></div></div>`).join('');
 }
 function renderAccounts(){
   const list=byId('accountsList');
@@ -264,7 +329,7 @@ function renderAccounts(){
       <div class="list-card account-toggle" data-account-toggle="${a.id}">
         <div class="list-icon ${iconLenClass(accountIcon(a))}" style="background:${accountColor(a)};color:#fff">${escapeHTML(accountIcon(a))}</div>
         <div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(accountTypeLabel(a.type))} · ${positions.length} ${t('positionsShort')}</small></div>
-        <div class="list-value"><strong>${money(accountTotal(a.id))}</strong></div>
+        <div class="list-value"><strong>${money(accountTotal(a.id))}</strong><small class="pnl-inline ${pnlClass(accountPnl(a.id))}">${pnlPctText(accountPnl(a.id))}</small></div>
         <button class="menu-button" data-account-menu="${a.id}" aria-label="${t('actions')}">···</button>
       </div>
       <div class="account-assets ${open?'':'hidden'}">${details}</div>
@@ -277,14 +342,14 @@ function renderAssets(){
   list.innerHTML=state.assets.map(a=>{
     const open=state.expandedAssets.has(a.id),positions=state.positions.filter(p=>p.assetId===a.id);
     const details=positions.length?positions.map(p=>{const acc=accountBy(p.accountId),comment=p.comment?`<small class="asset-position-comment">• ${escapeHTML(p.comment)}</small>`:'';return `<div class="account-asset-row"><span class="mini-asset-icon ${iconLenClass(accountIcon(acc))}" style="background:${accountColor(acc)}">${escapeHTML(accountIcon(acc))}</span><div><strong>${escapeHTML(acc?.name||t('account'))}</strong><small>${number(p.quantity)} ${escapeHTML(a.code)}</small>${comment}</div><b>${money(positionValue(p))}</b></div>`}).join(''):`<div class="account-empty">${t('emptyAsset')}</div>`;
-    return `<div class="account-expand-card ${open?'expanded':''}"><div class="list-card asset-toggle" data-asset-toggle="${a.id}"><div class="list-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)};color:#fff">${escapeHTML(assetIcon(a))}</div><div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)} · ${number(assetQuantity(a.id))} ${t('unitShort')} · ${money(a.price)} / ${t('unitShort')}<br><span class="asset-updated-time">${a.autoUpdateSource==='none'?t('autoSourceNone'):`${t('autoSourceLabel')}: ${a.autoUpdateSource==='coingecko'?t('autoSourceCoinGecko'):t('autoSourceFrankfurter')} · ${relativeTime(a.priceUpdatedAt)}`}</span></small></div><div class="list-value"><strong>${money(assetTotal(a.id))}</strong></div><button class="menu-button" data-asset-menu="${a.id}" aria-label="${t('actions')}">···</button></div><div class="account-assets ${open?'':'hidden'}">${details}</div></div>`;
+    return `<div class="account-expand-card ${open?'expanded':''}"><div class="list-card asset-toggle" data-asset-toggle="${a.id}"><div class="list-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)};color:#fff">${escapeHTML(assetIcon(a))}</div><div class="list-main"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)} · ${number(assetQuantity(a.id))} ${t('unitShort')} · ${money(a.price)} / ${t('unitShort')}<br><span class="asset-updated-time">${a.autoUpdateSource==='none'?t('autoSourceNone'):`${t('autoSourceLabel')}: ${a.autoUpdateSource==='coingecko'?t('autoSourceCoinGecko'):t('autoSourceFrankfurter')} · ${relativeTime(a.priceUpdatedAt)}`}</span></small></div><div class="list-value"><strong>${money(assetTotal(a.id))}</strong><small class="pnl-inline ${pnlClass(assetPnl(a.id))}">${pnlPctText(assetPnl(a.id))}</small></div><button class="menu-button" data-asset-menu="${a.id}" aria-label="${t('actions')}">···</button></div><div class="account-assets ${open?'':'hidden'}">${details}</div></div>`;
   }).join('');
 }
 function renderPositions(){
   const summary=byId('positionsSummary'),list=byId('positionsList');
   summary.innerHTML=state.accounts.map(a=>`<div class="summary-pill"><span class="summary-icon ${iconLenClass(accountIcon(a))}" style="background:${accountColor(a)};color:#fff">${escapeHTML(accountIcon(a))}</span><span><small>${escapeHTML(a.name)}</small><strong>${money(accountTotal(a.id))}</strong></span></div>`).join('');
   if(!state.positions.length){list.innerHTML=`<div class="empty-state">${t('emptyPositions')}</div>`;return}
-  list.innerHTML=state.positions.slice().sort((a,b)=>positionValue(b)-positionValue(a)).map(p=>{const a=assetBy(p.assetId),acc=accountBy(p.accountId),comment=p.comment?`<span class="position-comment">• ${escapeHTML(p.comment)}</span>`:'';return `<div class="list-card"><div class="list-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)};color:#fff">${escapeHTML(assetIcon(a))}</div><div class="list-main"><div class="position-title-line"><strong>${escapeHTML(a?.code||a?.name||t('asset'))}</strong>${comment}</div><small>${escapeHTML(acc?.name||t('deletedAccount'))} · ${number(p.quantity)} ${t('unitShort')} · ${escapeHTML(a?.name||'')}</small></div><div class="list-value"><strong>${money(positionValue(p))}</strong><small>${a?money(a.price):'—'} / ${t('unitShort')}</small></div><button class="menu-button" data-position-menu="${p.id}" aria-label="${t('actions')}">···</button></div>`}).join('');
+  list.innerHTML=state.positions.slice().sort((a,b)=>positionValue(b)-positionValue(a)).map(p=>{const a=assetBy(p.assetId),acc=accountBy(p.accountId),comment=p.comment?`<span class="position-comment">• ${escapeHTML(p.comment)}</span>`:'';return `<div class="list-card"><div class="list-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)};color:#fff">${escapeHTML(assetIcon(a))}</div><div class="list-main"><div class="position-title-line"><strong>${escapeHTML(a?.code||a?.name||t('asset'))}</strong>${comment}</div><small>${escapeHTML(acc?.name||t('deletedAccount'))} · ${number(p.quantity)} ${t('unitShort')} · ${escapeHTML(a?.name||'')}</small></div><div class="list-value"><strong>${money(positionValue(p))}</strong><small>${a?money(a.price):'—'} / ${t('unitShort')}</small><small class="pnl-inline ${pnlClass(positionPnl(p.id))}">${pnlPctText(positionPnl(p.id))}</small></div><button class="menu-button" data-position-menu="${p.id}" aria-label="${t('actions')}">···</button></div>`}).join('');
 }
 function positionLabel(p){const a=assetBy(p.assetId),acc=accountBy(p.accountId),comment=p.comment?` · ${p.comment}`:'';return `${acc?.name||t('account')} · ${a?.code||t('asset')}${comment}`}
 function historicalPositionOptions(){const map=new Map();for(const p of state.positions)map.set(p.id,{positionId:p.id,label:positionLabel(p)});for(const s of state.snapshots)for(const p of (Array.isArray(s.positions)?s.positions:[]))if(!map.has(p.positionId))map.set(p.positionId,{positionId:p.positionId,label:`${p.accountName||t('account')} · ${p.assetCode||t('asset')}${p.comment?` · ${p.comment}`:''}`});return [...map.values()].sort((a,b)=>a.label.localeCompare(b.label,locale()))}
@@ -359,7 +424,7 @@ function snapshotMenu(id){showActionMenu(t('snapshot'),[{label:t('deleteSnapshot
 
 function renderQuickUpdate(){const c=byId('quickUpdateFields');if(!state.assets.length){c.innerHTML=`<div class="empty-state">${t('emptyAssets')}</div>`;return}c.innerHTML=state.assets.map(a=>{const positions=state.positions.filter(p=>p.assetId===a.id);const rows=positions.length?positions.map(p=>{const acc=accountBy(p.accountId);return `<label class="quick-position-row"><span class="quick-position-account"><span class="quick-account-icon ${iconLenClass(accountIcon(acc))}" style="background:${accountColor(acc)}">${escapeHTML(accountIcon(acc))}</span><span><strong>${escapeHTML(acc?.name||t('account'))}</strong><small>${escapeHTML(t('qtyCode',a.code))}</small></span></span><input type="text" inputmode="decimal" autocomplete="off" data-position-qty="${p.id}" value="${inputDecimal(p.quantity)}" aria-label="${escapeHTML(t('qtyAccount',a.code,acc?.name||t('account')))}"></label>`}).join(''):`<div class="quick-no-positions">${t('noPositions')}</div>`;return `<section class="quick-asset-card"><div class="quick-asset-head"><span class="quick-asset-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)}">${escapeHTML(assetIcon(a))}</span><div class="quick-asset-meta"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)} · ${money(assetTotal(a.id))}</small></div></div><label class="quick-price-row"><span><strong>${t('unitPriceLabel')}</strong><small>${t('basePrice')}</small></span><div class="quick-price-entry"><input type="text" inputmode="decimal" autocomplete="off" data-asset-price="${a.id}" value="${inputDecimal(a.price)}" aria-label="${escapeHTML(t('priceUsd',a.code))}"><select data-asset-price-currency="${a.id}" class="price-currency-select">${currencySelectOptions('USD')}</select></div></label><div class="quick-positions-block"><div class="quick-block-title">${t('balances')}</div>${rows}</div></section>`}).join('')}
 
-function exportData(){const payload={app:'Worth',version:13,appVersion:'2.3.1-final',baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots,appSettings:{language:state.lang,theme:state.theme,displayCurrency:state.displayCurrency}},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast(t('backupCreated'))}
+function exportData(){const payload={app:'Worth',version:14,appVersion:'2.4-final',baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots,appSettings:{language:state.lang,theme:state.theme,displayCurrency:state.displayCurrency,pnlPeriod:state.pnlPeriod,autoRefreshOnLaunch:state.autoRefreshOnLaunch}},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast(t('backupCreated'))}
 
 function validateImport(data){return WorthCore.validateImport(data)}
 async function importData(file){try{const raw=JSON.parse(await file.text()),data=validateImport(raw);if(!confirm(t('confirmImport')))return;for(const n of STORE_NAMES){await dbClear(n);for(const item of data[n])await dbPut(n,item)}
@@ -367,11 +432,15 @@ if(raw.appSettings&&typeof raw.appSettings==='object'){
   if(['ru','en'].includes(raw.appSettings.language)){state.lang=raw.appSettings.language;localStorage.setItem('worth-language',state.lang)}
   if(['light','dark'].includes(raw.appSettings.theme)){state.theme=raw.appSettings.theme;localStorage.setItem('worth-theme',state.theme)}
   if(typeof raw.appSettings.displayCurrency==='string'){state.displayCurrency=raw.appSettings.displayCurrency;localStorage.setItem('worth-display-currency',state.displayCurrency)}
+  if(['all','last'].includes(raw.appSettings.pnlPeriod)){state.pnlPeriod=raw.appSettings.pnlPeriod;localStorage.setItem('worth-pnl-period',state.pnlPeriod)}
+  if(typeof raw.appSettings.autoRefreshOnLaunch==='boolean'){state.autoRefreshOnLaunch=raw.appSettings.autoRefreshOnLaunch;localStorage.setItem('worth-auto-refresh-launch',state.autoRefreshOnLaunch?'1':'0')}
 }
 await reload();toast(t('dataRestored'))}catch(e){console.error(e);alert(`${t('importFailed')}: ${e.message||t('unsupported')}`)}}
 
 function bindEvents(){document.addEventListener('click',async e=>{const currency=e.target.closest('[data-currency-code]');if(currency){setDisplayCurrency(currency.dataset.currencyCode);return}const theme=e.target.closest('[data-theme-choice]');if(theme){setTheme(theme.dataset.themeChoice);return}const lang=e.target.closest('[data-lang-choice]');if(lang){setLanguage(lang.dataset.langChoice);return}const accountToggle=e.target.closest('[data-account-toggle]');if(accountToggle&&!e.target.closest('[data-account-menu]')){const id=accountToggle.dataset.accountToggle;state.expandedAccounts.has(id)?state.expandedAccounts.delete(id):state.expandedAccounts.add(id);renderAccounts();return}const assetToggle=e.target.closest('[data-asset-toggle]');if(assetToggle&&!e.target.closest('[data-asset-menu]')){const id=assetToggle.dataset.assetToggle;state.expandedAssets.has(id)?state.expandedAssets.delete(id):state.expandedAssets.add(id);renderAssets();return}const open=e.target.closest('[data-open]');if(open){openDialog(open.dataset.open);return}const close=e.target.closest('[data-close]');if(close){closeDialog(close.dataset.close);return}const nav=e.target.closest('[data-nav]');if(nav){navigate(nav.dataset.nav);return}const am=e.target.closest('[data-account-menu]');if(am){accountMenu(am.dataset.accountMenu);return}const asm=e.target.closest('[data-asset-menu]');if(asm){assetMenu(asm.dataset.assetMenu);return}const pm=e.target.closest('[data-position-menu]');if(pm){positionMenu(pm.dataset.positionMenu);return}const sm=e.target.closest('[data-snapshot-menu]');if(sm){snapshotMenu(sm.dataset.snapshotMenu);return}const ai=e.target.closest('[data-action-index]');if(ai){const action=pendingActions[Number(ai.dataset.actionIndex)];closeDialog('actionMenuModal');if(action)await action.run();return}});
 byId('priceForm').elements.priceCurrency.addEventListener('change',e=>{const f=byId('priceForm'),prev=f.dataset.priceCurrency||'USD',next=e.target.value,current=parseDecimal(f.elements.price.value),usdValue=priceCurrencyToUsd(current,prev);if(Number.isFinite(usdValue)){const converted=usdToPriceCurrency(usdValue,next);if(Number.isFinite(converted))f.elements.price.value=inputDecimal(converted)}f.dataset.priceCurrency=next});
+byId('pnlPeriod').addEventListener('change',e=>{state.pnlPeriod=e.target.value==='last'?'last':'all';localStorage.setItem('worth-pnl-period',state.pnlPeriod);renderAll()});
+byId('autoRefreshOnLaunch').addEventListener('change',e=>{state.autoRefreshOnLaunch=!!e.target.checked;localStorage.setItem('worth-auto-refresh-launch',state.autoRefreshOnLaunch?'1':'0')});
 byId('historyScope').addEventListener('change',e=>{state.historyScope=e.target.value;renderHistory()});byId('saveSnapshotBtn').addEventListener('click',saveSnapshot);byId('saveSnapshotBtnHistory').addEventListener('click',saveSnapshot);byId('openQuickUpdate').addEventListener('click',()=>{renderQuickUpdate();openDialog('quickUpdateModal')});byId('displayCurrencyBtn').addEventListener('click',()=>{renderCurrencyOptions();openDialog('currencyModal')});byId('settingsShortcut').addEventListener('click',()=>navigate('settingsView'));
 byId('refreshPricesBtn').addEventListener('click',async()=>{await runPriceRefresh()});
 byId('exportBtn').addEventListener('click',exportData);
@@ -383,4 +452,4 @@ byId('assetForm').addEventListener('submit',async e=>{e.preventDefault();const f
 byId('assetEditForm').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,a=assetBy(f.elements.assetId.value),name=f.elements.name.value.trim(),code=WorthCore.cleanCode(f.elements.code.value);if(!a||!name||!code)return;if(state.assets.some(x=>x.id!==a.id&&x.code===code)){alert(t('duplicateCode'));return}const next=WorthCore.normalizeAsset({...a,name,code,icon:f.elements.icon.value,color:f.elements.color.value,autoUpdateSource:f.elements.autoUpdateSource.value||'none',updatedAt:Date.now()});await dbPut('assets',next);closeDialog('assetEditModal');await reload();toast(t('assetUpdated'))});
 byId('positionForm').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget;if(!state.accounts.length||!state.assets.length)return;const q=parseDecimal(f.elements.quantity.value),accountId=f.elements.accountId.value,assetId=f.elements.assetId.value,editId=f.dataset.editId,comment=String(f.elements.comment?.value||'').trim();if(!Number.isFinite(q))return;const existing=editId?state.positions.find(p=>p.id===editId):null;await dbPut('positions',{id:existing?.id||uid(),accountId,assetId,quantity:q,comment,createdAt:existing?.createdAt||Date.now(),updatedAt:Date.now()});closeDialog('positionModal');resetPositionForm();await reload();toast(t('positionSaved'))});
 byId('priceForm').addEventListener('submit',async e=>{e.preventDefault();const f=e.currentTarget,a=assetBy(f.elements.assetId.value),entered=parseDecimal(f.elements.price.value),currency=f.elements.priceCurrency.value||'USD',usdPrice=priceCurrencyToUsd(entered,currency);if(!a||!Number.isFinite(usdPrice)||usdPrice<0)return;a.price=usdPrice;a.updatedAt=Date.now();a.manualPriceCurrency=currency;await dbPut('assets',a);closeDialog('priceModal');await reload();toast(t('priceUpdated'))});byId('quickUpdateForm').addEventListener('submit',async e=>{e.preventDefault();const form=e.currentTarget,btn=form.querySelector('.sheet-primary');btn.disabled=true;try{for(const i of $$('[data-asset-price]',form)){const a=assetBy(i.dataset.assetPrice),entered=parseDecimal(i.value),currency=form.querySelector(`[data-asset-price-currency="${i.dataset.assetPrice}"]`)?.value||'USD',v=priceCurrencyToUsd(entered,currency);if(a&&Number.isFinite(v)&&v>=0){a.price=v;a.manualPriceCurrency=currency;a.updatedAt=Date.now();await dbPut('assets',a)}}for(const i of $$('[data-position-qty]',form)){const p=state.positions.find(x=>x.id===i.dataset.positionQty),v=parseDecimal(i.value);if(p&&Number.isFinite(v)){p.quantity=v;p.updatedAt=Date.now();await dbPut('positions',p)}}await reload();closeDialog('quickUpdateModal');requestAnimationFrame(()=>toast(t('changesSaved')))}finally{btn.disabled=false}});window.addEventListener('resize',()=>{if(byId('historyView').classList.contains('active'))drawChart()},{passive:true})}
-async function init(){try{db=await openDatabase();bindEvents();await reload();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn))}catch(e){console.error(e);document.body.innerHTML=`<div style="padding:30px;font-family:-apple-system">${state.lang==='en'?'Could not open the local database. Check Safari website storage settings.':'Не удалось открыть локальную базу данных. Проверьте, что Safari разрешает хранение данных для этого сайта.'}</div>`}} init();
+async function init(){try{db=await openDatabase();bindEvents();await reload();if(state.autoRefreshOnLaunch){await runPriceRefresh()}if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn))}catch(e){console.error(e);document.body.innerHTML=`<div style="padding:30px;font-family:-apple-system">${state.lang==='en'?'Could not open the local database. Check Safari website storage settings.':'Не удалось открыть локальную базу данных. Проверьте, что Safari разрешает хранение данных для этого сайта.'}</div>`}} init();
