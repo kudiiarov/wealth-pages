@@ -381,11 +381,10 @@ const en = {
 
 export const messages = { ru, en } as const;
 export type MessageKey = keyof RussianMessages;
-type MessageArguments<Key extends MessageKey> = RussianMessages[Key] extends (
-  ...args: infer Arguments
-) => string
-  ? Arguments
-  : [];
+export type MessageArguments<Key extends MessageKey> =
+  RussianMessages[Key] extends (...args: infer Arguments) => string
+    ? Arguments
+    : [];
 
 export function translate<Key extends MessageKey>(
   language: Language,
@@ -396,4 +395,8 @@ export function translate<Key extends MessageKey>(
   return typeof value === 'function'
     ? (value as (...values: MessageArguments<Key>) => string)(...args)
     : String(value);
+}
+
+export function isMessageKey(value: string): value is MessageKey {
+  return value in messages.ru;
 }

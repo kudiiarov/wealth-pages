@@ -17,7 +17,7 @@ interface LegacyCore {
 
 function loadLegacyCore(): LegacyCore {
   const source = readFileSync(
-    new URL('../../core.js', import.meta.url),
+    new URL('../fixtures/legacy-core.cjs', import.meta.url),
     'utf8',
   );
   const context = vm.createContext({ module: { exports: {} }, console });

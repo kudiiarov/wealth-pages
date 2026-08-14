@@ -2,7 +2,14 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'node_modules/**', 'app.js', 'core.js', 'sw.js'] },
+  {
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'sw.js',
+      'tests/fixtures/legacy-core.cjs',
+    ],
+  },
   eslint.configs.recommended,
   {
     files: ['**/*.ts'],
