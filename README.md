@@ -68,4 +68,4 @@ On iOS, open the HTTPS Pages URL in Safari and choose **Share → Add to Home Sc
 - legacy records are normalized on read;
 - backup schemas 1–14 remain importable;
 - exports use schema 14 and include application settings;
-- the product version remains `2.5.1` while behavior is preserved.
+- the current product version is `3.0.0` (`3.0-final` in the UI and backups).
