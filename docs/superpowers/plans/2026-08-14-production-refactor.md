@@ -6,7 +6,7 @@
 
 **Architecture:** Pure domain modules contain models, normalization, calculations, P&L, snapshots, and backup validation. Application services coordinate typed repository, settings, price-provider, and file ports; browser infrastructure implements those ports; DOM modules render and bind the existing interface. Vite produces one static `dist/` for GitHub Pages and future Capacitor packaging.
 
-**Tech Stack:** Node.js 20.19+ or 22.12+, Vite 8.2.1, TypeScript 7.0.2, Vitest 4.1.10, jsdom 30.0.1, fake-indexeddb 6.2.5, ESLint 10.8.1, Prettier 3.9.6, vite-plugin-pwa 1.3.0, Playwright 1.62.1, GitHub Actions.
+**Tech Stack:** Node.js 20.19+ or 22.13+, Vite 8.2.1, TypeScript 6.0.3, Vitest 4.1.10, jsdom 29.1.1, fake-indexeddb 6.2.5, ESLint 10.8.1, Prettier 3.9.6, vite-plugin-pwa 1.3.0, Playwright 1.62.1, GitHub Actions.
 
 **Spec:** `docs/superpowers/specs/2026-08-14-production-refactor-design.md`
 
@@ -52,6 +52,7 @@
 ### Task 1: Establish the reproducible toolchain and baseline characterization suite
 
 **Files:**
+
 - Create: `package.json`
 - Create: `tsconfig.json`
 - Create: `vite.config.ts`
@@ -64,6 +65,7 @@
 - Generate: `package-lock.json`
 
 **Interfaces:**
+
 - Consumes: current `core.js`, `app.js`, `index.html`, and static assets unchanged.
 - Produces: `npm run test`, `npm run typecheck`, `npm run lint`, `npm run format:check`, and `npm run build` commands used by every later task.
 
@@ -88,7 +90,11 @@ describe('legacy WorthCore', () => {
       snapshots: [],
     });
 
-    expect(data.assets[0]).toMatchObject({ code: 'USD', name: 'Dollar', price: 1 });
+    expect(data.assets[0]).toMatchObject({
+      code: 'USD',
+      name: 'Dollar',
+      price: 1,
+    });
     expect(core.portfolioTotal(data.positions, data.assets)).toBe(5);
     expect(data.positions).toHaveLength(2);
   });
@@ -117,12 +123,13 @@ describe('legacy WorthCore', () => {
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@types/jsdom": "30.0.0",
     "@types/node": "26.2.0",
     "eslint": "10.8.1",
     "fake-indexeddb": "6.2.5",
-    "jsdom": "30.0.1",
+    "jsdom": "29.1.1",
     "prettier": "3.9.6",
-    "typescript": "7.0.2",
+    "typescript": "6.0.3",
     "typescript-eslint": "8.67.0",
     "vite": "8.2.1",
     "vitest": "4.1.10"
@@ -152,6 +159,7 @@ git commit -m "test: capture legacy portfolio behavior"
 ### Task 2: Extract typed models, normalization, and portfolio calculations
 
 **Files:**
+
 - Create: `src/domain/models.ts`
 - Create: `src/domain/normalize.ts`
 - Create: `src/domain/portfolio.ts`
@@ -159,6 +167,7 @@ git commit -m "test: capture legacy portfolio behavior"
 - Create: `tests/domain/portfolio.test.ts`
 
 **Interfaces:**
+
 - Consumes: persisted shapes accepted by legacy `WorthCore`.
 - Produces: `normalizeData(raw: unknown): PortfolioData`, `positionValue(position, assets): number`, `portfolioTotal(data): number`, `assetQuantity(assetId, positions): number`, `assetTotal(assetId, data): number`, and `accountTotal(accountId, data): number`.
 
@@ -166,9 +175,15 @@ git commit -m "test: capture legacy portfolio behavior"
 
 ```ts
 it('migrates symbol to code and supplies legacy defaults', () => {
-  expect(normalizeAsset({ id: 'x', name: ' Gold ', symbol: ' xau ', price: '2' })).toMatchObject({
-    id: 'x', name: 'Gold', code: 'XAU', price: 2,
-    autoUpdateSource: 'none', color: '#5667ff',
+  expect(
+    normalizeAsset({ id: 'x', name: ' Gold ', symbol: ' xau ', price: '2' }),
+  ).toMatchObject({
+    id: 'x',
+    name: 'Gold',
+    code: 'XAU',
+    price: 2,
+    autoUpdateSource: 'none',
+    color: '#5667ff',
   });
 });
 ```
@@ -181,8 +196,21 @@ Expected: FAIL because `src/domain/normalize.ts` does not exist.
 
 ```ts
 export type AutoUpdateSource = 'none' | 'coingecko' | 'frankfurter';
-export interface Position { id: string; accountId: string; assetId: string; quantity: number; comment: string; createdAt?: number; updatedAt?: number }
-export interface PortfolioData { accounts: Account[]; assets: Asset[]; positions: Position[]; snapshots: Snapshot[] }
+export interface Position {
+  id: string;
+  accountId: string;
+  assetId: string;
+  quantity: number;
+  comment: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
+export interface PortfolioData {
+  accounts: Account[];
+  assets: Asset[];
+  positions: Position[];
+  snapshots: Snapshot[];
+}
 ```
 
 Implement the exact default colors, icon trimming, uppercase codes, `symbol` migration, position comments, and snapshot asset-code migration characterized from `core.js`.
@@ -211,7 +239,8 @@ Expected: FAIL because the typed calculation module is absent.
 
 ```ts
 export const positionValue = (position: Position, assets: readonly Asset[]) =>
-  numeric(position.quantity) * numeric(assets.find(({ id }) => id === position.assetId)?.price);
+  numeric(position.quantity) *
+  numeric(assets.find(({ id }) => id === position.assetId)?.price);
 ```
 
 Run: `npm run test && npm run typecheck`
@@ -228,6 +257,7 @@ git commit -m "refactor: extract typed portfolio domain"
 ### Task 3: Extract snapshots, P&L, and versioned backup validation
 
 **Files:**
+
 - Create: `src/domain/snapshots.ts`
 - Create: `src/domain/pnl.ts`
 - Create: `src/domain/backup.ts`
@@ -237,6 +267,7 @@ git commit -m "refactor: extract typed portfolio domain"
 - Create: `tests/fixtures/legacy-backups.ts`
 
 **Interfaces:**
+
 - Consumes: `PortfolioData`, `AppSettings`, a supplied `id`, and a supplied `createdAt`.
 - Produces: `buildSnapshot(data, id, createdAt): Snapshot`, `flowAdjustedPnl(points, predicate): PnlResult | null`, `validateBackup(raw): ValidatedBackup`, and `createBackup(data, settings, exportedAt): BackupV14`.
 
@@ -244,9 +275,16 @@ git commit -m "refactor: extract typed portfolio domain"
 
 ```ts
 expect(buildSnapshot(data, 's1', 123).positions[0]).toEqual({
-  positionId: 'p1', accountId: 'a1', accountName: 'Cash', assetId: 'usd',
-  assetCode: 'USD', assetName: 'Dollar', comment: 'reserve',
-  quantity: 2, price: 1, value: 2,
+  positionId: 'p1',
+  accountId: 'a1',
+  accountName: 'Cash',
+  assetId: 'usd',
+  assetCode: 'USD',
+  assetName: 'Dollar',
+  comment: 'reserve',
+  quantity: 2,
+  price: 1,
+  value: 2,
 });
 ```
 
@@ -266,9 +304,12 @@ Expected: PASS.
 
 ```ts
 it('treats quantity increases as external flows at the later price', () => {
-  const result = flowAdjustedPnl([point(1, 1, 10), point(2, 2, 12)], () => true);
+  const result = flowAdjustedPnl(
+    [point(1, 1, 10), point(2, 2, 12)],
+    () => true,
+  );
   expect(result).toMatchObject({ pnl: 2, baseCapital: 10, positiveFlows: 12 });
-  expect(result?.pct).toBeCloseTo(100 * 2 / 22);
+  expect(result?.pct).toBeCloseTo((100 * 2) / 22);
 });
 ```
 
@@ -289,8 +330,12 @@ Expected: PASS.
 ```ts
 expect(validateBackup(legacyV1).data.assets[0].code).toBe('USD');
 expect(validateBackup(currentV14).settings?.language).toBe('en');
-expect(() => validateBackup({ ...currentV14, positions: [{ id: 'p', accountId: 'missing' }] }))
-  .toThrow('Повреждены позиции');
+expect(() =>
+  validateBackup({
+    ...currentV14,
+    positions: [{ id: 'p', accountId: 'missing' }],
+  }),
+).toThrow('Повреждены позиции');
 ```
 
 Run: `npm run test -- tests/domain/backup.test.ts`
@@ -315,6 +360,7 @@ git commit -m "refactor: isolate history and backup rules"
 ### Task 4: Add storage, settings, and file ports with atomic browser adapters
 
 **Files:**
+
 - Create: `src/application/ports.ts`
 - Create: `src/application/state.ts`
 - Create: `src/infrastructure/indexeddb/portfolio-repository.ts`
@@ -324,6 +370,7 @@ git commit -m "refactor: isolate history and backup rules"
 - Create: `tests/platform/settings-store.test.ts`
 
 **Interfaces:**
+
 - Produces: `PortfolioRepository.load()`, `put(store, value)`, `delete(store, id)`, `replaceAll(data)`, and `clearAll()`; `SettingsStore.load()` and `save(patch)`; `FileTransfer.downloadJson(name, payload)`.
 - Preserves: database identity and localStorage keys `worth-language`, `worth-theme`, `worth-display-currency`, `worth-pnl-period`, and `worth-auto-refresh-launch`.
 
@@ -366,8 +413,11 @@ Expected: tests confirm the exact database/store names and that an injected fail
 
 ```ts
 expect(store.load()).toEqual({
-  language: 'ru', theme: 'light', displayCurrency: 'USD',
-  pnlPeriod: 'all', autoRefreshOnLaunch: false,
+  language: 'ru',
+  theme: 'light',
+  displayCurrency: 'USD',
+  pnlPeriod: 'all',
+  autoRefreshOnLaunch: false,
 });
 ```
 
@@ -393,12 +443,14 @@ git commit -m "refactor: add local-first storage ports"
 ### Task 5: Extract price providers and application use cases
 
 **Files:**
+
 - Create: `src/infrastructure/http/price-providers.ts`
 - Create: `src/application/portfolio-service.ts`
 - Create: `tests/infrastructure/price-providers.test.ts`
 - Create: `tests/application/portfolio-service.test.ts`
 
 **Interfaces:**
+
 - Consumes: `PortfolioRepository`, `SettingsStore`, `FileTransfer`, `PriceProvider`, `Clock`, and `IdGenerator` ports.
 - Produces: use cases for CRUD, snapshot, refresh, import, export, reset, reload, and settings changes; `refreshPrices(assetId?): Promise<{ updated: number; skipped: number; failures: PriceFailure[] }>`.
 
@@ -409,8 +461,11 @@ expect(fetchMock).toHaveBeenCalledWith(
   'https://api.frankfurter.dev/v2/rate/USD/RUB',
   { cache: 'no-store' },
 );
-expect(await provider.usdPrice(asset({ code: 'RUB', autoUpdateSource: 'frankfurter' })))
-  .toBeCloseTo(1 / 90);
+expect(
+  await provider.usdPrice(
+    asset({ code: 'RUB', autoUpdateSource: 'frankfurter' }),
+  ),
+).toBeCloseTo(1 / 90);
 ```
 
 Run: `npm run test -- tests/infrastructure/price-providers.test.ts`
@@ -456,18 +511,22 @@ git commit -m "refactor: extract portfolio use cases"
 ### Task 6: Extract typed localization and formatting
 
 **Files:**
+
 - Create: `src/i18n/messages.ts`
 - Create: `src/i18n/format.ts`
 - Create: `tests/i18n/messages.test.ts`
 - Create: `tests/i18n/format.test.ts`
 
 **Interfaces:**
+
 - Produces: `translate(language, key, ...args)`, `formatMoney`, `formatNumber`, `formatDate`, `formatTime`, `formatRelativeTime`, and display-currency conversion helpers.
 
 - [ ] **Step 1: Write failing compile/runtime translation parity tests**
 
 ```ts
-expect(Object.keys(messages.en).sort()).toEqual(Object.keys(messages.ru).sort());
+expect(Object.keys(messages.en).sort()).toEqual(
+  Object.keys(messages.ru).sort(),
+);
 expect(translate('en', 'pnlVsLast')).toBe('Since last snapshot');
 expect(translate('ru', 'pricesUpdated', 2)).toBe('Цены обновлены: 2');
 ```
@@ -507,6 +566,7 @@ git commit -m "refactor: type localization and formatting"
 ### Task 7: Migrate the existing shell and UI to TypeScript modules
 
 **Files:**
+
 - Modify: `index.html`
 - Create: `src/main.ts`
 - Create: `src/ui/dom.ts`
@@ -524,6 +584,7 @@ git commit -m "refactor: type localization and formatting"
 - Delete: `styles.css`
 
 **Interfaces:**
+
 - Consumes: typed state, application service, translations, and formatting helpers.
 - Produces: `createWorthApp(dependencies).start()` with no global `WorthCore`, global database handle, or direct persistence calls from UI modules.
 
@@ -531,9 +592,13 @@ git commit -m "refactor: type localization and formatting"
 
 ```ts
 document.body.innerHTML = '<div id="root"></div>';
-expect(() => requiredElement('missing')).toThrow('Missing required element: missing');
+expect(() => requiredElement('missing')).toThrow(
+  'Missing required element: missing',
+);
 renderStartupError(document.body, 'en');
-expect(document.body.textContent).toContain('Could not open the local database');
+expect(document.body.textContent).toContain(
+  'Could not open the local database',
+);
 ```
 
 Run: `npm run test -- tests/ui/dom.test.ts tests/ui/startup-error.test.ts`
@@ -547,7 +612,12 @@ Use explicit `HTMLFormElement`, `HTMLDialogElement`, `HTMLCanvasElement`, input,
 - [ ] **Step 3: Write failing form tests for duplicate assets, multiple positions, and price-currency conversion**
 
 ```ts
-submitPosition({ accountId: 'a', assetId: 'usd', quantity: '2', comment: ' reserve ' });
+submitPosition({
+  accountId: 'a',
+  assetId: 'usd',
+  quantity: '2',
+  comment: ' reserve ',
+});
 submitPosition({ accountId: 'a', assetId: 'usd', quantity: '3', comment: '' });
 expect(service.createPosition).toHaveBeenCalledTimes(2);
 ```
@@ -595,6 +665,7 @@ git commit -m "refactor: migrate application UI to TypeScript"
 ### Task 8: Add build-aware PWA support and GitHub Pages deployment
 
 **Files:**
+
 - Modify: `vite.config.ts`
 - Create: `public/manifest.webmanifest`
 - Move: `icon.svg` to `public/icon.svg`
@@ -607,6 +678,7 @@ git commit -m "refactor: migrate application UI to TypeScript"
 - Create: `.github/workflows/deploy-pages.yml`
 
 **Interfaces:**
+
 - Produces: `dist/` with base `/wealth-pages/`, generated precache service worker, relative manifest scope/start URL, and a Pages deployment artifact.
 
 - [ ] **Step 1: Write failing built-path and manifest tests**
@@ -660,6 +732,7 @@ git commit -m "ci: deploy build-aware PWA to GitHub Pages"
 ### Task 9: Add the browser smoke test and production documentation
 
 **Files:**
+
 - Create: `playwright.config.ts`
 - Create: `e2e/portfolio.spec.ts`
 - Modify: `package.json`
@@ -667,6 +740,7 @@ git commit -m "ci: deploy build-aware PWA to GitHub Pages"
 - Create: `docs/mobile-and-sync-roadmap.md`
 
 **Interfaces:**
+
 - Consumes: production UI and browser storage.
 - Produces: reproducible end-to-end proof and operator documentation for Pages, backups, Capacitor, and future sync.
 
@@ -679,7 +753,11 @@ test('portfolio survives reload and exports a v14 backup', async ({ page }) => {
   await page.goto('/');
   await createAccount(page, 'Cash');
   await createAsset(page, { name: 'Dollar', code: 'USD', price: '1' });
-  await createPosition(page, { account: 'Cash', asset: 'USD', quantity: '100' });
+  await createPosition(page, {
+    account: 'Cash',
+    asset: 'USD',
+    quantity: '100',
+  });
   await page.getByRole('button', { name: 'Снимок' }).first().click();
   await page.reload();
   await expect(page.getByRole('heading', { name: '$100.00' })).toBeVisible();
@@ -722,9 +800,11 @@ git commit -m "test: verify production portfolio flow"
 ### Task 10: Final compatibility audit
 
 **Files:**
+
 - Modify only files implicated by failures found during this audit.
 
 **Interfaces:**
+
 - Consumes: every acceptance criterion in the approved specification.
 - Produces: fresh evidence that the refactor is ready for review without claiming deployment or publishing changes externally.
 

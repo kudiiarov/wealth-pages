@@ -1,0 +1,10 @@
+app.js
+core.js
+styles.css
+index.html
+manifest.json
+README.md
+sw.js
+dist
+node_modules
+package-lock.json
