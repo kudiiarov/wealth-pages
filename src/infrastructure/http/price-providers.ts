@@ -101,9 +101,9 @@ export class HttpPriceProvider implements PriceProvider {
     if (cached && this.now() - cached.cachedAt < 60_000)
       return cached.unitsPerUsd;
 
+    // Request.cache can trigger a rejected CORS preflight in WebKit PWAs.
     const response = await this.fetcher(
       `https://api.frankfurter.dev/v2/rate/USD/${encodeURIComponent(code)}`,
-      { cache: 'no-store' },
     );
     if (!response.ok) throw new Error(`Frankfurter ${response.status}`);
     const payload: unknown = await response.json();
@@ -127,7 +127,8 @@ export class HttpPriceProvider implements PriceProvider {
       `?ids=${encodeURIComponent(providerIds.join(','))}&vs_currencies=usd`;
 
     try {
-      const response = await this.fetcher(url, { cache: 'no-store' });
+      // Keep this a simple CORS request for installed Safari PWAs.
+      const response = await this.fetcher(url);
       if (!response.ok) throw new Error(`CoinGecko ${response.status}`);
       const payload: unknown = await response.json();
 

@@ -35,7 +35,6 @@ describe('HttpPriceProvider', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.frankfurter.dev/v2/rate/USD/RUB',
-      { cache: 'no-store' },
     );
     expect(result.quotes[0]).toMatchObject({
       assetId: 'rub',
@@ -58,6 +57,7 @@ describe('HttpPriceProvider', () => {
     ]);
 
     expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0]).toHaveLength(1);
     const requested = fetchMock.mock.calls[0]?.[0];
     expect(requested).toBeDefined();
     expect(requestUrl(requested!)).toContain(
