@@ -121,3 +121,10 @@ python3 -m http.server 8080
 - Export JSON now includes appSettings: language, theme, displayCurrency.
 - Import restores appSettings when present; old backups remain compatible.
 - JSON schema version 12.
+
+
+## 2.3.1-final
+- Fixed saving `autoUpdateSource` when editing an existing asset.
+- Existing assets can now switch between None / CoinGecko / Frankfurter without recreation.
+- The selected source is preloaded correctly when reopening the edit form.
+- JSON schema version 13; old backups remain compatible.
