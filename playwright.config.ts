@@ -11,7 +11,6 @@ export default defineConfig({
   reporter: isCi ? 'github' : 'list',
   use: {
     baseURL: 'http://127.0.0.1:4173',
-    ...(!isCi ? { channel: 'chrome' } : {}),
     trace: 'on-first-retry',
   },
   projects: [

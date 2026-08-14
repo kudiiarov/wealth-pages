@@ -20,6 +20,12 @@ describe('backup validation and serialization', () => {
     expect(backup.settings).toEqual(currentV14.appSettings);
   });
 
+  it('accepts every published backup schema version', () => {
+    for (let version = 1; version <= 14; version += 1) {
+      expect(validateBackup({ ...currentV14, version }).version).toBe(version);
+    }
+  });
+
   it('rejects broken references before normalization can hide bad values', () => {
     expect(() =>
       validateBackup({

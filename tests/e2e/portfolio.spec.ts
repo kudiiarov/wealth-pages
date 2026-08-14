@@ -43,4 +43,23 @@ test('creates and persists a portfolio, snapshot, and backup', async ({
   await page.locator('#exportBtn').click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^worth-backup-.*\.json$/);
+
+  const backupPath = await download.path();
+  expect(backupPath).not.toBeNull();
+  if (!backupPath) throw new Error('Browser did not save the backup');
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.locator('#resetBtn').click();
+  await expect(page.locator('#homeTitle')).toHaveText('$0.00');
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.locator('#importInput').setInputFiles(backupPath);
+  await expect(page.locator('#homeTitle')).toHaveText('$100.00');
+  await expect(page.locator('#accountsList')).toContainText('Основной счёт');
+
+  await page.locator('[data-lang-choice="en"]').click();
+  await expect(page.locator('[data-i18n="totalBalance"]')).toHaveText(
+    'Total balance',
+  );
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
