@@ -138,3 +138,11 @@ python3 -m http.server 8080
 - Added optional automatic price refresh on app launch.
 - Export/import settings include pnlPeriod and autoRefreshOnLaunch.
 - JSON schema version 14.
+
+
+## 2.5-final
+- Replaced the P&L dropdown with a compact balance-row UI: absolute P&L, percentage, and clickable snapshot date.
+- Clicking the date toggles between first-snapshot and last-snapshot P&L baselines.
+- The currently selected mode is shown as a small caption under the row.
+- Renamed the launch auto-refresh setting to clearer user-facing wording.
+- JSON schema remains version 14; no data migration required.

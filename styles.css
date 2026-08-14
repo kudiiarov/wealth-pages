@@ -209,3 +209,18 @@ html[data-theme="dark"] .quick-price-input,html[data-theme="dark"] .quick-positi
 .pnl-positive{color:var(--green)!important}.pnl-negative{color:var(--red)!important}
 .switch-row{cursor:pointer}.switch-row input[type="checkbox"]{width:46px;height:26px;accent-color:var(--blue)}
 .settings-auto-section{margin-bottom:14px}
+
+/* 2.5-final */
+.pnl-summary-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:10px;flex-wrap:wrap}
+.pnl-money{font-size:17px;font-weight:750;letter-spacing:-.02em}
+.pnl-percent{font-size:17px;font-weight:800;padding:5px 10px;border-radius:999px;background:var(--surface-soft)}
+.pnl-percent.pnl-positive{background:rgba(33,194,107,.12)}
+.pnl-percent.pnl-negative{background:rgba(238,82,100,.12)}
+.pnl-date-button{border:0;background:transparent;color:var(--muted);font-size:16px;font-weight:700;padding:5px 2px}
+.pnl-date-button:active{opacity:.6}
+.pnl-mode-caption{text-align:center;color:var(--muted);font-size:10.5px;margin-top:3px}
+.pnl-period-wrap,.pnl-period-select,.pnl-period-label,.pnl-period-date{display:none!important}
+@media(max-width:390px){
+  .pnl-summary-row{gap:9px}
+  .pnl-money,.pnl-percent,.pnl-date-button{font-size:15px}
+}

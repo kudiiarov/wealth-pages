@@ -300,16 +300,31 @@ function pnlPctText(r){if(!r||r.pct===null)return '—';const s=r.pct>0?'+':r.pc
 function pnlMoneyText(r){if(!r)return t('pnlNoBaseline');const s=r.pnl>0?'+':r.pnl<0?'−':'';return `${s}${money(Math.abs(r.pnl))} · ${pnlPctText(r)}`}
 function pnlClass(r){return !r||r.pnl===0?'':r.pnl>0?'pnl-positive':'pnl-negative'}
  function visibleMoney(v){return money(v)}
-function renderAll(){syncDisplayCurrency();applyTheme();applyLanguage();renderCurrencyButton();renderPnlPeriod();renderBalance();renderAllocation();renderAccounts();renderAssets();renderPositions();refreshHistoryScope();renderHistory();refreshPositionForm()}
-function renderPnlPeriod(){
-  const sel=byId('pnlPeriod');if(!sel)return;sel.value=state.pnlPeriod;
-  const b=pnlBaselineSnapshot(),d=byId('pnlPeriodDate');d.textContent=b?t('pnlFromDate',formatDate(b.createdAt)):t('pnlNoBaseline');
+function renderAll(){syncDisplayCurrency();applyTheme();applyLanguage();renderCurrencyButton();renderBalance();renderAllocation();renderAccounts();renderAssets();renderPositions();refreshHistoryScope();renderHistory();refreshPositionForm()}
+function pnlReferenceSnapshot(){
+  const snaps=compatibleSnapshots();
+  if(!snaps.length)return null;
+  return state.pnlPeriod==='last'?snaps.at(-1):snaps[0];
 }
-function renderBalance(){
-  const total=portfolioTotal(),el=byId('homeTitle'),delta=byId('balanceDelta'),r=portfolioPnl();el.textContent=money(total);
-  if(!r){delta.textContent=t('pnlNoBaseline');delta.style.color='';return}
-  delta.textContent=`${t('pnlLabel')}: ${pnlMoneyText(r)}`;delta.style.color=r.pnl>0?'var(--green)':r.pnl<0?'var(--red)':'';
+function shortPnlDate(ts){
+  return new Intl.DateTimeFormat(locale(),{day:'2-digit',month:'2-digit',year:'2-digit'}).format(new Date(ts));
 }
+function renderPnlSummary(){
+  const r=portfolioPnl(),ref=pnlReferenceSnapshot(),moneyEl=byId('pnlMoney'),pctEl=byId('pnlPercent'),dateBtn=byId('pnlPeriodToggle'),caption=byId('pnlModeCaption');
+  byId('homeTitle').textContent=money(portfolioTotal());
+  if(!r||!ref){
+    moneyEl.textContent='—';pctEl.textContent='—';dateBtn.textContent='—';caption.textContent=t('pnlNoBaseline');
+    moneyEl.className='pnl-money';pctEl.className='pnl-percent';return;
+  }
+  const sign=r.pnl>0?'+':r.pnl<0?'−':'';
+  moneyEl.textContent=`${sign}${money(Math.abs(r.pnl))}`;
+  pctEl.textContent=`${sign}${Math.abs(r.pct||0).toFixed(2)}%`;
+  dateBtn.textContent=shortPnlDate(ref.createdAt);
+  caption.textContent=state.pnlPeriod==='last'?t('pnlVsLast'):t('pnlVsFirst');
+  const cls=r.pnl>0?'pnl-positive':r.pnl<0?'pnl-negative':'';
+  moneyEl.className=`pnl-money ${cls}`;pctEl.className=`pnl-percent ${cls}`;
+}
+function renderBalance(){renderPnlSummary()}
 function renderAllocation(){
   const rows=state.assets.map(asset=>({asset,value:assetTotal(asset.id),qty:assetQuantity(asset.id)})).filter(x=>x.value!==0).sort((a,b)=>b.value-a.value),
     gross=rows.reduce((s,x)=>s+Math.abs(x.value),0),bar=byId('allocationBar'),list=byId('allocationList');
@@ -424,7 +439,7 @@ function snapshotMenu(id){showActionMenu(t('snapshot'),[{label:t('deleteSnapshot
 
 function renderQuickUpdate(){const c=byId('quickUpdateFields');if(!state.assets.length){c.innerHTML=`<div class="empty-state">${t('emptyAssets')}</div>`;return}c.innerHTML=state.assets.map(a=>{const positions=state.positions.filter(p=>p.assetId===a.id);const rows=positions.length?positions.map(p=>{const acc=accountBy(p.accountId);return `<label class="quick-position-row"><span class="quick-position-account"><span class="quick-account-icon ${iconLenClass(accountIcon(acc))}" style="background:${accountColor(acc)}">${escapeHTML(accountIcon(acc))}</span><span><strong>${escapeHTML(acc?.name||t('account'))}</strong><small>${escapeHTML(t('qtyCode',a.code))}</small></span></span><input type="text" inputmode="decimal" autocomplete="off" data-position-qty="${p.id}" value="${inputDecimal(p.quantity)}" aria-label="${escapeHTML(t('qtyAccount',a.code,acc?.name||t('account')))}"></label>`}).join(''):`<div class="quick-no-positions">${t('noPositions')}</div>`;return `<section class="quick-asset-card"><div class="quick-asset-head"><span class="quick-asset-icon ${iconLenClass(assetIcon(a))}" style="background:${assetColor(a)}">${escapeHTML(assetIcon(a))}</span><div class="quick-asset-meta"><strong>${escapeHTML(a.name)}</strong><small>${escapeHTML(a.code)} · ${money(assetTotal(a.id))}</small></div></div><label class="quick-price-row"><span><strong>${t('unitPriceLabel')}</strong><small>${t('basePrice')}</small></span><div class="quick-price-entry"><input type="text" inputmode="decimal" autocomplete="off" data-asset-price="${a.id}" value="${inputDecimal(a.price)}" aria-label="${escapeHTML(t('priceUsd',a.code))}"><select data-asset-price-currency="${a.id}" class="price-currency-select">${currencySelectOptions('USD')}</select></div></label><div class="quick-positions-block"><div class="quick-block-title">${t('balances')}</div>${rows}</div></section>`}).join('')}
 
-function exportData(){const payload={app:'Worth',version:14,appVersion:'2.4-final',baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots,appSettings:{language:state.lang,theme:state.theme,displayCurrency:state.displayCurrency,pnlPeriod:state.pnlPeriod,autoRefreshOnLaunch:state.autoRefreshOnLaunch}},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast(t('backupCreated'))}
+function exportData(){const payload={app:'Worth',version:14,appVersion:'2.5-final',baseCurrency:'USD',exportedAt:new Date().toISOString(),accounts:state.accounts,assets:state.assets,positions:state.positions,snapshots:state.snapshots,appSettings:{language:state.lang,theme:state.theme,displayCurrency:state.displayCurrency,pnlPeriod:state.pnlPeriod,autoRefreshOnLaunch:state.autoRefreshOnLaunch}},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`worth-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);toast(t('backupCreated'))}
 
 function validateImport(data){return WorthCore.validateImport(data)}
 async function importData(file){try{const raw=JSON.parse(await file.text()),data=validateImport(raw);if(!confirm(t('confirmImport')))return;for(const n of STORE_NAMES){await dbClear(n);for(const item of data[n])await dbPut(n,item)}
@@ -439,7 +454,7 @@ await reload();toast(t('dataRestored'))}catch(e){console.error(e);alert(`${t('im
 
 function bindEvents(){document.addEventListener('click',async e=>{const currency=e.target.closest('[data-currency-code]');if(currency){setDisplayCurrency(currency.dataset.currencyCode);return}const theme=e.target.closest('[data-theme-choice]');if(theme){setTheme(theme.dataset.themeChoice);return}const lang=e.target.closest('[data-lang-choice]');if(lang){setLanguage(lang.dataset.langChoice);return}const accountToggle=e.target.closest('[data-account-toggle]');if(accountToggle&&!e.target.closest('[data-account-menu]')){const id=accountToggle.dataset.accountToggle;state.expandedAccounts.has(id)?state.expandedAccounts.delete(id):state.expandedAccounts.add(id);renderAccounts();return}const assetToggle=e.target.closest('[data-asset-toggle]');if(assetToggle&&!e.target.closest('[data-asset-menu]')){const id=assetToggle.dataset.assetToggle;state.expandedAssets.has(id)?state.expandedAssets.delete(id):state.expandedAssets.add(id);renderAssets();return}const open=e.target.closest('[data-open]');if(open){openDialog(open.dataset.open);return}const close=e.target.closest('[data-close]');if(close){closeDialog(close.dataset.close);return}const nav=e.target.closest('[data-nav]');if(nav){navigate(nav.dataset.nav);return}const am=e.target.closest('[data-account-menu]');if(am){accountMenu(am.dataset.accountMenu);return}const asm=e.target.closest('[data-asset-menu]');if(asm){assetMenu(asm.dataset.assetMenu);return}const pm=e.target.closest('[data-position-menu]');if(pm){positionMenu(pm.dataset.positionMenu);return}const sm=e.target.closest('[data-snapshot-menu]');if(sm){snapshotMenu(sm.dataset.snapshotMenu);return}const ai=e.target.closest('[data-action-index]');if(ai){const action=pendingActions[Number(ai.dataset.actionIndex)];closeDialog('actionMenuModal');if(action)await action.run();return}});
 byId('priceForm').elements.priceCurrency.addEventListener('change',e=>{const f=byId('priceForm'),prev=f.dataset.priceCurrency||'USD',next=e.target.value,current=parseDecimal(f.elements.price.value),usdValue=priceCurrencyToUsd(current,prev);if(Number.isFinite(usdValue)){const converted=usdToPriceCurrency(usdValue,next);if(Number.isFinite(converted))f.elements.price.value=inputDecimal(converted)}f.dataset.priceCurrency=next});
-byId('pnlPeriod').addEventListener('change',e=>{state.pnlPeriod=e.target.value==='last'?'last':'all';localStorage.setItem('worth-pnl-period',state.pnlPeriod);renderAll()});
+byId('pnlPeriodToggle').addEventListener('click',()=>{state.pnlPeriod=state.pnlPeriod==='last'?'all':'last';localStorage.setItem('worth-pnl-period',state.pnlPeriod);renderAll()});
 byId('autoRefreshOnLaunch').addEventListener('change',e=>{state.autoRefreshOnLaunch=!!e.target.checked;localStorage.setItem('worth-auto-refresh-launch',state.autoRefreshOnLaunch?'1':'0')});
 byId('historyScope').addEventListener('change',e=>{state.historyScope=e.target.value;renderHistory()});byId('saveSnapshotBtn').addEventListener('click',saveSnapshot);byId('saveSnapshotBtnHistory').addEventListener('click',saveSnapshot);byId('openQuickUpdate').addEventListener('click',()=>{renderQuickUpdate();openDialog('quickUpdateModal')});byId('displayCurrencyBtn').addEventListener('click',()=>{renderCurrencyOptions();openDialog('currencyModal')});byId('settingsShortcut').addEventListener('click',()=>navigate('settingsView'));
 byId('refreshPricesBtn').addEventListener('click',async()=>{await runPriceRefresh()});
