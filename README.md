@@ -76,3 +76,20 @@ python3 -m http.server 8080
 - Массовое обновление переделано в мобильные карточки по активам: цена отдельно, остатки по счетам отдельно.
 - Кнопка сохранения массового обновления закреплена внизу формы.
 - JSON schema version 7; обратная совместимость сохранена.
+
+## 2.0-final
+- История теперь по конкретным позициям, не по счетам.
+- Новые snapshots содержат positions[] с идентификатором позиции, счетом, активом, количеством, ценой, комментарием и стоимостью.
+- Общая история старых snapshots остается совместимой; история позиции начинается с snapshots 2.0-final.
+- Массовое обновление после сохранения закрывает панель и показывает подтверждение.
+- Добавлены русский и английский интерфейсы, язык сохраняется локально.
+- JSON schema version 8.
+
+
+## 2.0.1-final
+- Multiple positions with the same asset are now allowed inside the same account.
+- `accountId + assetId` is no longer treated as unique.
+- Creating a position always creates a new `positionId`.
+- Editing updates only the selected position by its existing `positionId`.
+- Position-level history remains independent for each position.
+- JSON schema version 9; old backups remain compatible.

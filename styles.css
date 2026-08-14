@@ -177,3 +177,6 @@ html[data-theme="dark"] .quick-price-input,html[data-theme="dark"] .quick-positi
   .quick-price-input{max-width:none;width:100%}
   .quick-position-row>input{width:96px;flex-basis:96px}
 }
+
+/* 2.0-final */
+.language-row{margin-top:1px}.language-row .theme-segment button{min-width:42px}
