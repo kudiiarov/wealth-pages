@@ -42,9 +42,8 @@ import {
 import { all, escapeHtml, requiredElement } from './dom';
 import { formControl } from './forms';
 import {
-  accountHistorySeries,
   accountOverviewRows,
-  assetHistorySeries,
+  assetPriceHistorySeries,
   assetOverviewRows,
   categoryAllocationRows,
   compactAccountAllocation,
@@ -259,6 +258,10 @@ export class WorthRenderer {
   }
 
   redrawDetailChart(): void {
+    if (this.detailRoute?.kind !== 'asset') {
+      this.detailChartGeometry = undefined;
+      return;
+    }
     this.detailChartGeometry = drawHistoryChart(
       requiredElement('entityDetailChart', HTMLCanvasElement, this.documentRef),
       this.element('entityDetailEmpty'),
@@ -671,7 +674,7 @@ export class WorthRenderer {
       ? rates
           .map(
             ({ source, quote, value }) =>
-              `<button class="rate-row" data-rate-asset="${escapeHtml(source.id)}" type="button"><span class="driver-icon ${this.iconLengthClass(this.assetIcon(source))}" style="background:${this.assetColor(source)}">${escapeHtml(this.assetIcon(source))}</span><span class="rate-identity"><strong>${escapeHtml(source.name)}</strong><em class="rate-status ${this.assetPriceStatusClass(source)}">${escapeHtml(this.assetPriceStatus(source))}</em></span><span class="rate-value">${value === undefined ? '—' : formatMoney(Number(source.price) || 0, this.language, quote.code === 'USD' ? undefined : quote)}</span><i aria-hidden="true">›</i></button>`,
+              `<button class="rate-row" data-rate-asset="${escapeHtml(source.id)}" type="button"><span class="driver-icon ${this.iconLengthClass(this.assetIcon(source))}" style="background:${this.assetColor(source)}">${escapeHtml(this.assetIcon(source))}</span><span class="rate-identity"><strong>${escapeHtml(source.name)}</strong><em class="rate-status ${this.assetPriceStatusClass(source)}">${escapeHtml(this.assetPriceStatus(source))}</em></span><span class="rate-value">${this.service.settings.balancesHidden ? '••••' : value === undefined ? '—' : formatMoney(Number(source.price) || 0, this.language, quote.code === 'USD' ? undefined : quote)}</span><i aria-hidden="true">›</i></button>`,
           )
           .join('')
       : `<div class="empty-state compact-empty">${this.t('emptyAssets')}</div>`;
@@ -838,6 +841,7 @@ export class WorthRenderer {
     const metadata = this.element('entityDetailMetadata');
     const related = this.element('entityRelatedList');
     const menu = this.element('entityDetailMenu');
+    const chartSection = this.element('entityDetailChartSection');
     if (route.kind === 'asset') {
       const asset = this.assetBy(route.id);
       if (!asset) return false;
@@ -845,13 +849,18 @@ export class WorthRenderer {
         .filter(({ assetId }) => assetId === asset.id)
         .reduce((sum, position) => sum + Number(position.quantity || 0), 0);
       const pnl = this.homePnl((position) => position.assetId === asset.id);
+      const value = this.assetTotal(asset.id);
+      const total = portfolioTotal(this.service.data);
+      const share = total ? (Math.abs(value) / Math.abs(total)) * 100 : 0;
+      const pnlSign =
+        pnl?.pnl && pnl.pnl > 0 ? '+' : pnl?.pnl && pnl.pnl < 0 ? '−' : '';
       heading.textContent = asset.name;
-      hero.innerHTML = `<span class="detail-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><div><p>${escapeHtml(asset.code)}</p><h1 id="entityDetailTitle" tabindex="-1">${escapeHtml(asset.name)}</h1><strong>${this.money(this.assetTotal(asset.id))}</strong><small class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div>`;
-      metadata.innerHTML = `<div><span>${this.t('currentRate')}</span><strong>${this.money(Number(asset.price) || 0)}</strong></div><div><span>${this.t('lastAutoUpdate')}</span><strong class="${this.assetPriceStatusClass(asset)}">${escapeHtml(this.assetPriceStatus(asset))}</strong></div><div><span>${this.t('totalQuantity')}</span><strong>${formatNumber(quantity, this.language)} ${escapeHtml(asset.code)}</strong></div><div><span>${this.t('category')}</span><strong>${escapeHtml(this.categoryLabel(inferAssetProfile(asset).category))}</strong></div><div><span>${this.t('tags')}</span><strong>${
-        inferAssetProfile(asset)
-          .tags.map((tag) => escapeHtml(this.tagLabel(tag)))
-          .join(' · ') || '—'
-      }</strong></div>`;
+      hero.innerHTML = `<span class="detail-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><div class="detail-hero-main"><h1 id="entityDetailTitle" tabindex="-1">${escapeHtml(asset.name)}</h1><strong>${this.money(Number(asset.price) || 0)}</strong></div><span class="detail-price-status ${this.assetPriceStatusClass(asset)}">${escapeHtml(this.assetPriceStatus(asset))}</span>`;
+      chartSection.classList.remove('hidden');
+      chartSection.querySelector<HTMLElement>('.chart-stat span')!.textContent =
+        this.t('assetPriceHistory');
+      metadata.classList.remove('hidden');
+      metadata.innerHTML = `<section class="holding-summary surface"><div class="holding-summary-head"><span>${this.t('yourPortfolio')}</span><strong>${this.money(value)}</strong><small class="${this.pnlClass(pnl)}">${pnl ? `${pnlSign}${this.money(Math.abs(pnl.pnl))} · ${this.pnlPercent(pnl)}` : '—'}</small></div><div class="holding-summary-meta"><span><small>${this.t('totalQuantity')}</small><strong>${formatNumber(quantity, this.language)} ${escapeHtml(asset.code)}</strong></span><span><small>${this.t('portfolioShare')}</small><strong>${share.toFixed(1)}%</strong></span></div></section>`;
       const positions = this.service.data.positions.filter(
         ({ assetId }) => assetId === asset.id,
       );
@@ -876,14 +885,20 @@ export class WorthRenderer {
         ({ accountId }) => accountId === account.id,
       );
       const pnl = this.homePnl((position) => position.accountId === account.id);
-      hero.innerHTML = `<span class="detail-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><div><p>${escapeHtml(this.accountTypeLabel(account.type))}</p><h1 id="entityDetailTitle" tabindex="-1">${escapeHtml(account.name)}</h1><strong>${this.money(accountOverviewRows(this.service.data).find(({ account: candidate }) => candidate.id === account.id)?.value ?? 0)}</strong><small class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div>`;
-      metadata.innerHTML = `<div><span>${this.t('positions')}</span><strong>${positions.length}</strong></div><div><span>${this.t('type')}</span><strong>${escapeHtml(this.accountTypeLabel(account.type))}</strong></div>`;
+      const value =
+        accountOverviewRows(this.service.data).find(
+          ({ account: candidate }) => candidate.id === account.id,
+        )?.value ?? 0;
+      hero.innerHTML = `<span class="detail-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><div class="detail-hero-main"><p>${escapeHtml(this.accountTypeLabel(account.type))}</p><h1 id="entityDetailTitle" tabindex="-1">${escapeHtml(account.name)}</h1><strong>${this.money(value)}</strong><small class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></div>`;
+      chartSection.classList.add('hidden');
+      metadata.classList.add('hidden');
+      metadata.innerHTML = '';
       this.element('entityRelatedTitle').textContent = this.t('relatedAssets');
       related.innerHTML = positions.length
         ? positions
             .map((position) => {
               const asset = this.assetBy(position.assetId);
-              return `<button class="related-row" data-asset-open="${escapeHtml(position.assetId)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span><strong>${escapeHtml(asset?.name || this.t('asset'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset?.code || '')}</small></span><i>›</i></button>`;
+              return `<button class="related-row related-row-valued" data-asset-open="${escapeHtml(position.assetId)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span><strong>${escapeHtml(asset?.name || this.t('asset'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset?.code || '')}</small></span><b>${this.money(Number(position.quantity) * Number(asset?.price || 0))}</b><i>›</i></button>`;
             })
             .join('')
         : `<div class="empty-state compact-empty">${this.t('emptyAccount')}</div>`;
@@ -1013,21 +1028,13 @@ export class WorthRenderer {
   }
 
   private detailSeries(): HistoryDatum[] {
-    if (!this.detailRoute) return [];
-    const historical =
-      this.detailRoute.kind === 'asset'
-        ? assetHistorySeries(this.detailRoute.id, this.service.data.snapshots)
-        : accountHistorySeries(
-            this.detailRoute.id,
-            this.service.data.snapshots,
-          );
+    if (this.detailRoute?.kind !== 'asset') return [];
+    const historical = assetPriceHistorySeries(
+      this.detailRoute.id,
+      this.service.data.snapshots,
+    );
     if (historical.length < 2) return [];
-    const current =
-      this.detailRoute.kind === 'asset'
-        ? this.assetTotal(this.detailRoute.id)
-        : (accountOverviewRows(this.service.data).find(
-            ({ account }) => account.id === this.detailRoute?.id,
-          )?.value ?? 0);
+    const current = Number(this.assetBy(this.detailRoute.id)?.price) || 0;
     return [...historical, { createdAt: Date.now(), value: current }];
   }
 

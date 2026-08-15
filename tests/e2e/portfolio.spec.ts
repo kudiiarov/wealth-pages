@@ -347,8 +347,8 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   await page.locator('[data-rate-asset="btc"]').click();
   await expect(page).toHaveURL(/#\/assets\/btc$/);
   await expect(page.locator('#entityDetailTitle')).toHaveText('Bitcoin');
-  await expect(page.locator('#entityDetailMetadata')).toContainText('$100.00');
-  await expect(page.locator('#entityDetailMetadata')).toContainText(
+  await expect(page.locator('#entityDetailHero')).toContainText('$100.00');
+  await expect(page.locator('#entityDetailHero')).toContainText(
     'Цена актуальна',
   );
   await page.locator('#entityRelatedList [data-account-open]').first().click();
@@ -547,13 +547,21 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
 
   await page.locator('[data-rate-asset="btc"]').click();
   const detailCanvas = page.locator('#entityDetailChart');
+  await expect(page.locator('#entityDetailHero')).toContainText('$100.00');
+  await expect(page.locator('#entityDetailHero')).toContainText(
+    'Цена актуальна',
+  );
+  await expect(page.locator('#entityDetailMetadata')).toContainText(
+    'Ваш портфель',
+  );
+  await expect(page.locator('#entityDetailMetadata')).toContainText('42.9%');
   await detailCanvas.focus();
   await expect(page.locator('#entityDetailChartTooltip')).toContainText(
-    '$300.00',
+    '$100.00',
   );
   await page.keyboard.press('ArrowLeft');
   await expect(page.locator('#entityDetailChartTooltip')).toContainText(
-    '$285.45',
+    '$95.00',
   );
   const detailBox = await detailCanvas.boundingBox();
   if (!detailBox) throw new Error('Detail chart is not visible');
@@ -565,7 +573,7 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
     clientY: detailBox.y + detailBox.height / 2,
   });
   await expect(page.locator('#entityDetailChartTooltip')).toContainText(
-    '$240.12',
+    '$80.00',
   );
   await detailCanvas.dispatchEvent('pointercancel', {
     pointerId: 7,
@@ -575,14 +583,9 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
 
   await page.locator('#entityRelatedList [data-account-open]').first().click();
   await expect(page).toHaveURL(/#\/accounts\/vault$/);
-  await detailCanvas.focus();
-  await expect(page.locator('#entityDetailChartTooltip')).toContainText(
-    '$650.00',
-  );
-  await page.keyboard.press('ArrowLeft');
-  await expect(page.locator('#entityDetailChartTooltip')).toContainText(
-    '$575.45',
-  );
+  await expect(page.locator('#entityDetailChartSection')).toBeHidden();
+  await expect(page.locator('#entityDetailHero')).toContainText('$650.00');
+  await expect(page.locator('#entityRelatedList')).toContainText('Bitcoin');
   await page.locator('[data-detail-back]').click();
 
   await page.locator('[data-detail-back]').click();
@@ -603,6 +606,6 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
   await page.locator('[data-nav="homeView"]').click();
   await page.locator('#privacyToggle').click();
   await expect(
-    page.locator('[data-rate-asset="btc"] .rate-change'),
+    page.locator('[data-rate-asset="btc"] .rate-value'),
   ).toContainText('••••');
 });
