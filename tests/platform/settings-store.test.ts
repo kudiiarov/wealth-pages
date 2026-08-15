@@ -55,6 +55,7 @@ describe('BrowserSettingsStore', () => {
       positionGrouping: 'accounts',
       balancesHidden: false,
       selectedRateAssetIds: [],
+      ratePairs: [],
     });
   });
 
@@ -137,5 +138,40 @@ describe('BrowserSettingsStore', () => {
       JSON.stringify(['btc', 42, '  ', 'eth']),
     );
     expect(store.load().selectedRateAssetIds).toEqual(['btc', 'eth']);
+  });
+
+  it('round-trips three ordered pairs and deduplicates their source assets', () => {
+    store.save({
+      ratePairs: [
+        { sourceAssetId: 'usd', quoteAssetId: 'rub' },
+        { sourceAssetId: 'btc', quoteAssetId: 'usd' },
+        { sourceAssetId: 'usd', quoteAssetId: 'btc' },
+        { sourceAssetId: 'xaut', quoteAssetId: 'btc' },
+        { sourceAssetId: 'eth', quoteAssetId: 'usd' },
+      ],
+    });
+
+    expect(store.load().ratePairs).toEqual([
+      { sourceAssetId: 'usd', quoteAssetId: 'rub' },
+      { sourceAssetId: 'btc', quoteAssetId: 'usd' },
+      { sourceAssetId: 'xaut', quoteAssetId: 'btc' },
+    ]);
+  });
+
+  it('ignores malformed rate-pair storage', () => {
+    storage.setItem(SETTINGS_KEYS.ratePairs, 'not-json');
+    expect(store.load().ratePairs).toEqual([]);
+
+    storage.setItem(
+      SETTINGS_KEYS.ratePairs,
+      JSON.stringify([
+        { sourceAssetId: 'btc', quoteAssetId: 'usd' },
+        { sourceAssetId: '', quoteAssetId: 'rub' },
+        { sourceAssetId: 'eth', quoteAssetId: 42 },
+      ]),
+    );
+    expect(store.load().ratePairs).toEqual([
+      { sourceAssetId: 'btc', quoteAssetId: 'usd' },
+    ]);
   });
 });

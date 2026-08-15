@@ -71,6 +71,7 @@ describe('backup validation and serialization', () => {
       positionGrouping: 'assets',
       balancesHidden: true,
       selectedRateAssetIds: ['btc'],
+      ratePairs: [{ sourceAssetId: 'btc', quoteAssetId: 'usd' }],
     };
     const backup = createBackup(
       validated.data,
@@ -90,8 +91,26 @@ describe('backup validation and serialization', () => {
     expect(backup.appSettings.selectedRateAssetIds).not.toBe(
       settings.selectedRateAssetIds,
     );
+    expect(backup.appSettings.ratePairs).not.toBe(settings.ratePairs);
+    expect(validateBackup(backup).settings?.ratePairs).toEqual([
+      { sourceAssetId: 'btc', quoteAssetId: 'usd' },
+    ]);
     expect(validateBackup(backup).settings?.selectedRateAssetIds).toEqual([
       'btc',
+    ]);
+  });
+
+  it('migrates legacy selected rates to the saved display currency', () => {
+    const backup = validateBackup({
+      ...currentV14,
+      appSettings: {
+        displayCurrency: 'USD',
+        selectedRateAssetIds: ['usd'],
+      },
+    });
+
+    expect(backup.settings?.ratePairs).toEqual([
+      { sourceAssetId: 'usd', quoteAssetId: 'usd' },
     ]);
   });
 

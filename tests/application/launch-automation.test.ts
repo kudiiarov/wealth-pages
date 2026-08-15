@@ -21,6 +21,7 @@ function settings(overrides: Partial<AppSettings> = {}): AppSettings {
     positionGrouping: 'accounts',
     balancesHidden: false,
     selectedRateAssetIds: [],
+    ratePairs: [],
     ...overrides,
   };
 }

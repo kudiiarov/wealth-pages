@@ -103,6 +103,11 @@ export interface PortfolioData {
   snapshots: Snapshot[];
 }
 
+export interface RatePair {
+  sourceAssetId: string;
+  quoteAssetId: string;
+}
+
 export interface AppSettings {
   language: Language;
   theme: Theme;
@@ -117,6 +122,7 @@ export interface AppSettings {
   positionGrouping: PositionGrouping;
   balancesHidden: boolean;
   selectedRateAssetIds: string[];
+  ratePairs: RatePair[];
 }
 
 export type StoreName = keyof PortfolioData;

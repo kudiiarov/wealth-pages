@@ -31,6 +31,7 @@ const defaults: AppSettings = {
   positionGrouping: 'accounts',
   balancesHidden: false,
   selectedRateAssetIds: [],
+  ratePairs: [],
 };
 
 class MemoryRepository implements PortfolioRepository {

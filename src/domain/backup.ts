@@ -2,6 +2,7 @@ import type {
   AppSettings,
   AutomationInterval,
   PortfolioData,
+  RatePair,
   UnknownRecord,
 } from './models';
 import { normalizeData } from './normalize';
@@ -103,6 +104,20 @@ function parseSettings(value: unknown): Partial<AppSettings> | undefined {
       ),
     ).slice(0, 3);
   }
+  if (Array.isArray(value.ratePairs)) {
+    const sources = new Set<string>();
+    settings.ratePairs = value.ratePairs
+      .flatMap((item): RatePair[] => {
+        if (!isRecord(item)) return [];
+        const sourceAssetId = text(item.sourceAssetId).trim();
+        const quoteAssetId = text(item.quoteAssetId).trim();
+        if (!sourceAssetId || !quoteAssetId || sources.has(sourceAssetId))
+          return [];
+        sources.add(sourceAssetId);
+        return [{ sourceAssetId, quoteAssetId }];
+      })
+      .slice(0, 3);
+  }
   return Object.keys(settings).length > 0 ? settings : undefined;
 }
 
@@ -172,6 +187,25 @@ export function validateBackup(value: unknown): ValidatedBackup {
   }
 
   const settings = parseSettings(value.appSettings);
+  if (
+    settings &&
+    !settings.ratePairs?.length &&
+    settings.selectedRateAssetIds?.length
+  ) {
+    const quoteCode = settings.displayCurrency || 'USD';
+    const quote =
+      normalized.assets.find(({ code }) => code === quoteCode) ??
+      normalized.assets.find(({ code }) => code === 'USD') ??
+      normalized.assets[0];
+    if (quote) {
+      settings.ratePairs = settings.selectedRateAssetIds
+        .filter((id) => assetIds.has(id))
+        .map((sourceAssetId) => ({
+          sourceAssetId,
+          quoteAssetId: quote.id,
+        }));
+    }
+  }
   return settings
     ? { version, data: normalized, settings }
     : { version, data: normalized };
@@ -215,6 +249,7 @@ export function createBackup(
     appSettings: {
       ...settings,
       selectedRateAssetIds: [...(settings.selectedRateAssetIds ?? [])],
+      ratePairs: (settings.ratePairs ?? []).map((pair) => ({ ...pair })),
     },
   };
 }

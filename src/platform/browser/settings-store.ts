@@ -1,5 +1,9 @@
 import type { SettingsStore } from '../../application/ports';
-import type { AppSettings, AutomationInterval } from '../../domain/models';
+import type {
+  AppSettings,
+  AutomationInterval,
+  RatePair,
+} from '../../domain/models';
 
 export const SETTINGS_KEYS = {
   language: 'worth-language',
@@ -16,6 +20,7 @@ export const SETTINGS_KEYS = {
   positionGrouping: 'worth-position-grouping',
   balancesHidden: 'worth-balances-hidden',
   selectedRateAssetIds: 'worth-selected-rate-assets',
+  ratePairs: 'worth-rate-pairs',
 } as const;
 
 const AUTOMATION_INTERVALS: readonly AutomationInterval[] = [1, 3, 6, 12, 24];
@@ -53,6 +58,38 @@ function selectedRateAssetIds(value: string | null): string[] {
   if (value === null) return [];
   try {
     return normalizeSelectedRateAssetIds(JSON.parse(value));
+  } catch {
+    return [];
+  }
+}
+
+function normalizeRatePairs(value: unknown): RatePair[] {
+  if (!Array.isArray(value)) return [];
+  const sources = new Set<string>();
+  return value
+    .flatMap((item) => {
+      if (item === null || typeof item !== 'object' || Array.isArray(item))
+        return [];
+      const sourceAssetId = Reflect.get(item, 'sourceAssetId');
+      const quoteAssetId = Reflect.get(item, 'quoteAssetId');
+      if (
+        typeof sourceAssetId !== 'string' ||
+        !sourceAssetId.trim() ||
+        typeof quoteAssetId !== 'string' ||
+        !quoteAssetId.trim() ||
+        sources.has(sourceAssetId)
+      )
+        return [];
+      sources.add(sourceAssetId);
+      return [{ sourceAssetId, quoteAssetId }];
+    })
+    .slice(0, 3);
+}
+
+function ratePairs(value: string | null): RatePair[] {
+  if (value === null) return [];
+  try {
+    return normalizeRatePairs(JSON.parse(value));
   } catch {
     return [];
   }
@@ -105,6 +142,7 @@ export class BrowserSettingsStore implements SettingsStore {
       selectedRateAssetIds: selectedRateAssetIds(
         this.storage.getItem(SETTINGS_KEYS.selectedRateAssetIds),
       ),
+      ratePairs: ratePairs(this.storage.getItem(SETTINGS_KEYS.ratePairs)),
     };
   }
 
@@ -171,6 +209,11 @@ export class BrowserSettingsStore implements SettingsStore {
         JSON.stringify(
           normalizeSelectedRateAssetIds(settings.selectedRateAssetIds),
         ),
+      );
+    if (settings.ratePairs !== undefined)
+      this.storage.setItem(
+        SETTINGS_KEYS.ratePairs,
+        JSON.stringify(normalizeRatePairs(settings.ratePairs)),
       );
   }
 }
