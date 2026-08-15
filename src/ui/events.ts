@@ -194,15 +194,13 @@ export class WorthController {
       this.renderer.renderAll();
       return;
     }
-    const overviewPeriod = closestElement<HTMLElement>(
+    const overviewPeriodToggle = closestElement<HTMLElement>(
       event.target,
-      '[data-overview-period]',
+      '[data-overview-period-toggle]',
     );
-    if (
-      overviewPeriod?.dataset.overviewPeriod === '24h' ||
-      overviewPeriod?.dataset.overviewPeriod === 'all'
-    ) {
-      this.renderer.ui.overviewPeriod = overviewPeriod.dataset.overviewPeriod;
+    if (overviewPeriodToggle) {
+      this.renderer.ui.overviewPeriod =
+        this.renderer.ui.overviewPeriod === '24h' ? 'all' : '24h';
       this.renderer.renderAll();
       return;
     }

@@ -686,6 +686,91 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   await expect(page.locator('#assetsView')).toHaveClass(/active/);
 });
 
+test('aligns the Rates and Portfolio structure section gaps', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  const gaps = await page.evaluate(() => {
+    const ratesTitle = document.querySelector('.section-heading-row h2');
+    const ratesList = document.querySelector('#portfolioRates');
+    const structureSection = Array.from(
+      document.querySelectorAll('.home-insight-section'),
+    ).find((section) => section.querySelector('.structure-panel'));
+    const structureTitle = structureSection?.querySelector('h2');
+    const structurePanel = structureSection?.querySelector('.structure-panel');
+    if (!ratesTitle || !ratesList || !structureTitle || !structurePanel) {
+      throw new Error('Missing Home sections');
+    }
+    return {
+      rates:
+        ratesList.getBoundingClientRect().top -
+        ratesTitle.getBoundingClientRect().bottom,
+      structure:
+        structurePanel.getBoundingClientRect().top -
+        structureTitle.getBoundingClientRect().bottom,
+    };
+  });
+  expect(gaps.rates).toBe(10);
+  expect(gaps.rates).toBe(gaps.structure);
+});
+
+test('keeps system actions neutral', async ({ page }) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  const systemActionColors = await page
+    .locator('#configureRatesBtn, .structure-link')
+    .evaluateAll((elements) =>
+      elements.map((element) => getComputedStyle(element).color),
+    );
+  expect(systemActionColors).not.toContain('rgb(86, 103, 255)');
+
+  await page.locator('#displayCurrencyBtn').click();
+  const selectedCurrency = page.locator('.currency-option.selected');
+  await expect(selectedCurrency).toBeVisible();
+  expect(
+    await selectedCurrency.evaluate(
+      (element) => getComputedStyle(element).boxShadow,
+    ),
+  ).not.toContain('rgb(86, 103, 255)');
+  await expect(selectedCurrency.locator('b')).not.toHaveCSS(
+    'color',
+    'rgb(86, 103, 255)',
+  );
+  await page.locator('#currencyModal [data-close]').click();
+
+  await page.locator('#configureRatesBtn').click();
+  await expect(page.locator('.rate-pair-add')).not.toHaveCSS(
+    'color',
+    'rgb(86, 103, 255)',
+  );
+  await page.locator('#rateSelectionModal [data-close]').click();
+
+  const dormantSystemStyles = await page.evaluate(() => ({
+    cancel: getComputedStyle(document.querySelector('.action-cancel')!).color,
+    text: getComputedStyle(document.querySelector('.text-button')!).color,
+  }));
+  expect(Object.values(dormantSystemStyles)).not.toContain('rgb(86, 103, 255)');
+});
+
+test('uses neutral focus rings in forms', async ({ page }) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  await page.locator('.tab[data-nav="assetsView"]').click();
+  await page.locator('#assetAdd').click();
+  const assetName = page.locator('#assetForm [name="name"]');
+  await assetName.focus();
+  expect(
+    await assetName.evaluate((element) => getComputedStyle(element).boxShadow),
+  ).not.toContain('86, 103, 255');
+});
+
 test('freshness and asset headings stay aligned and code-free', async ({
   page,
 }) => {
@@ -717,6 +802,53 @@ test('freshness and asset headings stay aligned and code-free', async ({
   );
   await expect(assetHeading).toHaveText('Bitcoin');
   await expect(assetHeading.locator('em')).toHaveCount(0);
+});
+
+test('uses one shared overview period action and omits Assets update time', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+  await page.locator('.tab[data-nav="assetsView"]').click();
+
+  await expect(page.locator('#assetFreshness')).toHaveCount(0);
+  await expect(page.locator('#assetsView [data-overview-period]')).toHaveCount(
+    0,
+  );
+  const assetsPeriod = page.locator(
+    '#assetsView [data-overview-period-toggle]',
+  );
+  await expect(assetsPeriod).toHaveCount(1);
+  await expect(assetsPeriod).toHaveText('24h');
+  const periodBox = await assetsPeriod.boundingBox();
+  expect(periodBox?.width).toBeGreaterThanOrEqual(44);
+  expect(periodBox?.height).toBeGreaterThanOrEqual(44);
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
+  ).toHaveText('+$15.00 · +5.3%');
+
+  await assetsPeriod.click();
+  await expect(assetsPeriod).toHaveText('Всё время');
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
+  ).toHaveText('+$60.00 · +25.0%');
+
+  await page.locator('.tab[data-nav="accountsView"]').click();
+  const accountsPeriod = page.locator(
+    '#accountsView [data-overview-period-toggle]',
+  );
+  await expect(accountsPeriod).toHaveCount(1);
+  await expect(accountsPeriod).toHaveText('Всё время');
+  await expect(
+    page.locator('[data-account-open="exchange"] .portfolio-row-value small'),
+  ).toHaveText('+$10.00 · +25.0%');
+
+  await accountsPeriod.click();
+  await expect(accountsPeriod).toHaveText('24h');
+  await expect(
+    page.locator('[data-account-open="exchange"] .portfolio-row-value small'),
+  ).toHaveText('+$5.00 · +11.1%');
 });
 
 test('localizes static accessibility labels in English', async ({ page }) => {
@@ -832,6 +964,114 @@ test('matches the approved asset detail hierarchy and header actions', async ({
   await expect(page.locator('#positionForm [name="assetId"]')).toHaveValue(
     'btc',
   );
+});
+
+test('compacts account detail and shows position all-time performance', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+  await page.goto('/#/accounts/vault');
+
+  const hero = page.locator('#entityDetailHero');
+  await expect(hero).toContainText('Vault');
+  await expect(hero).not.toContainText('Банк');
+  await expect(hero).toContainText('за всё время');
+  const bitcoin = page.locator(
+    '#entityRelatedList [data-position-open="btc-vault"]',
+  );
+  await expect(bitcoin).toContainText('$300.00');
+  await expect(bitcoin.locator('b small')).toHaveText('+$60.00 · +25.0%');
+
+  for (const id of ['entityDetailAdd', 'entityDetailMenu']) {
+    const button = page.locator(`#${id}`);
+    const geometry = await button.evaluate((element) => {
+      const icon = element.querySelector('svg');
+      if (!icon) throw new Error('Missing action icon');
+      const buttonBox = element.getBoundingClientRect();
+      const iconBox = icon.getBoundingClientRect();
+      return {
+        width: buttonBox.width,
+        height: buttonBox.height,
+        centerDeltaX: Math.abs(
+          buttonBox.left +
+            buttonBox.width / 2 -
+            (iconBox.left + iconBox.width / 2),
+        ),
+        centerDeltaY: Math.abs(
+          buttonBox.top +
+            buttonBox.height / 2 -
+            (iconBox.top + iconBox.height / 2),
+        ),
+      };
+    });
+    expect(geometry.width).toBe(48);
+    expect(geometry.height).toBe(48);
+    expect(geometry.centerDeltaX).toBeLessThanOrEqual(0.5);
+    expect(geometry.centerDeltaY).toBeLessThanOrEqual(0.5);
+    await expect(button).toHaveCSS('border-radius', '50%');
+  }
+
+  await bitcoin.click();
+  await expect(page.locator('#positionModal')).toBeVisible();
+});
+
+test('keeps account position performance honest across display states', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+  await page.goto('/#/accounts/vault');
+
+  const bitcoinPnl = () =>
+    page.locator('#entityRelatedList [data-position-open="btc-vault"] b small');
+  await expect(bitcoinPnl()).toHaveText('+$60.00 · +25.0%');
+
+  await page.locator('[data-detail-back]').click();
+  await page.locator('#displayCurrencyBtn').click();
+  await page.locator('[data-currency-code="RUB"]').click();
+  await page.locator('[data-account-open="vault"]').click();
+  await expect(bitcoinPnl()).toHaveText('+6 600 ₽ · +34.4%');
+
+  await page.locator('[data-detail-back]').click();
+  await page.locator('#settingsShortcut').click();
+  await page.locator('[data-lang-choice="en"]').click();
+  await page.locator('.tab[data-nav="accountsView"]').click();
+  await page.locator('[data-account-open="vault"]').click();
+  await expect(page.locator('#entityDetailHero')).toContainText('all time');
+  await expect(bitcoinPnl()).toContainText('%');
+
+  await page.locator('[data-detail-back]').click();
+  await page.locator('.tab[data-nav="homeView"]').click();
+  await page.locator('#privacyToggle').click();
+  await page.locator('.tab[data-nav="accountsView"]').click();
+  await page.locator('[data-account-open="vault"]').click();
+  await expect(bitcoinPnl()).toContainText('•••• ·');
+  await expect(bitcoinPnl()).toContainText('%');
+
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 2);
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction('snapshots', 'readwrite');
+          transaction.objectStore('snapshots').clear();
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not clear snapshots'));
+        };
+      }),
+  );
+  await page.reload();
+  await expect(bitcoinPnl()).toHaveText('—');
 });
 
 test('summarizes the four largest assets and accounts without search controls', async ({
@@ -1107,18 +1347,18 @@ test('overview period updates row performance without changing totals or allocat
   });
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
-  ).toHaveText('+$60.00 · +25.0%');
+  ).toHaveText('+$15.00 · +5.3%');
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value strong'),
   ).toHaveText('$300.00');
 
-  await page.locator('#assetsView [data-overview-period="24h"]').click();
+  await page.locator('#assetsView [data-overview-period-toggle]').click();
   await expect(
-    page.locator('#assetsView [data-overview-period="24h"]'),
-  ).toHaveAttribute('aria-pressed', 'true');
+    page.locator('#assetsView [data-overview-period-toggle]'),
+  ).toHaveText('Всё время');
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
-  ).toHaveText('+$15.00 · +5.3%');
+  ).toHaveText('+$60.00 · +25.0%');
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value strong'),
   ).toHaveText('$300.00');
@@ -1138,11 +1378,11 @@ test('overview period updates row performance without changing totals or allocat
 
   await page.locator('.tab[data-nav="accountsView"]').click();
   await expect(
-    page.locator('#accountsView [data-overview-period="24h"]'),
-  ).toHaveAttribute('aria-pressed', 'true');
+    page.locator('#accountsView [data-overview-period-toggle]'),
+  ).toHaveText('Всё время');
   await expect(
     page.locator('[data-account-open="exchange"] .portfolio-row-value small'),
-  ).toHaveText('+$5.00 · +11.1%');
+  ).toHaveText('+$10.00 · +25.0%');
   await expect(
     page.locator('[data-account-open="exchange"] .portfolio-row-value strong'),
   ).toHaveText('$50.00');
@@ -1165,7 +1405,7 @@ test('overview period updates row performance without changing totals or allocat
   await page.locator('[data-nav="accountsView"]').click();
   await expect(
     page.locator('[data-account-open="exchange"] .portfolio-row-value small'),
-  ).toHaveText('•••• · +11.1%');
+  ).toHaveText('•••• · +25.0%');
 });
 
 test('keeps Home, overview rows, and entity detail performance periods independent', async ({
@@ -1184,11 +1424,11 @@ test('keeps Home, overview rows, and entity detail performance periods independe
   await page.locator('.tab[data-nav="assetsView"]').click();
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
-  ).toHaveText('+$60.00 · +25.0%');
-  await page.locator('#assetsView [data-overview-period="24h"]').click();
+  ).toHaveText('+$15.00 · +5.3%');
+  await page.locator('#assetsView [data-overview-period-toggle]').click();
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
-  ).toHaveText('+$15.00 · +5.3%');
+  ).toHaveText('+$60.00 · +25.0%');
 
   await page.locator('[data-nav="homeView"]').click();
   await expect(page.locator('[data-home-period="1d"]')).toHaveAttribute(
@@ -1201,11 +1441,11 @@ test('keeps Home, overview rows, and entity detail performance periods independe
 
   await page.locator('.tab[data-nav="assetsView"]').click();
   await expect(
-    page.locator('#assetsView [data-overview-period="24h"]'),
-  ).toHaveAttribute('aria-pressed', 'true');
+    page.locator('#assetsView [data-overview-period-toggle]'),
+  ).toHaveText('Всё время');
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
-  ).toHaveText('+$15.00 · +5.3%');
+  ).toHaveText('+$60.00 · +25.0%');
   await page.locator('[data-asset-open="btc"]').click();
   await expect(page.locator('#entityHoldingSummary')).toContainText('+$60.00');
   await expect(page.locator('#entityHoldingSummary')).toContainText('+25.0%');
@@ -1214,43 +1454,11 @@ test('keeps Home, overview rows, and entity detail performance periods independe
   await page.locator('.tab[data-nav="accountsView"]').click();
   await expect(
     page.locator('[data-account-open="exchange"] .portfolio-row-value small'),
-  ).toHaveText('+$5.00 · +11.1%');
+  ).toHaveText('+$10.00 · +25.0%');
   await page.locator('[data-account-open="exchange"]').click();
   await expect(
     page.locator('#entityDetailHero > .detail-hero-main > small'),
-  ).toHaveText('+$10.00 · +25.0%');
-});
-
-test('overview period visibly distinguishes the selected segment', async ({
-  page,
-}) => {
-  await page.goto('/');
-
-  for (const theme of ['light', 'dark'] as const) {
-    await page.locator('#settingsShortcut').click();
-    await page.locator(`[data-theme-choice="${theme}"]`).click();
-    await page.locator('.tab[data-nav="assetsView"]').click();
-
-    const styles = await page
-      .locator('#assetsView [data-overview-period]')
-      .evaluateAll((buttons) =>
-        buttons.map((button) => {
-          const style = getComputedStyle(button);
-          return {
-            active: button.getAttribute('aria-pressed') === 'true',
-            backgroundColor: style.backgroundColor,
-            color: style.color,
-          };
-        }),
-      );
-    const active = styles.find(({ active }) => active);
-    const inactive = styles.find(({ active }) => !active);
-
-    expect(active).toBeDefined();
-    expect(inactive).toBeDefined();
-    expect(active?.backgroundColor).not.toBe(inactive?.backgroundColor);
-    expect(active?.color).not.toBe(inactive?.color);
-  }
+  ).toContainText('+$10.00 · +25.0%');
 });
 
 test('overview period shows a dash when no eligible 24 hour baseline exists', async ({
@@ -1279,7 +1487,9 @@ test('overview period shows a dash when no eligible 24 hour baseline exists', as
   );
   await page.reload();
   await page.locator('.tab[data-nav="assetsView"]').click();
-  await page.locator('#assetsView [data-overview-period="24h"]').click();
+  await expect(
+    page.locator('#assetsView [data-overview-period-toggle]'),
+  ).toHaveText('24h');
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
   ).toHaveText('—');

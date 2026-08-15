@@ -38,7 +38,7 @@ describe('localized messages', () => {
   it('localizes overview list titles and performance period controls', () => {
     expect(translate('ru', 'allAssets')).toBe('Все активы');
     expect(translate('en', 'allAssets')).toBe('All assets');
-    expect(translate('ru', 'period24h')).toBe('24 ч');
+    expect(translate('ru', 'period24h')).toBe('24h');
     expect(translate('en', 'period24h')).toBe('24h');
     expect(translate('ru', 'periodAllTime')).toBe('Всё время');
     expect(translate('en', 'periodAllTime')).toBe('All time');

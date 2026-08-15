@@ -53,8 +53,7 @@
 <button aria-label="Добавить актив" class="portfolio-add" id="assetAdd" type="button">+</button>
 </div>
 <section class="compact-allocation surface" id="assetAllocationSummary"><div class="allocation-metrics"><span id="assetAllocationCount">—</span><strong id="assetAllocationTotal">—</strong></div><div aria-hidden="true" class="allocation-bar" id="assetAllocationBar"></div><div class="compact-allocation-list" id="assetAllocationList"></div></section>
-<div class="asset-freshness-summary"><span class="muted-inline" id="assetFreshness">—</span></div>
-<div class="portfolio-list-heading"><h2 data-i18n="allAssets" id="allAssetsTitle">Все активы</h2><div aria-label="Период доходности обзора" class="overview-periods ui-segmented" data-overview-period-controls role="group"><button data-i18n="period24h" data-overview-period="24h" type="button">24 ч</button><button class="active" data-i18n="periodAllTime" data-overview-period="all" type="button">Всё время</button></div></div>
+<div class="portfolio-list-heading"><h2 data-i18n="allAssets" id="allAssetsTitle">Все активы</h2><button aria-label="Период доходности обзора: 24h" class="overview-period-action" data-overview-period-toggle type="button">24h</button></div>
 <div class="portfolio-explorer-list" id="assetsList"></div>
 </section>
 <section aria-labelledby="accountsTitle" class="view" id="accountsView">
@@ -63,11 +62,11 @@
 <button aria-label="Добавить счёт" class="portfolio-add" id="accountAdd" type="button">+</button>
 </div>
 <section class="compact-allocation surface" id="accountAllocationSummary"><div class="allocation-metrics"><span id="accountAllocationCount">—</span><strong id="accountAllocationTotal">—</strong></div><div aria-hidden="true" class="allocation-bar" id="accountAllocationBar"></div><div class="compact-allocation-list" id="accountAllocationList"></div></section>
-<div class="portfolio-list-heading"><h2 data-i18n="allAccounts" id="allAccountsTitle">Все счета</h2><div aria-label="Период доходности обзора" class="overview-periods ui-segmented" data-overview-period-controls role="group"><button data-i18n="period24h" data-overview-period="24h" type="button">24 ч</button><button class="active" data-i18n="periodAllTime" data-overview-period="all" type="button">Всё время</button></div></div>
+<div class="portfolio-list-heading"><h2 data-i18n="allAccounts" id="allAccountsTitle">Все счета</h2><button aria-label="Период доходности обзора: 24h" class="overview-period-action" data-overview-period-toggle type="button">24h</button></div>
 <div class="portfolio-explorer-list" id="accountsList"></div>
 </section>
 <section aria-labelledby="entityDetailTitle" class="view detail-view" id="entityDetailView">
-<div class="detail-nav"><button class="detail-back" data-detail-back type="button"><span aria-hidden="true">‹</span><b data-i18n="back">Назад</b></button><div class="detail-nav-actions"><button class="circle-button detail-add" id="entityDetailAdd" type="button">+</button><button class="circle-button detail-menu" id="entityDetailMenu" type="button" aria-label="Действия">···</button></div></div>
+<div class="detail-nav"><button class="detail-back" data-detail-back type="button"><span aria-hidden="true">‹</span><b data-i18n="back">Назад</b></button><div class="detail-nav-actions"><button class="circle-button ui-icon-button detail-add" id="entityDetailAdd" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"/></svg></button><button class="circle-button ui-icon-button detail-menu" id="entityDetailMenu" type="button" aria-label="Действия"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" fill="currentColor" r="1.7"/><circle cx="12" cy="12" fill="currentColor" r="1.7"/><circle cx="19" cy="12" fill="currentColor" r="1.7"/></svg></button></div></div>
 <div class="detail-hero" id="entityDetailHero"><h1 id="entityDetailTitle" tabindex="-1">—</h1></div>
 <section class="chart-surface detail-chart-surface" id="entityDetailChartSection">
 <div class="chart-stat"><span data-i18n="valueHistory">История стоимости</span><strong id="entityDetailChange">—</strong></div>
@@ -146,7 +145,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 3.7.1-final</div>
+<div class="build-note">Worth · 3.8.0-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar" data-i18n-aria="navigationAria">

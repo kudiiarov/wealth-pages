@@ -8,7 +8,6 @@
   --ink: #17181b;
   --green: #21c26b;
   --red: #ee5264;
-  --blue: #5667ff;
   --purple: #9b63e8;
   --orange: #f5a341;
   --cyan: #33bfc6;
@@ -365,7 +364,7 @@ svg {
 .text-button {
   border: 0;
   background: none;
-  color: var(--blue);
+  color: var(--ink);
   font-weight: 650;
   font-size: 14px;
 }
@@ -728,7 +727,7 @@ svg {
 }
 .field input:focus,
 .field select:focus {
-  box-shadow: 0 0 0 2px rgba(86, 103, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(119, 123, 130, 0.28);
 }
 .sheet-primary {
   width: 100%;
@@ -941,7 +940,7 @@ svg {
   width: 100%;
   border: 0;
   background: #fff;
-  color: var(--blue);
+  color: var(--ink);
   border-radius: 18px;
   padding: 16px;
   margin-top: 9px;
@@ -1311,7 +1310,7 @@ body {
   text-align: left;
 }
 .currency-option.selected {
-  box-shadow: inset 0 0 0 2px var(--blue);
+  box-shadow: inset 0 0 0 2px var(--ink);
 }
 .currency-option-icon {
   width: 40px;
@@ -1336,7 +1335,7 @@ body {
 }
 .currency-option > b {
   text-align: center;
-  color: var(--blue);
+  color: var(--ink);
 }
 .static-row {
   cursor: default;
@@ -1564,7 +1563,7 @@ html[data-theme='dark'] .security-icon {
 .detail-nav-actions .circle-button {
   width: 48px;
   height: 48px;
-  border-radius: 16px;
+  border-radius: 50%;
   background: var(--surface-soft);
   box-shadow: inset 0 0 0 1px var(--line);
 }
@@ -1823,6 +1822,14 @@ html[data-theme='dark'] .security-icon {
 .account-detail-metadata {
   margin-top: 26px;
 }
+.detail-view .account-detail-hero {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+.account-detail-hero .detail-hero-main > small {
+  display: block;
+  margin: 6px 0 0;
+  line-height: 1.35;
+}
 .account-detail-metadata > h2 {
   color: var(--ink);
 }
@@ -1833,6 +1840,9 @@ html[data-theme='dark'] .security-icon {
   .detail-hero {
     grid-template-columns: 64px minmax(0, 1fr) minmax(72px, auto);
     gap: 12px;
+  }
+  .detail-view .account-detail-hero {
+    grid-template-columns: 64px minmax(0, 1fr);
   }
   .detail-icon {
     width: 64px;
@@ -1860,12 +1870,13 @@ html[data-theme='dark'] .security-icon {
 }
 .section-heading-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   margin: 0 5px 10px;
 }
-.section-heading-row h2 {
+.section-heading-row h2,
+.home-insight-section .section-heading-row h2 {
   margin: 0;
 }
 .section-action {
@@ -1874,7 +1885,7 @@ html[data-theme='dark'] .security-icon {
   border-radius: 0;
   padding: 0;
   background: transparent;
-  color: var(--blue);
+  color: var(--muted);
   font-size: 12px;
   font-weight: 750;
 }
@@ -2236,7 +2247,7 @@ html[data-theme='dark'] .security-icon {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--blue);
+  color: var(--ink);
   font-weight: 750;
 }
 .rate-pair-add:disabled {
@@ -2469,7 +2480,7 @@ html[data-theme='dark'] .security-icon {
   border: 0;
   border-top: 1px solid var(--line);
   background: transparent;
-  color: var(--blue);
+  color: var(--ink);
   font-weight: 700;
 }
 .structure-link b {
@@ -2664,12 +2675,6 @@ html[data-theme='dark'] .security-icon {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.asset-freshness-summary {
-  min-height: 31px;
-  display: flex;
-  align-items: center;
-  padding: 6px 2px 0;
-}
 .portfolio-list-heading {
   gap: 12px;
   margin: 30px 2px 14px;
@@ -2683,32 +2688,22 @@ html[data-theme='dark'] .security-icon {
   font-size: 23px;
   letter-spacing: -0.035em;
 }
-.overview-periods {
+.overview-period-action {
   flex: 0 0 auto;
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 14px;
-  background: var(--surface-soft);
-}
-.overview-periods button {
-  min-width: 52px;
+  min-width: 44px;
   min-height: 44px;
   border: 0;
-  border-radius: 10px;
   background: transparent;
   color: var(--muted);
-  padding: 0 10px;
+  padding: 0 2px;
   font-size: 12px;
   font-weight: 720;
 }
-.overview-periods button.active,
-.overview-periods button[aria-pressed='true'] {
-  background: var(--surface);
+.overview-period-action:hover,
+.overview-period-action:focus-visible {
   color: var(--ink);
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
 }
-.overview-periods button:active {
+.overview-period-action:active {
   transform: scale(0.97);
 }
 .portfolio-explorer-list {
@@ -2861,7 +2856,7 @@ html[data-theme='dark'] .security-icon {
   min-height: 43px;
   border: 0;
   background: transparent;
-  color: var(--blue);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 700;
 }
@@ -3151,7 +3146,7 @@ html[data-theme='dark'] .security-icon {
 }
 .quick-position-row > input:focus,
 .quick-price-input:focus-within {
-  box-shadow: 0 0 0 2px rgba(86, 103, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(119, 123, 130, 0.28);
 }
 .quick-no-positions {
   color: var(--muted);
@@ -3378,7 +3373,7 @@ html[data-theme='dark'] .quick-position-row > input {
 .switch-row input[type='checkbox'] {
   width: 46px;
   height: 26px;
-  accent-color: var(--blue);
+  accent-color: var(--green);
 }
 .settings-auto-section {
   margin-bottom: 14px;
@@ -3390,7 +3385,7 @@ html[data-theme='dark'] .quick-position-row > input {
   margin-top: 10px;
   border: 0;
   background: var(--surface-soft);
-  color: var(--blue);
+  color: var(--ink);
   border-radius: 14px;
   font-size: 13px;
   font-weight: 700;
@@ -3402,7 +3397,7 @@ html[data-theme='dark'] .quick-position-row > input {
   border: 0;
   border-radius: 14px;
   background: var(--surface-soft);
-  color: var(--blue);
+  color: var(--ink);
   font-size: 13px;
   font-weight: 700;
 }

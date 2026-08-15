@@ -147,7 +147,7 @@ const ru = {
   assetsCount: (count: number) =>
     `${count} ${declineRussian(count, 'актив', 'актива', 'активов')}`,
   allAssets: 'Все активы',
-  period24h: '24 ч',
+  period24h: '24h',
   periodAllTime: 'Всё время',
   overviewPnlPeriodAria: 'Период доходности обзора',
   pricePeriodAria: 'Период цены',

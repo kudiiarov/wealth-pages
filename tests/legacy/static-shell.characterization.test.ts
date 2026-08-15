@@ -30,7 +30,7 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('priceTrustText')).toBeNull();
     expect(document.getElementById('rateSelectionModal')).not.toBeNull();
     expect(document.querySelector('.build-note')?.textContent).toContain(
-      '3.7.1-final',
+      '3.8.0-final',
     );
   });
 
@@ -59,21 +59,36 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('autoSnapshot')).toBeNull();
   });
 
-  it('places overview metrics and period controls in both portfolio tabs', () => {
+  it('places overview metrics and one period action in both portfolio tabs', () => {
     const document = new JSDOM(html).window.document;
 
     expect(
-      document.querySelectorAll('[data-overview-period="24h"]'),
+      document.querySelectorAll('[data-overview-period-toggle]'),
     ).toHaveLength(2);
+    expect(document.querySelectorAll('[data-overview-period]')).toHaveLength(0);
     expect(
-      document.querySelectorAll('[data-overview-period="all"]'),
-    ).toHaveLength(2);
+      Array.from(
+        document.querySelectorAll<HTMLElement>('[data-overview-period-toggle]'),
+        ({ textContent }) => textContent?.trim(),
+      ),
+    ).toEqual(['24h', '24h']);
     expect(document.getElementById('assetAllocationCount')).not.toBeNull();
     expect(document.getElementById('assetAllocationTotal')).not.toBeNull();
     expect(document.getElementById('accountAllocationCount')).not.toBeNull();
     expect(document.getElementById('accountAllocationTotal')).not.toBeNull();
     expect(document.getElementById('assetSummary')).toBeNull();
     expect(document.getElementById('accountPortfolioValue')).toBeNull();
+    expect(document.getElementById('assetFreshness')).toBeNull();
+  });
+
+  it('uses svg artwork inside circular detail action buttons', () => {
+    const document = new JSDOM(html).window.document;
+
+    for (const id of ['entityDetailAdd', 'entityDetailMenu']) {
+      const button = document.getElementById(id);
+      expect(button?.classList.contains('ui-icon-button')).toBe(true);
+      expect(button?.querySelector('svg')).not.toBeNull();
+    }
   });
 
   it('defines shared UI primitives and a dedicated history row layout', () => {

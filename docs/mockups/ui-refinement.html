@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UI refinement mockup</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background: #0d0f12;
+        color: #f5f6f8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 28px 18px 48px;
+      }
+      button {
+        font: inherit;
+      }
+      main {
+        width: min(100%, 430px);
+        margin: 0 auto;
+        display: grid;
+        gap: 44px;
+      }
+
+      .heading,
+      .rates-heading,
+      .nav,
+      .hero,
+      .position {
+        display: flex;
+        align-items: center;
+      }
+
+      .heading,
+      .rates-heading,
+      .nav {
+        justify-content: space-between;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        letter-spacing: -0.04em;
+      }
+      h2 {
+        font-size: 22px;
+        letter-spacing: -0.03em;
+      }
+
+      .period,
+      .configure {
+        min-height: 44px;
+        border: 0;
+        background: transparent;
+        color: #a8adb8;
+        padding: 0 2px;
+        font-weight: 700;
+      }
+
+      .period:hover,
+      .period:focus-visible,
+      .configure:hover,
+      .configure:focus-visible {
+        color: #fff;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+      }
+      .icon-button {
+        width: 48px;
+        height: 48px;
+        padding: 0;
+        border: 1px solid #2a2f37;
+        border-radius: 50%;
+        background: #191c21;
+        color: #f5f6f8;
+        display: grid;
+        place-items: center;
+      }
+
+      .icon-button svg {
+        width: 22px;
+        height: 22px;
+        display: block;
+      }
+      .account {
+        display: grid;
+        gap: 26px;
+      }
+      .back {
+        color: #f5f6f8;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .hero {
+        gap: 18px;
+      }
+      .tile {
+        width: 76px;
+        height: 76px;
+        flex: 0 0 76px;
+        border-radius: 24px;
+        background: #8bd052;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-size: 22px;
+        font-weight: 850;
+      }
+
+      .hero-copy {
+        min-width: 0;
+      }
+      .name {
+        font-size: 30px;
+        line-height: 1.05;
+        letter-spacing: -0.045em;
+      }
+      .balance {
+        margin-top: 10px;
+        font-size: 23px;
+        font-weight: 650;
+        font-variant-numeric: tabular-nums;
+      }
+      .loss {
+        margin-top: 5px;
+        color: #ff5d78;
+        font-size: 14px;
+        font-weight: 750;
+      }
+
+      .positions {
+        overflow: hidden;
+        border-radius: 24px;
+        background: #191c21;
+        padding: 0 16px;
+      }
+      .position {
+        min-height: 82px;
+        gap: 13px;
+      }
+      .position + .position {
+        border-top: 1px solid #2a2f37;
+      }
+      .position-icon {
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .position-copy {
+        min-width: 0;
+        flex: 1;
+      }
+      .position-copy strong,
+      .position-copy small,
+      .position-value strong,
+      .position-value small {
+        display: block;
+      }
+      .position-copy small {
+        margin-top: 4px;
+        color: #9298a4;
+        font-size: 12px;
+      }
+      .position-value {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .position-value small {
+        margin-top: 5px;
+        font-size: 12px;
+        font-weight: 750;
+      }
+      .gain {
+        color: #31c982;
+      }
+      .ruble {
+        background: #0d9dbd;
+      }
+      .gold {
+        background: #f3a400;
+      }
+      .silver {
+        background: #9da1a8;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="heading">
+        <h1>Все активы</h1>
+        <button
+          class="period"
+          id="period"
+          type="button"
+          aria-label="Период: 24 часа"
+          data-period="24h"
+        >
+          24h
+        </button>
+      </div>
+
+      <section class="account">
+        <div class="nav">
+          <span class="back">‹ Назад</span>
+          <div class="actions">
+            <button
+              class="icon-button"
+              type="button"
+              aria-label="Добавить позицию"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 5v14M5 12h14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
+            <button class="icon-button" type="button" aria-label="Действия">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.7" fill="currentColor" />
+                <circle cx="12" cy="12" r="1.7" fill="currentColor" />
+                <circle cx="19" cy="12" r="1.7" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="hero">
+          <span class="tile">СБ</span>
+          <div class="hero-copy">
+            <h1 class="name">Сбербанк</h1>
+            <p class="balance">$4,787.56</p>
+            <p class="loss">−$87.36 · −1.8% · всё время</p>
+          </div>
+        </div>
+
+        <div class="positions">
+          <div class="position">
+            <span class="position-icon ruble">₽</span>
+            <span class="position-copy"
+              ><strong>Рубль</strong><small>11,700 RUB</small></span
+            >
+            <span class="position-value"
+              ><strong>$139.63</strong
+              ><small class="gain">+$0.42 · +0.3%</small></span
+            >
+          </div>
+          <div class="position">
+            <span class="position-icon gold">GLD</span>
+            <span class="position-copy"
+              ><strong>Золото</strong><small>20 GOLD</small></span
+            >
+            <span class="position-value"
+              ><strong>$2,676.45</strong
+              ><small class="loss">−$54.18 · −2.0%</small></span
+            >
+          </div>
+          <div class="position">
+            <span class="position-icon silver">SLR</span>
+            <span class="position-copy"
+              ><strong>Серебро</strong><small>1,000 SILVER</small></span
+            >
+            <span class="position-value"
+              ><strong>$1,971.48</strong
+              ><small class="loss">−$33.60 · −1.7%</small></span
+            >
+          </div>
+        </div>
+      </section>
+
+      <div class="rates-heading">
+        <h2>Курсы валют</h2>
+        <button class="configure" type="button">Настроить</button>
+      </div>
+    </main>
+
+    <script>
+      const period = document.querySelector('#period');
+      period.addEventListener('click', () => {
+        const isDay = period.dataset.period === '24h';
+        period.dataset.period = isDay ? 'all' : '24h';
+        period.textContent = isDay ? 'All time' : '24h';
+        period.setAttribute(
+          'aria-label',
+          `Период: ${isDay ? 'всё время' : '24 часа'}`,
+        );
+      });
+    </script>
+  </body>
+</html>
