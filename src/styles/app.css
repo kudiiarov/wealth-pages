@@ -2275,14 +2275,9 @@ html[data-theme='dark'] .security-icon {
 }
 .chart-inspector {
   position: relative;
-  border-radius: 18px;
-  overflow: hidden;
 }
 .chart-inspector canvas {
   touch-action: pan-y;
-}
-#entityDetailChart {
-  border-radius: 18px;
 }
 .chart-tooltip {
   position: absolute;
