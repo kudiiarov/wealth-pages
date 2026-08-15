@@ -175,6 +175,21 @@ export class WorthController {
       this.renderer.renderAll();
       return;
     }
+    const detailPeriod = closestElement<HTMLElement>(
+      event.target,
+      '[data-detail-period]',
+    );
+    if (
+      detailPeriod?.dataset.detailPeriod === '1d' ||
+      detailPeriod?.dataset.detailPeriod === '1w' ||
+      detailPeriod?.dataset.detailPeriod === '1m' ||
+      detailPeriod?.dataset.detailPeriod === '1y' ||
+      detailPeriod?.dataset.detailPeriod === 'all'
+    ) {
+      this.renderer.ui.detailPeriod = detailPeriod.dataset.detailPeriod;
+      this.renderer.renderAll();
+      return;
+    }
     const categoryFilter = closestElement<HTMLElement>(
       event.target,
       '[data-category-filter]',

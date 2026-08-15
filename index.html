@@ -59,25 +59,24 @@
 </section>
 <section aria-labelledby="accountsTitle" class="view" id="accountsView">
 <div class="page-heading portfolio-heading">
-<div><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="accounts" id="accountsTitle">Счета</h1></div>
+<div class="portfolio-page-intro"><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="accounts" id="accountsTitle">Счета</h1><strong class="portfolio-page-value" id="accountPortfolioValue">—</strong><small class="portfolio-page-meta" id="accountPortfolioMeta">—</small></div>
 <button aria-label="Добавить счёт" class="portfolio-add" id="accountAdd" type="button">+</button>
 </div>
-<section class="compact-allocation surface"><div aria-hidden="true" class="allocation-bar" id="accountAllocationBar"></div><div class="compact-allocation-list" id="accountAllocationList"></div></section>
-<div class="portfolio-summary"><span id="accountSummary">—</span></div>
-<div class="portfolio-explorer-list" id="accountsList"></div>
+<section class="compact-allocation account-allocation-summary" id="accountAllocationSummary"><div aria-hidden="true" class="allocation-bar" id="accountAllocationBar"></div><div class="compact-allocation-list" id="accountAllocationList"></div></section>
+<h2 class="portfolio-list-title" data-i18n="allAccounts" id="allAccountsTitle">Все счета</h2>
+<div class="portfolio-explorer-list flat-portfolio-list" id="accountsList"></div>
 </section>
 <section aria-labelledby="entityDetailTitle" class="view detail-view" id="entityDetailView">
-<div class="detail-nav"><button class="detail-back" data-detail-back type="button"><span aria-hidden="true">‹</span><b data-i18n="back">Назад</b></button><button class="circle-button detail-menu" id="entityDetailMenu" type="button" aria-label="Действия">···</button></div>
+<div class="detail-nav"><button class="detail-back" data-detail-back type="button"><span aria-hidden="true">‹</span><b data-i18n="back">Назад</b></button><div class="detail-nav-actions"><button class="circle-button detail-add" id="entityDetailAdd" type="button">+</button><button class="circle-button detail-menu" id="entityDetailMenu" type="button" aria-label="Действия">···</button></div></div>
 <div class="detail-hero" id="entityDetailHero"><h1 id="entityDetailTitle" tabindex="-1">—</h1></div>
-<div class="detail-actions" id="entityDetailActions"></div>
-<section class="surface chart-surface detail-chart-surface" id="entityDetailChartSection">
+<section class="chart-surface detail-chart-surface" id="entityDetailChartSection">
 <div class="chart-stat"><span data-i18n="valueHistory">История стоимости</span><strong id="entityDetailChange">—</strong></div>
 <div class="chart-inspector history-chart-inspector"><canvas aria-describedby="entityDetailChartTooltip" aria-label="История стоимости" id="entityDetailChart" tabindex="0"></canvas><output aria-live="polite" class="chart-tooltip hidden" id="entityDetailChartTooltip" role="status"></output></div>
 <div class="empty-state overlay-empty" data-i18n="needTwo" id="entityDetailEmpty">Нужно минимум два снимка для графика.</div>
 <div class="chart-dates" id="entityDetailChartDates"><span></span><span></span></div>
+<div aria-label="Период цены" class="detail-periods" id="detailPeriods" role="group"><button data-detail-period="1d" type="button">1Д</button><button data-detail-period="1w" type="button">1Н</button><button data-detail-period="1m" type="button">1М</button><button data-detail-period="1y" type="button">1Г</button><button class="active" data-detail-period="all" type="button">ВСЕ</button></div>
 </section>
-<div class="detail-metadata" id="entityDetailMetadata"></div>
-<section class="detail-related"><h2 id="entityRelatedTitle">—</h2><div class="related-list surface" id="entityRelatedList"></div></section>
+<section class="detail-metadata" id="entityDetailMetadata"><h2 id="entityRelatedTitle">—</h2><div class="holding-summary surface"><div id="entityHoldingSummary"></div><div class="related-list" id="entityRelatedList"></div></div></section>
 </section>
 <section aria-labelledby="historyTitle" class="view" id="historyView">
 <div class="page-heading">
@@ -147,7 +146,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 3.6.0-final</div>
+<div class="build-note">Worth · 3.6.1-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">

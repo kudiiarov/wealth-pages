@@ -237,8 +237,34 @@ const ru = {
   assetPriceHistory: 'История цены',
   yourPortfolio: 'Ваш портфель',
   portfolioShare: 'Доля портфеля',
+  ofPortfolio: 'портфеля',
   relatedAccounts: 'Счета с этим активом',
   relatedAssets: 'Активы на этом счёте',
+  allAccounts: 'Все счета',
+  accountsCount: (count: number) => {
+    const ending = count % 10;
+    const teens = count % 100 >= 11 && count % 100 <= 14;
+    const noun =
+      !teens && ending === 1
+        ? 'счёт'
+        : !teens && ending >= 2 && ending <= 4
+          ? 'счёта'
+          : 'счетов';
+    return `${count} ${noun}`;
+  },
+  remainingAccounts: (count: number) => {
+    const ending = count % 10;
+    const teens = count % 100 >= 11 && count % 100 <= 14;
+    const noun =
+      !teens && ending === 1
+        ? 'счёт'
+        : !teens && ending >= 2 && ending <= 4
+          ? 'счёта'
+          : 'счетов';
+    return `Остальные ${count} ${noun}`;
+  },
+  snapshotTodayAt: (time: string) => `снимок сегодня, ${time}`,
+  snapshotAt: (date: string, time: string) => `снимок ${date}, ${time}`,
   currentRate: 'Текущий курс',
   totalQuantity: 'Общее количество',
   addPosition: 'Добавить позицию',
@@ -502,8 +528,16 @@ const en = {
   assetPriceHistory: 'Price history',
   yourPortfolio: 'Your portfolio',
   portfolioShare: 'Portfolio share',
+  ofPortfolio: 'of portfolio',
   relatedAccounts: 'Accounts holding this asset',
   relatedAssets: 'Assets in this account',
+  allAccounts: 'All accounts',
+  remainingAccounts: (count: number) =>
+    `${count} more ${count === 1 ? 'account' : 'accounts'}`,
+  accountsCount: (count: number) =>
+    `${count} ${count === 1 ? 'account' : 'accounts'}`,
+  snapshotTodayAt: (time: string) => `snapshot today, ${time}`,
+  snapshotAt: (date: string, time: string) => `snapshot ${date}, ${time}`,
   currentRate: 'Current rate',
   totalQuantity: 'Total quantity',
   addPosition: 'Add position',

@@ -8,7 +8,7 @@ import type {
 import { normalizeData } from './normalize';
 
 export const BACKUP_VERSION = 15;
-export const APP_VERSION = '3.6.0-final';
+export const APP_VERSION = '3.6.1-final';
 
 export interface ValidatedBackup {
   version: number;

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { nearestChartPointIndex } from '../../src/ui/chart';
+import {
+  nearestChartPointIndex,
+  smoothChartSegments,
+} from '../../src/ui/chart';
 
 describe('chart inspection', () => {
   it('selects the nearest rendered point and clamps outside the plot', () => {
@@ -17,5 +20,22 @@ describe('chart inspection', () => {
 
   it('returns no selection when the chart has no rendered points', () => {
     expect(nearestChartPointIndex([], 100)).toBeUndefined();
+  });
+});
+
+describe('minimal asset chart path', () => {
+  it('builds midpoint control segments for a smooth price line', () => {
+    expect(
+      smoothChartSegments([
+        { x: 10, y: 80 },
+        { x: 50, y: 40 },
+        { x: 90, y: 60 },
+      ]),
+    ).toEqual([
+      { controlX: 30, controlY: 80, endX: 30, endY: 60 },
+      { controlX: 30, controlY: 40, endX: 50, endY: 40 },
+      { controlX: 70, controlY: 40, endX: 70, endY: 50 },
+      { controlX: 70, controlY: 60, endX: 90, endY: 60 },
+    ]);
   });
 });

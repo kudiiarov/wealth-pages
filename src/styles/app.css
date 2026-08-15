@@ -1404,6 +1404,412 @@ html[data-theme='dark'] .security-icon {
 .tab-bar {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
+
+/* 3.6.1 — approved portfolio hierarchy */
+.portfolio-page-intro {
+  display: grid;
+  justify-items: start;
+}
+.portfolio-page-value {
+  margin-top: 12px;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+.portfolio-page-meta {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+#accountsView .portfolio-heading {
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+#accountsView .portfolio-add {
+  margin-top: 0;
+}
+.compact-allocation.account-allocation-summary {
+  margin: 24px 2px 0;
+  padding: 0 0 24px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
+}
+#accountAllocationSummary {
+  border-radius: 0;
+}
+.account-allocation-summary .allocation-bar {
+  height: 10px;
+  margin-bottom: 17px;
+}
+.account-allocation-summary .compact-allocation-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+.account-allocation-summary .compact-allocation-key {
+  min-height: 42px;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  gap: 11px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+}
+.account-allocation-summary .compact-allocation-key:last-child {
+  border-bottom: 0;
+}
+.account-allocation-summary .compact-allocation-key > span {
+  width: 9px;
+  height: 9px;
+}
+.account-allocation-summary .compact-allocation-key strong {
+  font-weight: 520;
+}
+.account-allocation-summary .compact-allocation-key b {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.portfolio-list-title {
+  margin: 38px 2px 15px;
+  font-size: 23px;
+  letter-spacing: -0.035em;
+}
+.flat-portfolio-list {
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+.flat-portfolio-list .portfolio-row {
+  min-height: 82px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  padding: 13px 2px;
+  box-shadow: none;
+}
+.flat-portfolio-list .portfolio-row-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+}
+.flat-portfolio-list .portfolio-row-main strong {
+  font-size: 17px;
+  font-weight: 600;
+}
+.flat-portfolio-list .portfolio-row-value strong {
+  font-size: 16px;
+}
+.flat-portfolio-list .portfolio-row-value small {
+  font-size: 13px;
+  font-weight: 700;
+}
+.detail-nav {
+  margin-bottom: 28px;
+}
+.detail-view .detail-nav {
+  margin-bottom: 28px;
+}
+.detail-nav-actions {
+  display: flex;
+  gap: 10px;
+}
+.detail-nav-actions .circle-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--surface-soft);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.detail-add {
+  font-size: 30px;
+  font-weight: 300;
+}
+.detail-hero {
+  grid-template-columns: 72px minmax(0, 1fr) minmax(82px, auto);
+  gap: 17px;
+  margin: 0 2px 18px;
+}
+.detail-view .detail-hero {
+  grid-template-columns: 72px minmax(0, 1fr) minmax(82px, auto);
+  gap: 17px;
+  margin: 0 2px 18px;
+}
+.detail-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  font-size: 19px;
+}
+.detail-view .detail-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+}
+.detail-hero h1 {
+  font-size: 27px;
+  font-weight: 650;
+}
+.detail-view .detail-hero h1 {
+  font-size: 27px;
+  font-weight: 650;
+}
+.detail-hero-main > strong {
+  margin-top: 7px;
+  font-size: 22px;
+  font-weight: 540;
+  font-variant-numeric: tabular-nums;
+}
+.detail-view .detail-hero-main > strong {
+  margin-top: 7px;
+  font-size: 22px;
+  font-weight: 540;
+}
+.detail-price-change {
+  margin-top: 7px;
+  font-size: 13px;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+}
+.detail-price-status {
+  max-width: 112px;
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.detail-price-status strong {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 680;
+}
+.detail-view .detail-price-status strong {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 680;
+}
+.detail-price-status small {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 520;
+}
+.detail-view .detail-price-status small {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 520;
+}
+.detail-chart-surface {
+  min-height: 0;
+  margin: 0 0 28px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+.detail-view .detail-chart-surface {
+  min-height: 0;
+  margin: 0 0 28px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+.detail-chart-surface .chart-stat,
+.detail-chart-surface .chart-dates {
+  display: none;
+}
+#entityDetailChart {
+  height: 260px;
+}
+#entityDetailView #entityDetailChart {
+  height: 260px;
+}
+.detail-periods {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.detail-periods button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 720;
+  transition:
+    transform 160ms ease-out,
+    background 160ms ease-out,
+    color 160ms ease-out;
+}
+.detail-periods button.active {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+.detail-periods button:active {
+  transform: scale(0.97);
+}
+.detail-metadata {
+  margin: 0 0 28px;
+}
+.detail-view .detail-metadata {
+  display: block;
+  margin: 0 0 28px;
+}
+.detail-metadata > h2 {
+  margin: 0 2px 13px;
+  color: var(--muted);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+.detail-metadata .holding-summary {
+  overflow: hidden;
+  border-radius: 22px;
+}
+.holding-summary-head {
+  min-height: 104px;
+  padding: 17px 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 5px 16px;
+}
+.detail-view .holding-summary-head {
+  min-height: 104px;
+  padding: 17px 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 5px 16px;
+}
+.holding-summary-head > strong {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 28px;
+  font-weight: 560;
+}
+.detail-view .holding-summary-head > strong {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 28px;
+  font-weight: 560;
+}
+.holding-summary-head > small {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  padding: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 520;
+}
+.detail-view .holding-summary-head > small {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 520;
+}
+.holding-summary-head > span {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.detail-view .holding-summary-head > span {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+.holding-summary-head > span small {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 650;
+}
+.holding-summary .related-list {
+  padding: 0 16px 4px;
+  border-top: 1px solid var(--line);
+}
+.holding-summary .related-row {
+  min-height: 72px;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(86px, auto) 12px;
+  gap: 12px;
+  padding: 11px 0;
+}
+.holding-summary .portfolio-position-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+.holding-summary .related-row strong {
+  font-size: 15px;
+}
+.holding-summary .related-row small {
+  font-size: 11px;
+}
+.holding-summary .related-row > b {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+.holding-summary .related-row > b small {
+  color: inherit;
+  font-weight: 700;
+}
+.account-detail-metadata {
+  margin-top: 26px;
+}
+.account-detail-metadata > h2 {
+  color: var(--ink);
+}
+@media (max-width: 390px) {
+  .detail-nav {
+    margin-bottom: 22px;
+  }
+  .detail-hero {
+    grid-template-columns: 64px minmax(0, 1fr) minmax(72px, auto);
+    gap: 12px;
+  }
+  .detail-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 19px;
+  }
+  .detail-hero h1 {
+    font-size: 24px;
+  }
+  .detail-hero-main > strong {
+    font-size: 20px;
+  }
+  #entityDetailChart {
+    height: 235px;
+  }
+  .detail-periods {
+    gap: 4px;
+  }
+  .holding-summary-head {
+    padding-inline: 15px;
+  }
+  .holding-summary-head > strong {
+    font-size: 25px;
+  }
+}
 .section-heading-row {
   display: flex;
   align-items: center;

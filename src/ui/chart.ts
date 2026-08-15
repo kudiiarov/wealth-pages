@@ -11,6 +11,7 @@ export interface ChartFormatters {
   displayUnit(): string;
   money(value: number): string;
   language: Language;
+  minimal?: boolean;
 }
 
 export interface ChartPoint {
@@ -21,6 +22,38 @@ export interface ChartPoint {
 export interface ChartGeometry {
   points: readonly ChartPoint[];
   data: readonly HistoryDatum[];
+}
+
+export interface SmoothChartSegment {
+  controlX: number;
+  controlY: number;
+  endX: number;
+  endY: number;
+}
+
+export function smoothChartSegments(
+  points: readonly ChartPoint[],
+): SmoothChartSegment[] {
+  return points.slice(1).flatMap((point, index) => {
+    const previous = points[index];
+    if (!previous) return [];
+    const midpointX = (previous.x + point.x) / 2;
+    const midpointY = (previous.y + point.y) / 2;
+    return [
+      {
+        controlX: midpointX,
+        controlY: previous.y,
+        endX: midpointX,
+        endY: midpointY,
+      },
+      {
+        controlX: midpointX,
+        controlY: point.y,
+        endX: point.x,
+        endY: point.y,
+      },
+    ];
+  });
 }
 
 export function nearestChartPointIndex(
@@ -159,7 +192,7 @@ export function drawHistoryChart(
 
   const deviceScale = Math.min(window.devicePixelRatio || 1, 3);
   const width = rectangle.width;
-  const height = 270;
+  const height = formatting.minimal ? Math.max(220, rectangle.height) : 270;
   canvas.width = Math.round(width * deviceScale);
   canvas.height = Math.round(height * deviceScale);
   context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
@@ -196,15 +229,17 @@ export function drawHistoryChart(
   const maximumLabelWidth = Math.max(
     ...yLabels.map((label) => context.measureText(label).width),
   );
-  const padding = {
-    left: Math.min(
-      Math.max(42, maximumLabelWidth + 10),
-      Math.max(54, width * 0.3),
-    ),
-    right: 8,
-    top: 22,
-    bottom: 30,
-  };
+  const padding = formatting.minimal
+    ? { left: 8, right: 8, top: 18, bottom: 18 }
+    : {
+        left: Math.min(
+          Math.max(42, maximumLabelWidth + 10),
+          Math.max(54, width * 0.3),
+        ),
+        right: 8,
+        top: 22,
+        bottom: 30,
+      };
   const plotWidth = Math.max(20, width - padding.left - padding.right);
   const plotHeight = height - padding.top - padding.bottom;
   const styles = getComputedStyle(document.documentElement);
@@ -213,7 +248,7 @@ export function drawHistoryChart(
   const ink = styles.getPropertyValue('--ink').trim() || '#111';
   context.textBaseline = 'middle';
 
-  for (let index = 0; index < 4; index += 1) {
+  for (let index = 0; index < (formatting.minimal ? 0 : 4); index += 1) {
     const y = padding.top + (index / 3) * plotHeight;
     context.strokeStyle = grid;
     context.lineWidth = 1;
@@ -243,17 +278,36 @@ export function drawHistoryChart(
   );
   gradient.addColorStop(
     0,
-    difference >= 0 ? 'rgba(33,194,107,.18)' : 'rgba(238,82,100,.16)',
+    formatting.minimal
+      ? difference >= 0
+        ? 'rgba(33,194,107,.08)'
+        : 'rgba(238,82,100,.07)'
+      : difference >= 0
+        ? 'rgba(33,194,107,.18)'
+        : 'rgba(238,82,100,.16)',
   );
   gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
-  context.beginPath();
-  points.forEach((point, index) =>
-    index ? context.lineTo(point.x, point.y) : context.moveTo(point.x, point.y),
-  );
   const lastPoint = points.at(-1);
   const firstPoint = points[0];
   if (!lastPoint || !firstPoint) return;
+  const traceLine = (): void => {
+    context.moveTo(firstPoint.x, firstPoint.y);
+    if (formatting.minimal) {
+      for (const segment of smoothChartSegments(points)) {
+        context.quadraticCurveTo(
+          segment.controlX,
+          segment.controlY,
+          segment.endX,
+          segment.endY,
+        );
+      }
+      return;
+    }
+    points.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+  };
+  context.beginPath();
+  traceLine();
   context.lineTo(lastPoint.x, height - padding.bottom);
   context.lineTo(firstPoint.x, height - padding.bottom);
   context.closePath();
@@ -261,9 +315,7 @@ export function drawHistoryChart(
   context.fill();
 
   context.beginPath();
-  points.forEach((point, index) =>
-    index ? context.lineTo(point.x, point.y) : context.moveTo(point.x, point.y),
-  );
+  traceLine();
   context.strokeStyle = lineColor;
   context.lineWidth = 2.5;
   context.lineJoin = 'round';
@@ -271,11 +323,13 @@ export function drawHistoryChart(
   context.stroke();
 
   points.forEach((point, index) => {
+    if (formatting.minimal && index !== points.length - 1) return;
     context.beginPath();
     context.arc(point.x, point.y, 3.2, 0, Math.PI * 2);
     context.fillStyle = lineColor;
     context.fill();
     if (
+      !formatting.minimal &&
       (data.length <= 6 || index === 0 || index === points.length - 1) &&
       width > 350
     ) {

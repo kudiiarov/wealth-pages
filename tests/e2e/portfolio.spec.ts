@@ -404,6 +404,60 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   await expect(page.locator('#assetsView')).toHaveClass(/active/);
 });
 
+test('matches the approved asset detail hierarchy and header actions', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+  await page.locator('[data-rate-asset="btc"]').click();
+
+  await expect(
+    page.locator('.detail-nav [data-detail-add-position="asset:btc"]'),
+  ).toHaveCount(1);
+  await expect(page.locator('#entityDetailActions')).toHaveCount(0);
+  await expect(page.locator('#entityDetailHero')).toContainText('Bitcoin');
+  await expect(page.locator('#entityDetailHero')).toContainText('$100.00');
+  await expect(page.locator('#entityDetailPriceChange')).toContainText(
+    '+$20.00',
+  );
+  await expect(page.locator('#entityDetailPriceChange')).toContainText(
+    '+25.0%',
+  );
+  await expect(page.locator('#entityDetailFreshness')).toContainText(
+    'Цена актуальна',
+  );
+  const freshnessWhiteSpace = await page
+    .locator('#entityDetailFreshness')
+    .evaluate((element) => getComputedStyle(element).whiteSpace);
+  expect(freshnessWhiteSpace).toBe('nowrap');
+  await expect(page.locator('[data-detail-period]')).toHaveCount(5);
+  await page.locator('[data-detail-period="1d"]').click();
+  await expect(page.locator('[data-detail-period="1d"]')).toHaveClass(/active/);
+  const chartHasCardSurface = await page
+    .locator('#entityDetailChartSection')
+    .evaluate((element) => element.classList.contains('surface'));
+  expect(chartHasCardSurface).toBe(false);
+  await expect(
+    page.locator('#entityDetailMetadata #entityRelatedList'),
+  ).toHaveCount(1);
+  await expect(page.locator('#entityDetailMetadata')).toContainText(
+    '42.9% портфеля',
+  );
+  await expect(
+    page.locator('#entityRelatedList [data-account-open="vault"]'),
+  ).toContainText('$300.00');
+  await expect(
+    page.locator('#entityRelatedList [data-account-open="vault"]'),
+  ).toContainText('+$60.00');
+  await page
+    .locator('.detail-nav [data-detail-add-position="asset:btc"]')
+    .click();
+  await expect(page.locator('#positionForm [name="assetId"]')).toHaveValue(
+    'btc',
+  );
+});
+
 test('summarizes the four largest assets and accounts without search controls', async ({
   page,
 }) => {
@@ -470,11 +524,49 @@ test('summarizes the four largest assets and accounts without search controls', 
 
   await page.locator('[data-nav="accountsView"]').click();
   await expect(page.locator('#accountSearch')).toHaveCount(0);
+  await expect(page.locator('#accountPortfolioValue')).toContainText('$750.00');
+  await expect(page.locator('#accountPortfolioMeta')).toContainText('6 счетов');
+  await expect(page.locator('#accountPortfolioMeta')).toContainText('снимок');
   await expect(
     page.locator('#accountAllocationList .compact-allocation-key'),
   ).toHaveCount(5);
-  await expect(page.locator('#accountAllocationList')).toContainText('Другое');
+  await expect(page.locator('#accountAllocationList')).toContainText(
+    'Остальные 2 счёта',
+  );
+  await expect(page.locator('#accountAllocationSummary')).not.toHaveClass(
+    /surface/,
+  );
+  const allocationRadius = await page
+    .locator('#accountAllocationSummary')
+    .evaluate((element) => getComputedStyle(element).borderRadius);
+  expect(allocationRadius).toBe('0px');
+  await expect(page.locator('#allAccountsTitle')).toHaveText('Все счета');
   await expect(page.locator('#accountsList .portfolio-row')).toHaveCount(6);
+  await expect(
+    page.locator('#accountsList .portfolio-row-main small'),
+  ).toHaveCount(0);
+  await expect(page.locator('#accountsList')).toHaveClass(
+    /flat-portfolio-list/,
+  );
+
+  const accountLayout = await page.evaluate(() => ({
+    overline: document
+      .querySelector('#accountsView .overline')!
+      .getBoundingClientRect().top,
+    add: document.getElementById('accountAdd')!.getBoundingClientRect().top,
+    metrics: document
+      .getElementById('accountPortfolioValue')!
+      .getBoundingClientRect().top,
+    allocation: document
+      .getElementById('accountAllocationSummary')!
+      .getBoundingClientRect().top,
+    listTitle: document
+      .getElementById('allAccountsTitle')!
+      .getBoundingClientRect().top,
+  }));
+  expect(Math.abs(accountLayout.add - accountLayout.overline)).toBeLessThan(20);
+  expect(accountLayout.metrics).toBeLessThan(accountLayout.allocation);
+  expect(accountLayout.allocation).toBeLessThan(accountLayout.listTitle);
 });
 
 test('requires two historical snapshots before drawing an entity chart', async ({
