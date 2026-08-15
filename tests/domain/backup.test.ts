@@ -22,7 +22,8 @@ describe('backup validation and serialization', () => {
       theme: 'dark',
       displayCurrency: 'USD',
       pnlPeriod: 'last',
-      autoPriceRefresh: true,
+      priceRefreshIntervalMinutes: 60,
+      snapshotIntervalMinutes: 0,
     });
   });
 
@@ -62,11 +63,9 @@ describe('backup validation and serialization', () => {
       theme: 'dark',
       displayCurrency: 'USD',
       pnlPeriod: 'last',
-      autoPriceRefresh: true,
-      priceRefreshIntervalHours: 3,
+      priceRefreshIntervalMinutes: 15,
       lastPriceRefreshAt: 1_700_000_000_000,
-      autoSnapshot: true,
-      snapshotIntervalHours: 6,
+      snapshotIntervalMinutes: 30,
       lastSnapshotAt: 1_700_000_100_000,
       positionGrouping: 'assets',
       balancesHidden: true,
@@ -140,22 +139,24 @@ describe('backup validation and serialization', () => {
     expect(backup.assets[0]?.tags).not.toBe(validated.data.assets[0]?.tags);
   });
 
-  it('ignores invalid schema 15 scheduling settings', () => {
+  it('ignores invalid schema 16 scheduling settings', () => {
     const backup = validateBackup({
       ...currentV14,
-      version: 15,
+      version: 16,
       appSettings: {
         ...currentV14.appSettings,
-        priceRefreshIntervalHours: 2,
-        snapshotIntervalHours: 'daily',
+        priceRefreshIntervalMinutes: 2,
+        snapshotIntervalMinutes: 'daily',
         lastPriceRefreshAt: -1,
         lastSnapshotAt: 'tomorrow',
         positionGrouping: 'brokers',
       },
     });
 
-    expect(backup.settings).not.toHaveProperty('priceRefreshIntervalHours');
-    expect(backup.settings).not.toHaveProperty('snapshotIntervalHours');
+    expect(backup.settings).toMatchObject({
+      priceRefreshIntervalMinutes: 60,
+      snapshotIntervalMinutes: 0,
+    });
     expect(backup.settings).not.toHaveProperty('lastPriceRefreshAt');
     expect(backup.settings).not.toHaveProperty('lastSnapshotAt');
     expect(backup.settings).not.toHaveProperty('positionGrouping');

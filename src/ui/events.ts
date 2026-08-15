@@ -2,9 +2,10 @@ import type { PortfolioService } from '../application/portfolio-service';
 import type {
   Account,
   Asset,
-  AutomationInterval,
   Position,
+  PriceRefreshIntervalMinutes,
   RatePair,
+  SnapshotIntervalMinutes,
 } from '../domain/models';
 import {
   convertPriceCurrencyToUsd,
@@ -40,6 +41,7 @@ export class WorthController {
     private readonly renderer: WorthRenderer,
     private readonly documentRef: Document = document,
     private readonly windowRef: Window = window,
+    private readonly onAutomationSettingsChanged: () => void = () => undefined,
   ) {}
 
   bind(): void {
@@ -357,48 +359,32 @@ export class WorthController {
       this.renderer.renderAll();
     });
     requiredElement(
-      'autoPriceRefresh',
-      HTMLInputElement,
-      this.documentRef,
-    ).addEventListener('change', (event) => {
-      const input = event.currentTarget;
-      if (input instanceof HTMLInputElement) {
-        this.service.saveSettings({ autoPriceRefresh: input.checked });
-        this.renderer.renderAll();
-      }
-    });
-    requiredElement(
-      'priceRefreshIntervalHours',
+      'priceRefreshIntervalMinutes',
       HTMLSelectElement,
       this.documentRef,
     ).addEventListener('change', (event) => {
       const input = event.currentTarget;
       if (input instanceof HTMLSelectElement)
         this.service.saveSettings({
-          priceRefreshIntervalHours: Number(input.value) as AutomationInterval,
+          priceRefreshIntervalMinutes: Number(
+            input.value,
+          ) as PriceRefreshIntervalMinutes,
         });
+      this.onAutomationSettingsChanged();
     });
     requiredElement(
-      'autoSnapshot',
-      HTMLInputElement,
-      this.documentRef,
-    ).addEventListener('change', (event) => {
-      const input = event.currentTarget;
-      if (input instanceof HTMLInputElement) {
-        this.service.saveSettings({ autoSnapshot: input.checked });
-        this.renderer.renderAll();
-      }
-    });
-    requiredElement(
-      'snapshotIntervalHours',
+      'snapshotIntervalMinutes',
       HTMLSelectElement,
       this.documentRef,
     ).addEventListener('change', (event) => {
       const input = event.currentTarget;
       if (input instanceof HTMLSelectElement)
         this.service.saveSettings({
-          snapshotIntervalHours: Number(input.value) as AutomationInterval,
+          snapshotIntervalMinutes: Number(
+            input.value,
+          ) as SnapshotIntervalMinutes,
         });
+      this.onAutomationSettingsChanged();
     });
     this.element('saveSnapshotBtnHistory').addEventListener(
       'click',

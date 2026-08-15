@@ -7,6 +7,7 @@ import { IndexedDbPortfolioRepository } from './infrastructure/indexeddb/portfol
 import { BrowserFileTransfer } from './platform/browser/file-transfer';
 import { BrowserDiagnosticLog } from './platform/browser/diagnostic-log';
 import { BrowserSettingsStore } from './platform/browser/settings-store';
+import { ActivePwaScheduler } from './platform/browser/active-pwa-scheduler';
 import { WorthController } from './ui/events';
 import { WorthRenderer } from './ui/render';
 import { renderStartupError } from './ui/startup-error';
@@ -37,23 +38,22 @@ async function start(): Promise<void> {
   try {
     await service.initialize();
     const renderer = new WorthRenderer(service);
-    const controller = new WorthController(service, renderer);
+    const automation = new LaunchAutomation(service, Date.now, diagnostics);
+    const scheduler = new ActivePwaScheduler(
+      automation,
+      () => service.settings,
+      () => renderer.renderAll(),
+    );
+    const controller = new WorthController(
+      service,
+      renderer,
+      document,
+      window,
+      () => scheduler.settingsChanged(),
+    );
     controller.bind();
     renderer.renderAll();
-    const automation = new LaunchAutomation(service, Date.now, diagnostics);
-    const runAutomation = async (): Promise<void> => {
-      try {
-        await automation.run();
-        renderer.renderAll();
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    await runAutomation();
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') void runAutomation();
-    });
+    scheduler.start();
   } catch (error) {
     console.error(error);
     renderStartupError(document.body, settings.load().language, () =>

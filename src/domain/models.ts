@@ -2,7 +2,9 @@ export type EntityId = string;
 export type Language = 'ru' | 'en';
 export type Theme = 'light' | 'dark';
 export type PnlPeriod = 'all' | 'last';
-export type AutomationInterval = 1 | 3 | 6 | 12 | 24;
+export type LegacyAutomationInterval = 1 | 3 | 6 | 12 | 24;
+export type PriceRefreshIntervalMinutes = 0 | 5 | 15 | 30 | 60;
+export type SnapshotIntervalMinutes = 0 | 30 | 60;
 export type PositionGrouping = 'accounts' | 'assets';
 export type AutoUpdateSource = 'none' | 'coingecko' | 'frankfurter';
 export type AssetCategory = string;
@@ -123,11 +125,9 @@ export interface AppSettings {
   theme: Theme;
   displayCurrency: string;
   pnlPeriod: PnlPeriod;
-  autoPriceRefresh: boolean;
-  priceRefreshIntervalHours: AutomationInterval;
+  priceRefreshIntervalMinutes: PriceRefreshIntervalMinutes;
   lastPriceRefreshAt?: number;
-  autoSnapshot: boolean;
-  snapshotIntervalHours: AutomationInterval;
+  snapshotIntervalMinutes: SnapshotIntervalMinutes;
   lastSnapshotAt?: number;
   positionGrouping: PositionGrouping;
   balancesHidden: boolean;
@@ -137,9 +137,5 @@ export interface AppSettings {
 
 export type StoreName = keyof PortfolioData;
 export type PortfolioEntity =
-  | Account
-  | Asset
-  | Position
-  | Snapshot
-  | PriceHistoryPoint;
+  Account | Asset | Position | Snapshot | PriceHistoryPoint;
 export type UnknownRecord = Record<string, unknown>;

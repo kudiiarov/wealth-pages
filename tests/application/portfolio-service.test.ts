@@ -24,10 +24,8 @@ const defaults: AppSettings = {
   theme: 'light',
   displayCurrency: 'USD',
   pnlPeriod: 'all',
-  autoPriceRefresh: false,
-  priceRefreshIntervalHours: 3,
-  autoSnapshot: false,
-  snapshotIntervalHours: 6,
+  priceRefreshIntervalMinutes: 0,
+  snapshotIntervalMinutes: 0,
   positionGrouping: 'accounts',
   balancesHidden: false,
   selectedRateAssetIds: [],
@@ -227,7 +225,8 @@ describe('PortfolioService', () => {
       theme: 'dark',
       displayCurrency: 'USD',
       pnlPeriod: 'last',
-      autoPriceRefresh: true,
+      priceRefreshIntervalMinutes: 60,
+      snapshotIntervalMinutes: 0,
     });
   });
 

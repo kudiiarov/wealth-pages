@@ -28,6 +28,8 @@ describe('localized messages', () => {
     expect(translate('ru', 'hoursLabel', 3)).toBe('3 ч');
     expect(translate('en', 'hoursLabel', 1)).toBe('1 hour');
     expect(translate('en', 'hoursLabel', 6)).toBe('6 hours');
+    expect(translate('ru', 'minutesLabel', 30)).toBe('30 минут');
+    expect(translate('en', 'minutesLabel', 60)).toBe('60 minutes');
     expect(translate('en', 'autoSnapshotSub')).toBe(
       'Automatically create portfolio history',
     );

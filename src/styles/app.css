@@ -3435,11 +3435,6 @@ html[data-theme='dark'] .quick-position-row > input {
   background: var(--surface-soft);
   color: var(--ink);
 }
-.automation-controls input[type='checkbox'] {
-  width: 44px;
-  height: 26px;
-  accent-color: var(--blue);
-}
 .tab-bar {
   height: calc(58px + var(--safe-bottom));
   padding: 3px 12px var(--safe-bottom);

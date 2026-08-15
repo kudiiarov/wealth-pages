@@ -546,39 +546,28 @@ export class WorthRenderer {
         button.dataset.langChoice === this.language,
       ),
     );
-    const autoRefresh = requiredElement(
-      'autoPriceRefresh',
-      HTMLInputElement,
-      this.documentRef,
-    );
-    autoRefresh.checked = this.service.settings.autoPriceRefresh;
     const priceInterval = requiredElement(
-      'priceRefreshIntervalHours',
+      'priceRefreshIntervalMinutes',
       HTMLSelectElement,
       this.documentRef,
     );
     priceInterval.value = String(
-      this.service.settings.priceRefreshIntervalHours,
+      this.service.settings.priceRefreshIntervalMinutes,
     );
-    priceInterval.disabled = !this.service.settings.autoPriceRefresh;
-    const autoSnapshot = requiredElement(
-      'autoSnapshot',
-      HTMLInputElement,
-      this.documentRef,
-    );
-    autoSnapshot.checked = this.service.settings.autoSnapshot;
     const snapshotInterval = requiredElement(
-      'snapshotIntervalHours',
+      'snapshotIntervalMinutes',
       HTMLSelectElement,
       this.documentRef,
     );
     snapshotInterval.value = String(
-      this.service.settings.snapshotIntervalHours,
+      this.service.settings.snapshotIntervalMinutes,
     );
-    snapshotInterval.disabled = !this.service.settings.autoSnapshot;
     for (const select of [priceInterval, snapshotInterval]) {
       for (const option of select.options) {
-        option.textContent = this.t('hoursLabel', Number(option.value));
+        option.textContent =
+          option.value === '0'
+            ? this.t('autoNone')
+            : this.t('minutesLabel', Number(option.value));
       }
     }
     const currencyButton = this.element('displayCurrencyBtn');
@@ -702,7 +691,7 @@ export class WorthRenderer {
     const freshness = priceFreshness(
       this.service.data,
       Date.now(),
-      this.service.settings.priceRefreshIntervalHours * 60 * 60 * 1000,
+      (this.service.settings.priceRefreshIntervalMinutes || 60) * 60 * 1000,
     );
     const trust = this.element('priceTrust');
     trust.classList.toggle(
@@ -730,7 +719,7 @@ export class WorthRenderer {
     const freshness = priceFreshness(
       this.service.data,
       Date.now(),
-      this.service.settings.priceRefreshIntervalHours * 60 * 60 * 1000,
+      (this.service.settings.priceRefreshIntervalMinutes || 60) * 60 * 1000,
     );
     this.element('assetFreshness').textContent =
       freshness.tracked > 0 && freshness.current < freshness.tracked
@@ -1135,7 +1124,7 @@ export class WorthRenderer {
   private assetPriceStatus(asset: Asset): string {
     if (asset.autoUpdateSource === 'none') return this.t('autoSourceNone');
     const maximumAge =
-      this.service.settings.priceRefreshIntervalHours * 60 * 60 * 1000;
+      (this.service.settings.priceRefreshIntervalMinutes || 60) * 60 * 1000;
     return typeof asset.priceUpdatedAt === 'number' &&
       Date.now() - asset.priceUpdatedAt <= maximumAge
       ? this.t('currentPriceStatus')
