@@ -45,9 +45,10 @@ import {
   accountHistorySeries,
   accountOverviewRows,
   assetHistorySeries,
-  assetMatchesPortfolioFilter,
   assetOverviewRows,
   categoryAllocationRows,
+  compactAccountAllocation,
+  compactAssetAllocation,
   inferAssetProfile,
   normalizeRatePairs,
   portfolioTags,
@@ -718,26 +719,7 @@ export class WorthRenderer {
   }
 
   renderAssetsView(): void {
-    const filters = this.element('portfolioFilters');
-    const tags = portfolioTags(this.service.data);
-    filters.innerHTML = `<button data-portfolio-filter="all" type="button">${escapeHtml(this.t('all'))}</button>${tags.map((tag) => `<button data-portfolio-filter="tag:${escapeHtml(tag)}" type="button">${escapeHtml(this.tagLabel(tag))}</button>`).join('')}`;
-    all<HTMLElement>('[data-portfolio-filter]', this.documentRef).forEach(
-      (button) => {
-        const key = button.dataset.portfolioFilter;
-        const active =
-          (key === 'all' && this.ui.portfolioFilter.kind === 'all') ||
-          (key?.startsWith('tag:') === true &&
-            this.ui.portfolioFilter.kind === 'tag' &&
-            key.slice(4).toLocaleLowerCase() ===
-              this.ui.portfolioFilter.value.toLocaleLowerCase());
-        button.classList.toggle('active', active);
-        button.setAttribute('aria-pressed', String(active));
-      },
-    );
     const list = this.element('assetsList');
-    const query = this.ui.assetQuery
-      .trim()
-      .toLocaleLowerCase(locale(this.language));
     const freshness = priceFreshness(
       this.service.data,
       Date.now(),
@@ -757,44 +739,33 @@ export class WorthRenderer {
             )
           : this.t('pricesNotTracked');
 
-    const rows = assetOverviewRows(this.service.data).filter(({ asset }) => {
-      const matchesQuery =
-        !query ||
-        asset.name.toLocaleLowerCase(locale(this.language)).includes(query) ||
-        asset.code.toLocaleLowerCase(locale(this.language)).includes(query);
-      return (
-        matchesQuery &&
-        assetMatchesPortfolioFilter(asset, this.ui.portfolioFilter)
-      );
-    });
+    const rows = assetOverviewRows(this.service.data);
+    this.renderCompactAllocation(
+      'assetAllocationBar',
+      'assetAllocationList',
+      compactAssetAllocation(this.service.data),
+    );
     this.element('assetSummary').textContent =
       `${rows.length} ${this.t('assets').toLocaleLowerCase(locale(this.language))} · ${this.money(portfolioTotal(this.service.data))}`;
-    const gross = assetOverviewRows(this.service.data).reduce(
-      (sum, { value }) => sum + Math.abs(value),
-      0,
-    );
     list.innerHTML = rows.length
       ? rows
           .map(({ asset, value }) => {
             const pnl = this.homePnl(
               (position) => position.assetId === asset.id,
             );
-            const allocation = gross ? (Math.abs(value) / gross) * 100 : 0;
             const stale = freshness.staleAssetIds.includes(asset.id);
-            return `<button class="portfolio-row portfolio-flat-row ${stale ? 'stale-price' : ''}" data-asset-open="${escapeHtml(asset.id)}" type="button"><span class="portfolio-row-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span class="portfolio-row-main"><strong>${escapeHtml(asset.name)} <em>${escapeHtml(asset.code)}</em></strong><small>${escapeHtml(this.categoryLabel(inferAssetProfile(asset).category))}${stale ? `<b class="stale-label">${this.t('stalePrice')}</b>` : ''}</small></span><span class="portfolio-row-value"><strong>${this.money(value)}</strong><small>${allocation.toFixed(1)}% <b class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</b></small></span><i>›</i></button>`;
+            return `<button class="portfolio-row portfolio-flat-row ${stale ? 'stale-price' : ''}" data-asset-open="${escapeHtml(asset.id)}" type="button"><span class="portfolio-row-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span class="portfolio-row-main"><strong>${escapeHtml(asset.name)} <em>${escapeHtml(asset.code)}</em></strong><small>${escapeHtml(this.categoryLabel(inferAssetProfile(asset).category))}${stale ? `<b class="stale-label">${this.t('stalePrice')}</b>` : ''}</small></span><span class="portfolio-row-value"><strong>${this.money(value)}</strong><small class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></span><i>›</i></button>`;
           })
           .join('')
       : `<div class="empty-state">${this.t('emptyAssets')}</div>`;
   }
 
   renderAccountsView(): void {
-    const query = this.ui.accountQuery
-      .trim()
-      .toLocaleLowerCase(locale(this.language));
-    const rows = accountOverviewRows(this.service.data).filter(
-      ({ account }) =>
-        !query ||
-        account.name.toLocaleLowerCase(locale(this.language)).includes(query),
+    const rows = accountOverviewRows(this.service.data);
+    this.renderCompactAllocation(
+      'accountAllocationBar',
+      'accountAllocationList',
+      compactAccountAllocation(this.service.data),
     );
     this.element('accountSummary').textContent =
       `${rows.length} ${this.t('accounts').toLocaleLowerCase(locale(this.language))} · ${this.money(portfolioTotal(this.service.data))}`;
@@ -811,6 +782,29 @@ export class WorthRenderer {
           })
           .join('')
       : `<div class="empty-state">${this.t('emptyAccounts')}</div>`;
+  }
+
+  private renderCompactAllocation(
+    barId: string,
+    listId: string,
+    rows: ReturnType<typeof compactAssetAllocation>,
+  ): void {
+    const color = (row: (typeof rows)[number]): string =>
+      row.kind === 'other' ? '#8e939e' : row.color;
+    this.element(barId).innerHTML = rows
+      .map(
+        (row) =>
+          `<span class="allocation-segment" style="width:${row.percentage}%;background:${color(row)}"></span>`,
+      )
+      .join('');
+    this.element(listId).innerHTML = rows.length
+      ? rows
+          .map(
+            (row) =>
+              `<div class="compact-allocation-key"><span style="background:${color(row)}"></span><strong>${escapeHtml(row.kind === 'other' ? this.t('other') : row.name)}</strong><b>${row.percentage.toFixed(0)}%</b></div>`,
+          )
+          .join('')
+      : `<div class="empty-state compact-empty">${this.t('emptyAllocation')}</div>`;
   }
 
   renderRateSelection(pairs: readonly RatePair[]): void {

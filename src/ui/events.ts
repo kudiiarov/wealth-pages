@@ -175,45 +175,21 @@ export class WorthController {
       this.renderer.renderAll();
       return;
     }
-    const portfolioFilter = closestElement<HTMLElement>(
-      event.target,
-      '[data-portfolio-filter]',
-    );
-    if (portfolioFilter?.dataset.portfolioFilter) {
-      const key = portfolioFilter.dataset.portfolioFilter;
-      this.renderer.ui.portfolioFilter = key.startsWith('tag:')
-        ? { kind: 'tag', value: key.slice(4) }
-        : { kind: 'all' };
-      this.renderer.renderAssetsView();
-      return;
-    }
     const categoryFilter = closestElement<HTMLElement>(
       event.target,
       '[data-category-filter]',
     );
     if (categoryFilter?.dataset.categoryFilter) {
-      this.renderer.ui.assetQuery = '';
-      requiredElement('assetSearch', HTMLInputElement, this.documentRef).value =
-        '';
-      this.renderer.ui.portfolioFilter = {
-        kind: 'category',
-        value: categoryFilter.dataset.categoryFilter,
-      };
       this.navigate('assetsView');
+      return;
     }
     const exposureFilter = closestElement<HTMLElement>(
       event.target,
       '[data-exposure-filter]',
     );
     if (exposureFilter?.dataset.exposureFilter) {
-      this.renderer.ui.assetQuery = '';
-      requiredElement('assetSearch', HTMLInputElement, this.documentRef).value =
-        '';
-      this.renderer.ui.portfolioFilter = {
-        kind: 'tag',
-        value: exposureFilter.dataset.exposureFilter,
-      };
       this.navigate('assetsView');
+      return;
     }
     const rateAsset = closestElement<HTMLElement>(
       event.target,
@@ -413,26 +389,6 @@ export class WorthController {
       'click',
       () => void this.saveSnapshot(),
     );
-    requiredElement(
-      'assetSearch',
-      HTMLInputElement,
-      this.documentRef,
-    ).addEventListener('input', (event) => {
-      const input = event.currentTarget;
-      if (!(input instanceof HTMLInputElement)) return;
-      this.renderer.ui.assetQuery = input.value;
-      this.renderer.renderAssetsView();
-    });
-    requiredElement(
-      'accountSearch',
-      HTMLInputElement,
-      this.documentRef,
-    ).addEventListener('input', (event) => {
-      const input = event.currentTarget;
-      if (!(input instanceof HTMLInputElement)) return;
-      this.renderer.ui.accountQuery = input.value;
-      this.renderer.renderAccountsView();
-    });
     this.element('assetAdd').addEventListener('click', () =>
       this.openDialog('assetModal'),
     );

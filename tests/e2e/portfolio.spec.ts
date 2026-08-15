@@ -404,6 +404,79 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   await expect(page.locator('#assetsView')).toHaveClass(/active/);
 });
 
+test('summarizes the four largest assets and accounts without search controls', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 1);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction(
+            ['accounts', 'assets', 'positions'],
+            'readwrite',
+          );
+          for (let index = 1; index <= 4; index += 1) {
+            transaction.objectStore('accounts').put({
+              id: `extra-account-${index}`,
+              name: `Extra account ${index}`,
+              type: 'bank',
+              icon: String(index),
+              color: `hsl(${index * 45} 60% 48%)`,
+            });
+            transaction.objectStore('assets').put({
+              id: `extra-asset-${index}`,
+              name: `Extra asset ${index}`,
+              code: `E${index}`,
+              icon: String(index),
+              color: `hsl(${index * 45} 60% 48%)`,
+              price: 1,
+              autoUpdateSource: 'none',
+              category: 'other',
+              tags: [],
+            });
+            transaction.objectStore('positions').put({
+              id: `extra-position-${index}`,
+              accountId: `extra-account-${index}`,
+              assetId: `extra-asset-${index}`,
+              quantity: 10 + index,
+              comment: '',
+            });
+          }
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not extend seed'));
+        };
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+      }),
+  );
+  await page.reload();
+
+  await page.locator('.tab[data-nav="assetsView"]').click();
+  await expect(page.locator('#assetSearch')).toHaveCount(0);
+  await expect(page.locator('#portfolioFilters')).toHaveCount(0);
+  await expect(
+    page.locator('#assetAllocationList .compact-allocation-key'),
+  ).toHaveCount(5);
+  await expect(page.locator('#assetAllocationList')).toContainText('Другое');
+  await expect(page.locator('#assetsList .portfolio-row')).toHaveCount(9);
+
+  await page.locator('[data-nav="accountsView"]').click();
+  await expect(page.locator('#accountSearch')).toHaveCount(0);
+  await expect(
+    page.locator('#accountAllocationList .compact-allocation-key'),
+  ).toHaveCount(5);
+  await expect(page.locator('#accountAllocationList')).toContainText('Другое');
+  await expect(page.locator('#accountsList .portfolio-row')).toHaveCount(6);
+});
+
 test('requires two historical snapshots before drawing an entity chart', async ({
   page,
 }) => {
