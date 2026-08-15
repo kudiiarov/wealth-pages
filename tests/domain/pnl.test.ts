@@ -122,6 +122,15 @@ describe('flow-adjusted P&L', () => {
     expect(pnlPointTotal(normalized!)).toBe(50);
   });
 
+  it('normalizes the undefined quote as canonical USD', () => {
+    const usdPoint = currencyPoint(1, 'usd', 99, 2);
+    const normalized = normalizePnlPointInQuote(usdPoint, undefined, []);
+    expect(normalized?.positions[0]).toMatchObject({ price: 1, value: 2 });
+    expect(normalized?.assets).toEqual(
+      expect.arrayContaining([{ assetId: 'usd', price: 1 }]),
+    );
+  });
+
   it('treats quantity increases as flows valued at the later price', () => {
     const result = flowAdjustedPnl(
       [point(1, 1, 10), point(2, 2, 12)],
@@ -214,6 +223,7 @@ describe('flow-adjusted P&L', () => {
     ).toEqual([
       august14BeforeCutoff.createdAt,
       august14AfterCutoff.createdAt,
+      august15.createdAt,
       current.createdAt,
     ]);
     expect(

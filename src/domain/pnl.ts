@@ -54,28 +54,25 @@ export function normalizePnlPointInQuote(
   quoteAssetId: string | undefined,
   priceHistory: readonly PriceHistoryPoint[],
 ): PnlPoint | null {
-  if (!quoteAssetId)
-    return {
-      ...point,
-      positions: point.positions.map((position) => ({ ...position })),
-      assets: point.assets.map((asset) => ({ ...asset })),
-    };
-
-  const quotePrice = quotePriceForPoint(point, quoteAssetId, priceHistory);
+  const effectiveQuoteAssetId = quoteAssetId ?? 'usd';
+  const quotePrice =
+    effectiveQuoteAssetId === 'usd'
+      ? 1
+      : quotePriceForPoint(point, effectiveQuoteAssetId, priceHistory);
   const hasNonQuotePosition = point.positions.some(
-    (position) => position.assetId !== quoteAssetId,
+    (position) => position.assetId !== effectiveQuoteAssetId,
   );
   if (hasNonQuotePosition && quotePrice === undefined) return null;
   const divisor = quotePrice ?? 1;
   const assets = point.assets.map((asset) => ({
     ...asset,
     price:
-      asset.assetId === quoteAssetId
+      asset.assetId === effectiveQuoteAssetId
         ? 1
         : (finitePositive(asset.price) ?? 0) / divisor,
   }));
-  if (!assets.some((asset) => asset.assetId === quoteAssetId)) {
-    assets.push({ assetId: quoteAssetId, price: 1 });
+  if (!assets.some((asset) => asset.assetId === effectiveQuoteAssetId)) {
+    assets.push({ assetId: effectiveQuoteAssetId, price: 1 });
   }
   const positions = point.positions.map((position) => {
     const sourcePrice =
@@ -84,7 +81,8 @@ export function normalizePnlPointInQuote(
       ) ??
       finitePositive(position.price) ??
       0;
-    const price = position.assetId === quoteAssetId ? 1 : sourcePrice / divisor;
+    const price =
+      position.assetId === effectiveQuoteAssetId ? 1 : sourcePrice / divisor;
     return { ...position, price, value: Number(position.quantity) * price };
   });
   return { ...point, positions, assets };
@@ -264,11 +262,7 @@ export function selectOverviewPnlSeries(
   const baselineCreatedAt = baseline.createdAt;
   return [
     baseline,
-    ...sorted.filter(
-      (snapshot) =>
-        snapshot.createdAt > baselineCreatedAt &&
-        localDayKey(snapshot.createdAt) !== currentDayKey,
-    ),
+    ...sorted.filter((snapshot) => snapshot.createdAt > baselineCreatedAt),
     current,
   ];
 }
