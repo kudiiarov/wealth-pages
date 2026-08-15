@@ -134,6 +134,7 @@ describe('PortfolioService', () => {
   let files: CapturingFiles;
   let diagnostics: MemoryDiagnostics;
   let nextId: number;
+  let now: number;
 
   beforeEach(() => {
     repository = new MemoryRepository();
@@ -141,6 +142,7 @@ describe('PortfolioService', () => {
     files = new CapturingFiles();
     diagnostics = new MemoryDiagnostics();
     nextId = 1;
+    now = new Date(2026, 7, 15, 9).getTime();
   });
 
   function service(
@@ -157,7 +159,7 @@ describe('PortfolioService', () => {
       diagnostics,
       prices,
       clock: {
-        now: () => 1_700_000_000_000,
+        now: () => now,
         isoNow: () => '2026-08-14T00:00:00.000Z',
       },
       ids: { next: () => `id-${nextId++}` },
@@ -229,7 +231,7 @@ describe('PortfolioService', () => {
     });
   });
 
-  it('exports schema 15 through the file port', async () => {
+  it('exports schema 16 through the file port', async () => {
     const app = service();
     await app.initialize();
 
@@ -237,7 +239,7 @@ describe('PortfolioService', () => {
 
     expect(files.downloads[0]?.filename).toBe('worth-backup-2026-08-14.json');
     expect(files.downloads[0]?.payload).toMatchObject({
-      version: 15,
+      version: 16,
       app: 'Worth',
     });
   });
@@ -287,7 +289,7 @@ describe('PortfolioService', () => {
     });
     expect(app.data.assets.find(({ id }) => id === 'rub')).toMatchObject({
       price: 0.01,
-      priceUpdatedAt: 1_700_000_000_000,
+      priceUpdatedAt: now,
     });
     expect(app.data.assets.find(({ id }) => id === 'eur')?.price).toBe(1.1);
     expect(app.getDiagnostics()[0]).toMatchObject({
@@ -308,8 +310,8 @@ describe('PortfolioService', () => {
     await app.refreshPrices();
     await app.saveSnapshot();
 
-    expect(app.settings.lastPriceRefreshAt).toBe(1_700_000_000_000);
-    expect(app.settings.lastSnapshotAt).toBe(1_700_000_000_000);
+    expect(app.settings.lastPriceRefreshAt).toBe(now);
+    expect(app.settings.lastSnapshotAt).toBe(now);
   });
 
   it('records a normally completed partial price refresh', async () => {
@@ -324,7 +326,7 @@ describe('PortfolioService', () => {
 
     await app.refreshPrices();
 
-    expect(app.settings.lastPriceRefreshAt).toBe(1_700_000_000_000);
+    expect(app.settings.lastPriceRefreshAt).toBe(now);
   });
 
   it('does not record a failed price refresh as completed', async () => {
@@ -336,5 +338,101 @@ describe('PortfolioService', () => {
     await expect(app.refreshPrices()).rejects.toThrow('offline');
 
     expect(app.settings.lastPriceRefreshAt).toBeUndefined();
+  });
+
+  it('replaces an earlier snapshot on the same local day', async () => {
+    const app = service();
+    await app.initialize();
+    await app.saveSnapshot();
+
+    now = new Date(2026, 7, 15, 18).getTime();
+    await app.saveSnapshot();
+
+    expect(app.data.snapshots).toEqual([
+      expect.objectContaining({
+        id: 'daily-snapshot:2026-08-15',
+        createdAt: now,
+      }),
+    ]);
+  });
+
+  it('keeps snapshots from different local days', async () => {
+    const app = service();
+    await app.initialize();
+    await app.saveSnapshot();
+
+    now = new Date(2026, 7, 16, 9).getTime();
+    await app.saveSnapshot();
+
+    expect(app.data.snapshots.map(({ id }) => id)).toEqual([
+      'daily-snapshot:2026-08-15',
+      'daily-snapshot:2026-08-16',
+    ]);
+  });
+
+  it('records only the latest successful quote per asset and day', async () => {
+    let usdPrice = 45_000;
+    const app = service({
+      getUsdPrices: () =>
+        Promise.resolve({
+          quotes: [
+            {
+              assetId: 'btc',
+              usdPrice,
+              source: { type: 'crypto', id: 'bitcoin' },
+            },
+          ],
+          failures: [],
+          skipped: [],
+        }),
+    });
+    repository.data.assets = [
+      {
+        id: 'btc',
+        name: 'Bitcoin',
+        code: 'BTC',
+        icon: '₿',
+        color: '#f7931a',
+        price: 44_000,
+        autoUpdateSource: 'coingecko',
+      },
+    ];
+    await app.initialize();
+    await app.refreshPrices('btc');
+
+    usdPrice = 46_000;
+    now = new Date(2026, 7, 15, 18).getTime();
+    await app.refreshPrices('btc');
+
+    expect(app.data.priceHistory).toEqual([
+      expect.objectContaining({
+        id: 'daily-price:btc:2026-08-15',
+        assetId: 'btc',
+        createdAt: now,
+        usdPrice: 46_000,
+      }),
+    ]);
+  });
+
+  it('records a manual asset price in daily price history', async () => {
+    repository.data.assets = [
+      {
+        id: 'gold',
+        name: 'Gold',
+        code: 'XAU',
+        icon: 'Au',
+        color: '#d9a520',
+        price: 2_000,
+        autoUpdateSource: 'none',
+      },
+    ];
+    const app = service();
+    await app.initialize();
+
+    await app.updateAssetPrice('gold', 2_100, 'USD');
+
+    expect(app.data.priceHistory).toEqual([
+      expect.objectContaining({ assetId: 'gold', usdPrice: 2_100 }),
+    ]);
   });
 });
