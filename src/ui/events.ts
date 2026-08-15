@@ -20,6 +20,7 @@ import {
   readPositionForm,
 } from './forms';
 import type { WorthRenderer } from './render';
+import { formatAppRoute, parseAppRoute, type AppRoute } from './routes';
 
 interface ActionItem {
   label: string;
@@ -30,6 +31,8 @@ interface ActionItem {
 export class WorthController {
   private pendingActions: ActionItem[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
+  private rateSelectionOrder: string[] = [];
+  private readonly detailReturnRoutes: AppRoute[] = [];
 
   constructor(
     private readonly service: PortfolioService,
@@ -47,6 +50,15 @@ export class WorthController {
     this.bindDirectActions();
     this.bindForms();
     this.bindChartInspection();
+    this.windowRef.addEventListener('hashchange', () => this.applyHashRoute());
+    if (!this.windowRef.location.hash) {
+      this.windowRef.history.replaceState(
+        null,
+        '',
+        formatAppRoute({ kind: 'home' }),
+      );
+    }
+    queueMicrotask(() => this.applyHashRoute());
     this.windowRef.addEventListener(
       'resize',
       () => {
@@ -55,6 +67,9 @@ export class WorthController {
         }
         if (this.element('homeView').classList.contains('active')) {
           this.renderer.redrawHomeChart();
+        }
+        if (this.element('entityDetailView').classList.contains('active')) {
+          this.renderer.redrawDetailChart();
         }
       },
       { passive: true },
@@ -65,6 +80,7 @@ export class WorthController {
     for (const [id, kind] of [
       ['homeChart', 'home'],
       ['historyChart', 'history'],
+      ['entityDetailChart', 'detail'],
     ] as const) {
       const canvas = requiredElement(id, HTMLCanvasElement, this.documentRef);
       const inspect = (event: PointerEvent): void => {
@@ -157,24 +173,6 @@ export class WorthController {
       this.renderer.renderAll();
       return;
     }
-    const portfolioMode = closestElement<HTMLElement>(
-      event.target,
-      '[data-portfolio-mode]',
-    );
-    if (
-      portfolioMode?.dataset.portfolioMode === 'assets' ||
-      portfolioMode?.dataset.portfolioMode === 'accounts'
-    ) {
-      this.renderer.ui.portfolioMode = portfolioMode.dataset.portfolioMode;
-      this.renderer.ui.portfolioQuery = '';
-      requiredElement(
-        'portfolioSearch',
-        HTMLInputElement,
-        this.documentRef,
-      ).value = '';
-      this.renderer.renderAll();
-      return;
-    }
     const portfolioFilter = closestElement<HTMLElement>(
       event.target,
       '[data-portfolio-filter]',
@@ -184,93 +182,94 @@ export class WorthController {
       this.renderer.ui.portfolioFilter = key.startsWith('tag:')
         ? { kind: 'tag', value: key.slice(4) }
         : { kind: 'all' };
-      this.renderer.renderAll();
+      this.renderer.renderAssetsView();
       return;
-    }
-    const driverFilter = closestElement<HTMLElement>(
-      event.target,
-      '[data-driver-filter]',
-    );
-    if (driverFilter?.dataset.driverFilter) {
-      this.renderer.ui.portfolioMode = 'assets';
-      this.renderer.ui.portfolioFilter = { kind: 'all' };
-      this.renderer.ui.portfolioQuery = driverFilter.dataset.driverFilter;
-      requiredElement(
-        'portfolioSearch',
-        HTMLInputElement,
-        this.documentRef,
-      ).value = driverFilter.dataset.driverFilter;
-      this.renderer.renderAll();
     }
     const categoryFilter = closestElement<HTMLElement>(
       event.target,
       '[data-category-filter]',
     );
     if (categoryFilter?.dataset.categoryFilter) {
-      this.renderer.ui.portfolioMode = 'assets';
-      this.renderer.ui.portfolioQuery = '';
-      requiredElement(
-        'portfolioSearch',
-        HTMLInputElement,
-        this.documentRef,
-      ).value = '';
+      this.renderer.ui.assetQuery = '';
+      requiredElement('assetSearch', HTMLInputElement, this.documentRef).value =
+        '';
       this.renderer.ui.portfolioFilter = {
         kind: 'category',
         value: categoryFilter.dataset.categoryFilter,
       };
-      this.renderer.renderAll();
+      this.navigate('assetsView');
     }
     const exposureFilter = closestElement<HTMLElement>(
       event.target,
       '[data-exposure-filter]',
     );
     if (exposureFilter?.dataset.exposureFilter) {
-      this.renderer.ui.portfolioMode = 'assets';
-      this.renderer.ui.portfolioQuery = '';
-      requiredElement(
-        'portfolioSearch',
-        HTMLInputElement,
-        this.documentRef,
-      ).value = '';
+      this.renderer.ui.assetQuery = '';
+      requiredElement('assetSearch', HTMLInputElement, this.documentRef).value =
+        '';
       this.renderer.ui.portfolioFilter = {
         kind: 'tag',
         value: exposureFilter.dataset.exposureFilter,
       };
-      this.renderer.renderAll();
+      this.navigate('assetsView');
     }
-    const portfolioAdd = closestElement<HTMLElement>(
+    const rateAsset = closestElement<HTMLElement>(
       event.target,
-      '[data-portfolio-add]',
+      '[data-rate-asset]',
     );
-    if (portfolioAdd) {
-      this.showActionMenu(this.renderer.t('add'), [
-        {
-          label: this.renderer.t('position'),
-          run: () => this.openDialog('positionModal'),
-        },
-        {
-          label: this.renderer.t('account'),
-          run: () => this.openDialog('accountModal'),
-        },
-        {
-          label: this.renderer.t('asset'),
-          run: () => this.openDialog('assetModal'),
-        },
-      ]);
+    if (rateAsset?.dataset.rateAsset) {
+      this.openEntity(
+        { kind: 'asset', id: rateAsset.dataset.rateAsset },
+        { kind: 'home' },
+      );
       return;
     }
-    const portfolioExpand = closestElement<HTMLElement>(
+    const assetOpen = closestElement<HTMLElement>(
       event.target,
-      '[data-portfolio-expand]',
+      '[data-asset-open]',
     );
-    if (portfolioExpand?.dataset.portfolioExpand) {
-      const id = portfolioExpand.dataset.portfolioExpand;
-      if (this.renderer.ui.expandedPortfolioRows.has(id)) {
-        this.renderer.ui.expandedPortfolioRows.delete(id);
-      } else {
-        this.renderer.ui.expandedPortfolioRows.add(id);
-      }
-      this.renderer.renderPortfolioExplorer();
+    if (assetOpen?.dataset.assetOpen) {
+      this.openEntity(
+        { kind: 'asset', id: assetOpen.dataset.assetOpen },
+        parseAppRoute(this.windowRef.location.hash).kind === 'account'
+          ? parseAppRoute(this.windowRef.location.hash)
+          : { kind: 'assets' },
+      );
+      return;
+    }
+    const accountOpen = closestElement<HTMLElement>(
+      event.target,
+      '[data-account-open]',
+    );
+    if (accountOpen?.dataset.accountOpen) {
+      this.openEntity(
+        { kind: 'account', id: accountOpen.dataset.accountOpen },
+        parseAppRoute(this.windowRef.location.hash).kind === 'asset'
+          ? parseAppRoute(this.windowRef.location.hash)
+          : { kind: 'accounts' },
+      );
+      return;
+    }
+    if (closestElement<HTMLElement>(event.target, '[data-detail-back]')) {
+      const current = parseAppRoute(this.windowRef.location.hash);
+      this.goToRoute(
+        this.detailReturnRoutes.pop() ??
+          (current.kind === 'account'
+            ? { kind: 'accounts' }
+            : { kind: 'assets' }),
+      );
+      return;
+    }
+    const detailPosition = closestElement<HTMLElement>(
+      event.target,
+      '[data-detail-add-position]',
+    );
+    if (detailPosition?.dataset.detailAddPosition) {
+      const [kind, id] = detailPosition.dataset.detailAddPosition.split(':');
+      this.openDialog('positionModal');
+      const form = this.form('positionForm');
+      if (kind === 'asset') formControl(form, 'assetId').value = id ?? '';
+      if (kind === 'account') formControl(form, 'accountId').value = id ?? '';
       return;
     }
     const opener = closestElement<HTMLElement>(event.target, '[data-open]');
@@ -412,30 +411,63 @@ export class WorthController {
           snapshotIntervalHours: Number(input.value) as AutomationInterval,
         });
     });
-    requiredElement(
-      'historyScope',
-      HTMLSelectElement,
-      this.documentRef,
-    ).addEventListener('change', (event) => {
-      const select = event.currentTarget;
-      if (select instanceof HTMLSelectElement) {
-        this.renderer.ui.historyScope = select.value;
-        this.renderer.renderAll();
-      }
-    });
     this.element('saveSnapshotBtnHistory').addEventListener(
       'click',
       () => void this.saveSnapshot(),
     );
     requiredElement(
-      'portfolioSearch',
+      'assetSearch',
       HTMLInputElement,
       this.documentRef,
     ).addEventListener('input', (event) => {
       const input = event.currentTarget;
       if (!(input instanceof HTMLInputElement)) return;
-      this.renderer.ui.portfolioQuery = input.value;
-      this.renderer.renderPortfolioExplorer();
+      this.renderer.ui.assetQuery = input.value;
+      this.renderer.renderAssetsView();
+    });
+    requiredElement(
+      'accountSearch',
+      HTMLInputElement,
+      this.documentRef,
+    ).addEventListener('input', (event) => {
+      const input = event.currentTarget;
+      if (!(input instanceof HTMLInputElement)) return;
+      this.renderer.ui.accountQuery = input.value;
+      this.renderer.renderAccountsView();
+    });
+    this.element('assetAdd').addEventListener('click', () =>
+      this.openDialog('assetModal'),
+    );
+    this.element('accountAdd').addEventListener('click', () =>
+      this.openDialog('accountModal'),
+    );
+    this.element('configureRatesBtn').addEventListener('click', () => {
+      this.renderer.renderRateSelection();
+      this.rateSelectionOrder = Array.from(
+        this.form('rateSelectionForm').querySelectorAll<HTMLInputElement>(
+          '[name="rateAsset"]:checked',
+        ),
+        ({ value }) => value,
+      );
+      this.openDialog('rateSelectionModal');
+    });
+    this.form('rateSelectionForm').addEventListener('change', (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.name !== 'rateAsset')
+        return;
+      if (input.checked) {
+        if (this.rateSelectionOrder.length >= 3) {
+          input.checked = false;
+          this.showRateSelectionError(this.renderer.t('rateLimit'));
+          return;
+        }
+        this.rateSelectionOrder.push(input.value);
+      } else {
+        this.rateSelectionOrder = this.rateSelectionOrder.filter(
+          (id) => id !== input.value,
+        );
+      }
+      this.element('rateSelectionError').classList.add('hidden');
     });
     this.element('displayCurrencyBtn').addEventListener('click', () => {
       this.renderer.renderCurrencyOptions();
@@ -510,6 +542,18 @@ export class WorthController {
       'submit',
       (event) => void this.submitQuickUpdate(event),
     );
+    this.form('rateSelectionForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!this.rateSelectionOrder.length) {
+        this.showRateSelectionError(this.renderer.t('rateRequired'));
+        return;
+      }
+      this.service.saveSettings({
+        selectedRateAssetIds: this.rateSelectionOrder.slice(0, 3),
+      });
+      this.closeDialog('rateSelectionModal');
+      this.renderer.renderAll();
+    });
   }
 
   private async submitAccount(event: SubmitEvent): Promise<void> {
@@ -683,6 +727,7 @@ export class WorthController {
           }
           await this.service.deleteAccount(account.id);
           this.renderer.renderAll();
+          this.applyHashRoute();
           this.toast(this.renderer.t('accountDeleted'));
         },
       },
@@ -718,6 +763,7 @@ export class WorthController {
           }
           await this.service.deleteAsset(asset.id);
           this.renderer.renderAll();
+          this.applyHashRoute();
           this.toast(this.renderer.t('assetDeleted'));
         },
       },
@@ -731,14 +777,6 @@ export class WorthController {
     if (!position) return;
     const asset = this.renderer.assetBy(position.assetId);
     this.showActionMenu(asset?.name || this.renderer.t('position'), [
-      {
-        label: this.renderer.t('showPositionHistory'),
-        run: () => {
-          this.renderer.ui.historyScope = `position:${position.id}`;
-          this.navigate('historyView');
-          this.renderer.renderAll();
-        },
-      },
       {
         label: this.renderer.t('editPosition'),
         run: () => this.openPositionEdit(position),
@@ -893,6 +931,7 @@ export class WorthController {
       if (!this.windowRef.confirm(this.renderer.t('confirmImport'))) return;
       await this.service.importBackup(json);
       this.renderer.renderAll();
+      this.applyHashRoute();
       this.toast(this.renderer.t('dataRestored'));
     } catch (error) {
       console.error(error);
@@ -915,6 +954,7 @@ export class WorthController {
     if (!this.windowRef.confirm(this.renderer.t('confirmDeleteAll'))) return;
     await this.service.reset();
     this.renderer.renderAll();
+    this.applyHashRoute();
     this.toast(this.renderer.t('allDeleted'));
   }
 
@@ -938,17 +978,75 @@ export class WorthController {
   }
 
   private navigate(id: string): void {
+    const routes: Record<string, AppRoute> = {
+      homeView: { kind: 'home' },
+      assetsView: { kind: 'assets' },
+      accountsView: { kind: 'accounts' },
+      historyView: { kind: 'history' },
+      settingsView: { kind: 'settings' },
+    };
+    const route = routes[id];
+    if (route) this.goToRoute(route);
+  }
+
+  private openEntity(
+    route: Extract<AppRoute, { kind: 'asset' | 'account' }>,
+    returnRoute: AppRoute,
+  ): void {
+    this.detailReturnRoutes.push(returnRoute);
+    this.goToRoute(route);
+  }
+
+  private goToRoute(route: AppRoute): void {
+    const hash = formatAppRoute(route);
+    if (this.windowRef.location.hash === hash) {
+      this.applyHashRoute();
+    } else {
+      this.windowRef.location.hash = hash;
+    }
+  }
+
+  private applyHashRoute(): void {
+    const route = parseAppRoute(this.windowRef.location.hash);
+    let viewId: string;
+    if (route.kind === 'asset' || route.kind === 'account') {
+      if (!this.renderer.renderEntityDetail(route)) {
+        const fallback: AppRoute =
+          route.kind === 'asset' ? { kind: 'assets' } : { kind: 'accounts' };
+        this.windowRef.history.replaceState(null, '', formatAppRoute(fallback));
+        this.applyHashRoute();
+        return;
+      }
+      viewId = 'entityDetailView';
+    } else {
+      viewId = `${route.kind}View`;
+    }
     all<HTMLElement>('.view', this.documentRef).forEach((view) =>
-      view.classList.toggle('active', view.id === id),
+      view.classList.toggle('active', view.id === viewId),
     );
+    const detail = route.kind === 'asset' || route.kind === 'account';
+    this.documentRef
+      .querySelector<HTMLElement>('.tab-bar')
+      ?.classList.toggle('hidden', detail);
+    this.documentRef
+      .querySelector<HTMLElement>('.app-header')
+      ?.classList.toggle('hidden', detail);
     all<HTMLElement>('.tab', this.documentRef).forEach((tab) =>
-      tab.classList.toggle('active', tab.dataset.nav === id),
+      tab.classList.toggle('active', tab.dataset.nav === viewId),
     );
     this.windowRef.scrollTo({ top: 0, behavior: 'auto' });
-    if (id === 'historyView')
-      requestAnimationFrame(() => this.renderer.redrawChart());
-    if (id === 'homeView')
-      requestAnimationFrame(() => this.renderer.redrawHomeChart());
+    if (route.kind === 'history') this.renderer.redrawChart();
+    if (route.kind === 'home') this.renderer.redrawHomeChart();
+    if (detail) {
+      this.renderer.redrawDetailChart();
+      this.element('entityDetailTitle').focus();
+    }
+  }
+
+  private showRateSelectionError(message: string): void {
+    const error = this.element('rateSelectionError');
+    error.textContent = message;
+    error.classList.remove('hidden');
   }
 
   private toast(message: string): void {

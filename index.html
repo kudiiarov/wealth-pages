@@ -40,35 +40,51 @@
 <button class="price-trust" data-nav="settingsView" id="priceTrust" type="button"><span></span><b id="priceTrustText">—</b></button>
 </div>
 <section class="home-insight-section">
-<h2 data-i18n="whatChanged">Что изменилось</h2>
-<div class="driver-list surface" id="portfolioDrivers"></div>
+<div class="section-heading-row"><h2 data-i18n="rates">Курсы</h2><button class="section-action" data-i18n="configure" id="configureRatesBtn" type="button">Настроить</button></div>
+<div class="rate-list surface" id="portfolioRates"></div>
 </section>
 <section class="home-insight-section">
 <h2 data-i18n="portfolioStructure">Структура портфеля</h2>
-<div class="structure-panel surface"><div aria-hidden="true" class="allocation-bar" id="categoryAllocationBar"></div><div class="category-list" id="categoryAllocationList"></div><button class="structure-link" data-nav="positionsView" type="button"><span data-i18n="viewPortfolio">Открыть портфель</span><b>›</b></button></div>
+<div class="structure-panel surface"><div aria-hidden="true" class="allocation-bar" id="categoryAllocationBar"></div><div class="category-list" id="categoryAllocationList"></div><button class="structure-link" data-nav="assetsView" type="button"><span data-i18n="viewAssets">Открыть активы</span><b>›</b></button></div>
 </section>
 <section class="home-insight-section exposure-section"><h2 data-i18n="exposures">Экспозиции</h2><div class="exposure-list" id="exposureList"></div></section>
 </section>
-<section aria-labelledby="positionsTitle" class="view" id="positionsView">
+<section aria-labelledby="assetsTitle" class="view" id="assetsView">
 <div class="page-heading portfolio-heading">
-<div><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="explore" id="positionsTitle">Обзор</h1></div>
-<button aria-label="Добавить" class="portfolio-add" data-portfolio-add id="portfolioAdd" type="button">+</button>
+<div><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="assets" id="assetsTitle">Активы</h1></div>
+<button aria-label="Добавить актив" class="portfolio-add" id="assetAdd" type="button">+</button>
 </div>
-<div aria-label="Режим портфеля" class="portfolio-segment" id="portfolioSegment" role="group"><button class="active" data-portfolio-mode="assets" type="button" data-i18n="assets">Активы</button><button data-portfolio-mode="accounts" type="button" data-i18n="accounts">Счета</button></div>
-<label class="portfolio-search"><svg aria-hidden="true" viewbox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg><input data-i18n-placeholder="searchAssets" id="portfolioSearch" type="search" placeholder="Поиск активов" autocomplete="off"></label>
+<label class="portfolio-search"><svg aria-hidden="true" viewbox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg><input data-i18n-placeholder="searchAssets" id="assetSearch" type="search" placeholder="Поиск активов" autocomplete="off"></label>
 <div class="portfolio-filters" id="portfolioFilters"><button class="active" data-portfolio-filter="all" type="button" data-i18n="all">Все</button><button data-portfolio-filter="crypto" type="button" data-i18n="crypto">Крипто</button><button data-portfolio-filter="currency" type="button" data-i18n="currency">Валюты</button><button data-portfolio-filter="gold" type="button" data-i18n="gold">Золото</button></div>
-<div class="portfolio-summary"><span id="portfolioSummary">—</span><span id="portfolioFreshness">—</span></div>
-<div class="portfolio-explorer-list" id="positionsList"></div>
+<div class="portfolio-summary"><span id="assetSummary">—</span><span id="assetFreshness">—</span></div>
+<div class="portfolio-explorer-list" id="assetsList"></div>
+</section>
+<section aria-labelledby="accountsTitle" class="view" id="accountsView">
+<div class="page-heading portfolio-heading">
+<div><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="accounts" id="accountsTitle">Счета</h1></div>
+<button aria-label="Добавить счёт" class="portfolio-add" id="accountAdd" type="button">+</button>
+</div>
+<label class="portfolio-search"><svg aria-hidden="true" viewbox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg><input data-i18n-placeholder="searchAccounts" id="accountSearch" type="search" placeholder="Поиск счетов" autocomplete="off"></label>
+<div class="portfolio-summary"><span id="accountSummary">—</span></div>
+<div class="portfolio-explorer-list" id="accountsList"></div>
+</section>
+<section aria-labelledby="entityDetailTitle" class="view detail-view" id="entityDetailView">
+<div class="detail-nav"><button class="detail-back" data-detail-back type="button"><span aria-hidden="true">‹</span><b data-i18n="back">Назад</b></button><button class="circle-button detail-menu" id="entityDetailMenu" type="button" aria-label="Действия">···</button></div>
+<div class="detail-hero" id="entityDetailHero"><h1 id="entityDetailTitle" tabindex="-1">—</h1></div>
+<section class="surface chart-surface detail-chart-surface">
+<div class="chart-stat"><span data-i18n="valueHistory">История стоимости</span><strong id="entityDetailChange">—</strong></div>
+<div class="chart-inspector history-chart-inspector"><canvas aria-describedby="entityDetailChartTooltip" aria-label="История стоимости" id="entityDetailChart" tabindex="0"></canvas><output aria-live="polite" class="chart-tooltip hidden" id="entityDetailChartTooltip" role="status"></output></div>
+<div class="empty-state overlay-empty" data-i18n="needTwo" id="entityDetailEmpty">Нужно минимум два снимка для графика.</div>
+<div class="chart-dates" id="entityDetailChartDates"><span></span><span></span></div>
+</section>
+<div class="detail-metadata" id="entityDetailMetadata"></div>
+<section class="detail-related"><h2 id="entityRelatedTitle">—</h2><div class="related-list surface" id="entityRelatedList"></div></section>
+<div class="detail-actions" id="entityDetailActions"></div>
 </section>
 <section aria-labelledby="historyTitle" class="view" id="historyView">
 <div class="page-heading">
 <div><div class="overline" data-i18n="trend">Динамика</div><h1 data-i18n="history" id="historyTitle">История</h1></div>
 <button class="primary-small" data-i18n="snapshot" id="saveSnapshotBtnHistory">Снимок</button>
-</div>
-<div class="history-filter-wrap">
-<select aria-label="Что показывать в истории" class="history-filter" id="historyScope">
-<option data-i18n="wholePortfolio" value="portfolio">Весь портфель</option>
-</select>
 </div>
 <section class="surface chart-surface">
 <div class="chart-stat">
@@ -133,15 +149,26 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 3.4.0-final</div>
+<div class="build-note">Worth · 3.5.0-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">
 <button class="tab active" data-nav="homeView"><svg viewbox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V21H4z"></path></svg><span data-i18n="home">Главная</span></button>
-<button class="tab" data-nav="positionsView"><svg viewbox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8h8"></path></svg><span data-i18n="portfolio">Портфель</span></button>
+<button class="tab" data-nav="assetsView"><svg viewbox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 4v8h8"></path></svg><span data-i18n="assets">Активы</span></button>
+<button class="tab" data-nav="accountsView"><svg viewbox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"></rect><path d="M3 10h18"></path></svg><span data-i18n="accounts">Счета</span></button>
 <button class="tab" data-nav="historyView"><svg viewbox="0 0 24 24"><path d="M4 17l5-5 4 3 7-8"></path></svg><span data-i18n="history">История</span></button>
 </nav>
 </div>
+<dialog class="modal" id="rateSelectionModal">
+<form class="sheet compact-sheet" id="rateSelectionForm">
+<div class="sheet-handle"></div>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="home">Главная</div><h2 data-i18n="chooseRates">Выберите курсы</h2></div><button class="close-button" data-close="rateSelectionModal" type="button">×</button></div>
+<p class="sheet-note" data-i18n="chooseRatesHint">От одного до трёх активов</p>
+<div class="rate-choice-list" id="rateSelectionList"></div>
+<p aria-live="polite" class="inline-warning hidden" id="rateSelectionError"></p>
+<button class="sheet-primary" data-i18n="save" type="submit">Сохранить</button>
+</form>
+</dialog>
 <dialog class="modal" id="accountModal">
 <form class="sheet" id="accountForm">
 <div class="sheet-handle"></div>

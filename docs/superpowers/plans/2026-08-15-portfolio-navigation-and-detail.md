@@ -43,12 +43,14 @@
 ### Task 1: Pure routes and portfolio selectors
 
 **Files:**
+
 - Create: `src/ui/routes.ts`
 - Create: `tests/ui/routes.test.ts`
 - Modify: `src/ui/portfolio-view-model.ts`
 - Modify: `tests/ui/portfolio-view-model.test.ts`
 
 **Interfaces:**
+
 - Produces: `AppRoute`, `parseAppRoute(hash: string): AppRoute`, `formatAppRoute(route: AppRoute): string`.
 - Produces: `selectedRateAssets(data, selectedIds, limit?)`, `assetHistorySeries(assetId, snapshots)`, and `accountHistorySeries(accountId, snapshots)`.
 - History selectors return `HistoryDatum[]` sorted by `createdAt` and omit snapshots without the requested entity value.
@@ -57,7 +59,10 @@
 
 ```ts
 expect(parseAppRoute('#/assets/btc')).toEqual({ kind: 'asset', id: 'btc' });
-expect(parseAppRoute('#/accounts/vault')).toEqual({ kind: 'account', id: 'vault' });
+expect(parseAppRoute('#/accounts/vault')).toEqual({
+  kind: 'account',
+  id: 'vault',
+});
 expect(parseAppRoute('#/unknown')).toEqual({ kind: 'home' });
 expect(formatAppRoute({ kind: 'history' })).toBe('#/history');
 ```
@@ -92,15 +97,14 @@ Expected: PASS.
 - [ ] **Step 5: Write failing selector tests**
 
 ```ts
-expect(selectedRateAssets(data, []) .map(({ id }) => id)).toEqual([
+expect(selectedRateAssets(data, []).map(({ id }) => id)).toEqual([
   'largest',
   'second',
   'third',
 ]);
-expect(selectedRateAssets(data, ['small', 'largest']).map(({ id }) => id)).toEqual([
-  'small',
-  'largest',
-]);
+expect(
+  selectedRateAssets(data, ['small', 'largest']).map(({ id }) => id),
+).toEqual(['small', 'largest']);
 expect(selectedRateAssets(data, ['deleted']).map(({ id }) => id)).toEqual([
   'largest',
   'second',
@@ -141,11 +145,13 @@ git commit -m "feat: add portfolio routes and detail selectors"
 ### Task 2: Persist selected rate assets safely
 
 **Files:**
+
 - Modify: `src/domain/models.ts`
 - Modify: `src/platform/browser/settings-store.ts`
 - Modify: `tests/platform/settings-store.test.ts`
 
 **Interfaces:**
+
 - Adds `selectedRateAssetIds: string[]` to `AppSettings` with default `[]`.
 - Adds `SETTINGS_KEYS.selectedRateAssetIds = 'worth-selected-rate-assets'`.
 
@@ -155,7 +161,10 @@ git commit -m "feat: add portfolio routes and detail selectors"
 store.save({ selectedRateAssetIds: ['btc', 'usd', 'xaut'] });
 expect(store.load().selectedRateAssetIds).toEqual(['btc', 'usd', 'xaut']);
 
-storage.setItem(SETTINGS_KEYS.selectedRateAssetIds, '["btc",42,"btc","", "eth", "sol"]');
+storage.setItem(
+  SETTINGS_KEYS.selectedRateAssetIds,
+  '["btc",42,"btc","", "eth", "sol"]',
+);
 expect(store.load().selectedRateAssetIds).toEqual(['btc', 'eth', 'sol']);
 ```
 
@@ -187,6 +196,7 @@ git commit -m "feat: persist selected portfolio rates"
 ### Task 3: Split Assets and Accounts into flat tab views
 
 **Files:**
+
 - Modify: `index.html`
 - Modify: `src/ui/render.ts`
 - Modify: `src/ui/events.ts`
@@ -197,6 +207,7 @@ git commit -m "feat: persist selected portfolio rates"
 - Modify: `tests/legacy/static-shell.characterization.test.ts`
 
 **Interfaces:**
+
 - Replaces `positionsView` with `assetsView` and `accountsView`.
 - Replaces `renderPortfolioExplorer()` with `renderAssetsView()` and `renderAccountsView()`.
 - Rows expose `data-asset-open="<id>"` or `data-account-open="<id>"`; there are no `data-portfolio-expand` controls.
@@ -243,6 +254,7 @@ git commit -m "feat: split assets and accounts navigation"
 ### Task 4: Add routable asset and account detail screens
 
 **Files:**
+
 - Modify: `index.html`
 - Modify: `src/ui/render.ts`
 - Modify: `src/ui/events.ts`
@@ -254,6 +266,7 @@ git commit -m "feat: split assets and accounts navigation"
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Adds a reusable `entityDetailView` shell with `entityDetailChart`, tooltip, header, metadata, related list, and action controls.
 - Adds `navigate(route: AppRoute, options?: { replace?: boolean }): void` and route rendering driven by `hashchange`.
 - Extends chart inspection kind to `'detail'` and draws the current entity series.
@@ -300,6 +313,7 @@ git commit -m "feat: add asset and account detail screens"
 ### Task 5: Replace Home drivers with configurable rates
 
 **Files:**
+
 - Modify: `index.html`
 - Modify: `src/ui/render.ts`
 - Modify: `src/ui/events.ts`
@@ -309,6 +323,7 @@ git commit -m "feat: add asset and account detail screens"
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - `portfolioRates` contains one to three `data-rate-asset` rows.
 - `rateSelectionModal` contains ordered checkboxes keyed by `data-rate-choice` and an inline `rateSelectionError` status.
 - Saving calls `service.saveSettings({ selectedRateAssetIds })`.
@@ -351,6 +366,7 @@ git commit -m "feat: add configurable home rates"
 ### Task 6: Make History portfolio-only and remove dead scope code
 
 **Files:**
+
 - Modify: `src/application/state.ts`
 - Modify: `src/ui/render.ts`
 - Modify: `src/ui/events.ts`
@@ -359,6 +375,7 @@ git commit -m "feat: add configurable home rates"
 - Modify: affected unit fixtures and tests under `tests/`
 
 **Interfaces:**
+
 - Removes `historyScope`, `refreshHistoryScope()`, position history branches, and `#historyScope`.
 - `historyData()` always maps snapshots to `snapshot.total`.
 
@@ -398,6 +415,7 @@ git commit -m "refactor: keep history portfolio-wide"
 ### Task 7: Version, responsive polish, migration verification, and release
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `package-lock.json`
 - Modify: `index.html`
@@ -406,6 +424,7 @@ git commit -m "refactor: keep history portfolio-wide"
 - Modify: any test fixtures affected by the new default setting.
 
 **Interfaces:**
+
 - Application package version is `3.5.0`; visible build label is `3.5.0-final`.
 - No backup schema or IndexedDB database version change.
 

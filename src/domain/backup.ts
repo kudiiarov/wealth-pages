@@ -7,7 +7,7 @@ import type {
 import { normalizeData } from './normalize';
 
 export const BACKUP_VERSION = 15;
-export const APP_VERSION = '3.4.0-final';
+export const APP_VERSION = '3.5.0-final';
 
 export interface ValidatedBackup {
   version: number;
@@ -93,6 +93,16 @@ function parseSettings(value: unknown): Partial<AppSettings> | undefined {
     settings.positionGrouping = value.positionGrouping;
   if (typeof value.balancesHidden === 'boolean')
     settings.balancesHidden = value.balancesHidden;
+  if (Array.isArray(value.selectedRateAssetIds)) {
+    settings.selectedRateAssetIds = Array.from(
+      new Set(
+        value.selectedRateAssetIds.filter(
+          (item): item is string =>
+            typeof item === 'string' && item.trim().length > 0,
+        ),
+      ),
+    ).slice(0, 3);
+  }
   return Object.keys(settings).length > 0 ? settings : undefined;
 }
 
@@ -202,6 +212,9 @@ export function createBackup(
     baseCurrency: 'USD',
     exportedAt,
     ...cloneData(data),
-    appSettings: { ...settings },
+    appSettings: {
+      ...settings,
+      selectedRateAssetIds: [...(settings.selectedRateAssetIds ?? [])],
+    },
   };
 }

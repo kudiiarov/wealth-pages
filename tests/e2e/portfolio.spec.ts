@@ -1,242 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-test('creates and persists a portfolio, snapshot, and backup', async ({
-  page,
-}) => {
-  await page.goto('/');
-
-  await page.locator('.tab[data-nav="positionsView"]').click();
-  await page.locator('[data-portfolio-add]').click();
-  await page
-    .locator('#actionMenuItems')
-    .getByText('Счёт', { exact: true })
-    .click();
-  await page.locator('#accountForm [name="name"]').fill('Основной счёт');
-  await page
-    .locator('#accountForm')
-    .getByRole('button', { name: 'Создать счёт' })
-    .click();
-  await page.locator('[data-portfolio-mode="accounts"]').click();
-  await expect(page.locator('#positionsList')).toContainText('Основной счёт');
-
-  await page.locator('[data-portfolio-add]').click();
-  await page
-    .locator('#actionMenuItems')
-    .getByText('Актив', { exact: true })
-    .click();
-  await page.locator('#assetForm [name="name"]').fill('Доллар');
-  await page.locator('#assetForm [name="code"]').fill('USD');
-  await page.locator('#assetForm [name="price"]').fill('1');
-  await page
-    .locator('#assetForm [name="category"]')
-    .selectOption('value:cash-currencies');
-  await page
-    .locator('#assetForm .taxonomy-tag')
-    .filter({ hasText: 'Валюты' })
-    .click();
-  await page.locator('#assetForm [name="customTags"]').fill('Резерв');
-  await page
-    .locator('#assetForm')
-    .getByRole('button', { name: 'Создать актив' })
-    .click();
-
-  await page.locator('[data-portfolio-add]').click();
-  await page
-    .locator('#actionMenuItems')
-    .getByText('Актив', { exact: true })
-    .click();
-  await page.locator('#assetForm [name="name"]').fill('Bitcoin');
-  await page.locator('#assetForm [name="code"]').fill('BTC');
-  await page.locator('#assetForm [name="price"]').fill('50000');
-  await page
-    .locator('#assetForm [name="category"]')
-    .selectOption('value:crypto');
-  await page
-    .locator('#assetForm .taxonomy-tag')
-    .filter({ hasText: 'Крипто' })
-    .click();
-  await page
-    .locator('#assetForm')
-    .getByRole('button', { name: 'Создать актив' })
-    .click();
-
-  await page.locator('[data-portfolio-add]').click();
-  await page
-    .locator('#actionMenuItems')
-    .getByText('Позиция', { exact: true })
-    .click();
-  await page.locator('#positionForm [name="quantity"]').fill('100');
-  await page
-    .locator('#positionForm [name="assetId"]')
-    .selectOption({ label: 'Доллар · USD' });
-  await page.locator('#positionForm [name="comment"]').fill('Резерв');
-  await page
-    .locator('#positionForm')
-    .getByRole('button', { name: 'Сохранить' })
-    .click();
-
-  await expect(page.locator('#homeTitle')).toHaveText('$100.00');
-  await page.locator('[data-portfolio-mode="assets"]').click();
-  await expect(page.locator('#positionsList')).toContainText('Доллар');
-  await expect(page.locator('#positionsList')).toContainText('Деньги и валюты');
-  await page
-    .locator('#positionsList .portfolio-explorer-group')
-    .filter({ hasText: 'Доллар' })
-    .locator('.portfolio-row')
-    .click();
-  await page
-    .locator('#positionsList .portfolio-explorer-group')
-    .filter({ hasText: 'Доллар' })
-    .locator('.portfolio-position-row')
-    .click();
-  await page
-    .locator('#actionMenuItems')
-    .getByText('Изменить позицию', { exact: true })
-    .click();
-  await page.locator('#positionForm [name="comment"]').fill('Резерв обновлён');
-  await page
-    .locator('#positionForm')
-    .getByRole('button', { name: 'Сохранить' })
-    .click();
-  await page.locator('#positionsList .portfolio-position-row').click();
-  await page
-    .locator('#actionMenuItems')
-    .getByText('Изменить позицию', { exact: true })
-    .click();
-  await expect(page.locator('#positionForm [name="comment"]')).toHaveValue(
-    'Резерв обновлён',
-  );
-  await page.locator('[data-close="positionModal"]').click();
-  await page.locator('#portfolioSearch').fill('USD');
-  await expect(page.locator('#positionsList .portfolio-row')).toHaveCount(1);
-  await page.locator('#portfolioSearch').fill('');
-  await page.locator('[data-portfolio-filter="tag:currency"]').click();
-  await expect(page.locator('#positionsList')).toContainText('Доллар');
-  await expect(
-    page.locator('[data-portfolio-filter="tag:Резерв"]'),
-  ).toBeVisible();
-  await page.locator('#portfolioSearch').fill('BTC');
-  await page.locator('[data-nav="homeView"]').click();
-  await expect(page.locator('#categoryAllocationList')).toContainText(
-    'Деньги и валюты',
-  );
-  await page
-    .locator('#categoryAllocationList [data-category-filter="cash-currencies"]')
-    .click();
-  await expect(page.locator('#portfolioSearch')).toHaveValue('');
-  await expect(page.locator('#positionsList')).toContainText('Доллар');
-  await expect(page.locator('#positionsList')).not.toContainText('Bitcoin');
-  await page.locator('.tab[data-nav="homeView"]').click();
-  await page.locator('#privacyToggle').click();
-  await expect(page.locator('#homeTitle')).toHaveText('••••');
-  await page.reload();
-  await expect(page.locator('#homeTitle')).toHaveText('••••');
-  await page.locator('#privacyToggle').click();
-  await expect(page.locator('#homeTitle')).toHaveText('$100.00');
-  await page.locator('[data-nav="historyView"]').click();
-  await page.locator('#saveSnapshotBtnHistory').click();
-  await expect(page.locator('#toast')).toContainText('Снимок');
-
-  await page.reload();
-  await expect(page.locator('#homeTitle')).toHaveText('$100.00');
-  await page.locator('.tab[data-nav="positionsView"]').click();
-  await page.locator('[data-portfolio-mode="accounts"]').click();
-  await expect(page.locator('#positionsList')).toContainText('Основной счёт');
-
-  const accountGroup = page
-    .locator('#positionsList .portfolio-explorer-group')
-    .filter({ hasText: 'Основной счёт' });
-  await accountGroup.locator('.portfolio-row').click();
-  await expect(accountGroup.locator('.portfolio-position-icon')).toHaveText(
-    'USD',
-  );
-  await expect(accountGroup.locator('.portfolio-position-row')).toContainText(
-    '100 USD',
-  );
-  await expect(
-    accountGroup.locator('.portfolio-position-row'),
-  ).not.toContainText('$100.00');
-
-  await page.locator('#settingsShortcut').click();
-  await page.locator('#refreshPricesBtn').click();
-  await expect(page.locator('#toast')).toContainText(
-    'Нет активов с доступным автоматическим источником цены',
-  );
-  await page.locator('#diagnosticsBtn').click();
-  await expect(page.locator('#diagnosticsModal')).toBeVisible();
-  await expect(page.locator('#diagnosticsModal')).toContainText(
-    'Журнал событий',
-  );
-  await expect(page.locator('#diagnosticsList')).toContainText(
-    'prices.refresh.completed',
-  );
-  await expect(page.locator('#copyDiagnosticsBtn')).toBeVisible();
-  await page.locator('#clearDiagnosticsBtn').click();
-  await expect(page.locator('#diagnosticsList')).toContainText(
-    'Событий пока нет',
-  );
-  await page.locator('[data-close="diagnosticsModal"]').click();
-
-  const downloadPromise = page.waitForEvent('download');
-  await page.locator('#exportBtn').click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^worth-backup-.*\.json$/);
-
-  const backupPath = await download.path();
-  expect(backupPath).not.toBeNull();
-  if (!backupPath) throw new Error('Browser did not save the backup');
-
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.locator('#resetBtn').click();
-  await expect(page.locator('#homeTitle')).toHaveText('$0.00');
-
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.locator('#importInput').setInputFiles(backupPath);
-  await expect(page.locator('#homeTitle')).toHaveText('$100.00');
-  await page.locator('.tab[data-nav="positionsView"]').click();
-  await page.locator('[data-portfolio-mode="accounts"]').click();
-  await expect(page.locator('#positionsList')).toContainText('Основной счёт');
-
-  await page.locator('[data-portfolio-mode="assets"]').click();
-  const restoredDollar = page
-    .locator('#positionsList .portfolio-explorer-group')
-    .filter({ hasText: 'Доллар' });
-  if (
-    (await restoredDollar
-      .locator('.portfolio-row')
-      .getAttribute('aria-expanded')) === 'false'
-  ) {
-    await restoredDollar.locator('.portfolio-row').click();
-  }
-  await restoredDollar.locator('.portfolio-position-row').click();
-  page.once('dialog', (dialog) => dialog.accept());
-  await page
-    .locator('#actionMenuItems')
-    .getByText('Удалить позицию', { exact: true })
-    .click();
-  await page.locator('.tab[data-nav="homeView"]').click();
-  await expect(page.locator('#homeTitle')).toHaveText('$0.00');
-
-  await page.locator('#settingsShortcut').click();
-  await page.locator('[data-lang-choice="en"]').click();
-  await expect(page.locator('[data-i18n="totalBalance"]')).toHaveText(
-    'Total balance',
-  );
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.locator('#homePeriods')).toHaveAttribute(
-    'aria-label',
-    'Performance period',
-  );
-  await expect(page.locator('#portfolioAdd')).toHaveAttribute(
-    'aria-label',
-    'Add to portfolio',
-  );
-});
-
-test('shows exact portfolio values while inspecting both charts', async ({
-  page,
-}) => {
-  await page.goto('/');
+async function seedPortfolio(page: Page): Promise<void> {
   const now = Date.now();
   await page.evaluate(
     ({ currentTime }) =>
@@ -250,40 +14,226 @@ test('shows exact portfolio values while inspecting both charts', async ({
             ['accounts', 'assets', 'positions', 'snapshots'],
             'readwrite',
           );
-          transaction.objectStore('accounts').put({
-            id: 'account',
+          const accounts = transaction.objectStore('accounts');
+          const assets = transaction.objectStore('assets');
+          const positions = transaction.objectStore('positions');
+          const snapshots = transaction.objectStore('snapshots');
+          accounts.put({
+            id: 'vault',
             name: 'Vault',
             type: 'bank',
             icon: 'V',
             color: '#17181b',
           });
-          transaction.objectStore('assets').put({
-            id: 'usd',
-            name: 'Dollar',
-            code: 'USD',
-            icon: '$',
-            color: '#5667ff',
-            price: 1,
-            autoUpdateSource: 'none',
-            category: 'cash-currencies',
-            tags: ['currency'],
+          accounts.put({
+            id: 'exchange',
+            name: 'Exchange',
+            type: 'exchange',
+            icon: 'EX',
+            color: '#299bc6',
           });
-          transaction.objectStore('positions').put({
-            id: 'position',
-            accountId: 'account',
-            assetId: 'usd',
-            quantity: 140.67,
-            comment: '',
-          });
-          transaction.objectStore('snapshots').put({
+          for (const asset of [
+            {
+              id: 'btc',
+              name: 'Bitcoin',
+              code: 'BTC',
+              icon: 'B',
+              color: '#f5a341',
+              price: 100,
+              autoUpdateSource: 'coingecko',
+              category: 'crypto',
+              tags: ['crypto'],
+              priceUpdatedAt: currentTime,
+            },
+            {
+              id: 'xaut',
+              name: 'Tether Gold',
+              code: 'XAUT',
+              icon: 'Au',
+              color: '#d8a700',
+              price: 200,
+              autoUpdateSource: 'coingecko',
+              category: 'precious-metals',
+              tags: ['crypto', 'gold'],
+              priceUpdatedAt: currentTime,
+            },
+            {
+              id: 'usd',
+              name: 'Dollar',
+              code: 'USD',
+              icon: '$',
+              color: '#5667ff',
+              price: 1,
+              autoUpdateSource: 'none',
+              category: 'cash-currencies',
+              tags: ['currency'],
+            },
+            {
+              id: 'eth',
+              name: 'Ethereum',
+              code: 'ETH',
+              icon: 'E',
+              color: '#9b63e8',
+              price: 50,
+              autoUpdateSource: 'coingecko',
+              category: 'crypto',
+              tags: ['crypto'],
+              priceUpdatedAt: currentTime,
+            },
+          ])
+            assets.put(asset);
+          for (const position of [
+            {
+              id: 'btc-vault',
+              accountId: 'vault',
+              assetId: 'btc',
+              quantity: 3,
+              comment: '',
+            },
+            {
+              id: 'xaut-vault',
+              accountId: 'vault',
+              assetId: 'xaut',
+              quantity: 1,
+              comment: '',
+            },
+            {
+              id: 'usd-vault',
+              accountId: 'vault',
+              assetId: 'usd',
+              quantity: 150,
+              comment: '',
+            },
+            {
+              id: 'eth-exchange',
+              accountId: 'exchange',
+              assetId: 'eth',
+              quantity: 1,
+              comment: '',
+            },
+          ])
+            positions.put(position);
+          snapshots.put({
             id: 'first',
             createdAt: currentTime - 7_200_000,
-            total: 100.12,
+            total: 500.12,
+            accounts: [
+              { accountId: 'vault', name: 'Vault', total: 460.12 },
+              { accountId: 'exchange', name: 'Exchange', total: 40 },
+            ],
+            assets: [
+              { assetId: 'btc', code: 'BTC', value: 240.12, price: 80 },
+              { assetId: 'xaut', code: 'XAUT', value: 180, price: 180 },
+              { assetId: 'usd', code: 'USD', value: 40, price: 1 },
+              { assetId: 'eth', code: 'ETH', value: 40, price: 40 },
+            ],
+            positions: [
+              {
+                positionId: 'btc-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'btc',
+                assetCode: 'BTC',
+                comment: '',
+                quantity: 3,
+                price: 80,
+                value: 240.12,
+              },
+              {
+                positionId: 'xaut-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'xaut',
+                assetCode: 'XAUT',
+                comment: '',
+                quantity: 1,
+                price: 180,
+                value: 180,
+              },
+              {
+                positionId: 'usd-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'usd',
+                assetCode: 'USD',
+                comment: '',
+                quantity: 40,
+                price: 1,
+                value: 40,
+              },
+              {
+                positionId: 'eth-exchange',
+                accountId: 'exchange',
+                accountName: 'Exchange',
+                assetId: 'eth',
+                assetCode: 'ETH',
+                comment: '',
+                quantity: 1,
+                price: 40,
+                value: 40,
+              },
+            ],
           });
-          transaction.objectStore('snapshots').put({
+          snapshots.put({
             id: 'second',
             createdAt: currentTime - 3_600_000,
-            total: 123.45,
+            total: 620.45,
+            accounts: [
+              { accountId: 'vault', name: 'Vault', total: 575.45 },
+              { accountId: 'exchange', name: 'Exchange', total: 45 },
+            ],
+            assets: [
+              { assetId: 'btc', code: 'BTC', value: 285.45, price: 95 },
+              { assetId: 'xaut', code: 'XAUT', value: 195, price: 195 },
+              { assetId: 'usd', code: 'USD', value: 95, price: 1 },
+              { assetId: 'eth', code: 'ETH', value: 45, price: 45 },
+            ],
+            positions: [
+              {
+                positionId: 'btc-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'btc',
+                assetCode: 'BTC',
+                comment: '',
+                quantity: 3,
+                price: 95,
+                value: 285.45,
+              },
+              {
+                positionId: 'xaut-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'xaut',
+                assetCode: 'XAUT',
+                comment: '',
+                quantity: 1,
+                price: 195,
+                value: 195,
+              },
+              {
+                positionId: 'usd-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'usd',
+                assetCode: 'USD',
+                comment: '',
+                quantity: 95,
+                price: 1,
+                value: 95,
+              },
+              {
+                positionId: 'eth-exchange',
+                accountId: 'exchange',
+                accountName: 'Exchange',
+                assetId: 'eth',
+                assetCode: 'ETH',
+                comment: '',
+                quantity: 1,
+                price: 45,
+                value: 45,
+              },
+            ],
           });
           transaction.oncomplete = () => {
             database.close();
@@ -295,35 +245,191 @@ test('shows exact portfolio values while inspecting both charts', async ({
       }),
     { currentTime: now },
   );
+}
+
+test('creates entities and opens their dedicated detail screens', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.locator('[data-nav="accountsView"]').click();
+  await page.locator('#accountAdd').click();
+  await page.locator('#accountForm [name="name"]').fill('Основной счёт');
+  await page
+    .locator('#accountForm')
+    .getByRole('button', { name: 'Создать счёт' })
+    .click();
+  await expect(page.locator('#accountsList')).toContainText('Основной счёт');
+
+  await page.locator('.tab[data-nav="assetsView"]').click();
+  await page.locator('#assetAdd').click();
+  await page.locator('#assetForm [name="name"]').fill('Доллар');
+  await page.locator('#assetForm [name="code"]').fill('USD');
+  await page.locator('#assetForm [name="price"]').fill('1');
+  await page
+    .locator('#assetForm [name="category"]')
+    .selectOption('value:cash-currencies');
+  await page
+    .locator('#assetForm')
+    .getByRole('button', { name: 'Создать актив' })
+    .click();
+
+  await page.locator('#assetsList [data-asset-open]').click();
+  await expect(page).toHaveURL(/#\/assets\//);
+  await expect(page.locator('#entityDetailTitle')).toHaveText('Доллар');
+  await expect(page.locator('.tab-bar')).toBeHidden();
+  await page.locator('[data-detail-add-position]').click();
+  await expect(page.locator('#positionForm [name="assetId"]')).not.toHaveValue(
+    '',
+  );
+  await page.locator('#positionForm [name="quantity"]').fill('140.67');
+  await page
+    .locator('#positionForm')
+    .getByRole('button', { name: 'Сохранить' })
+    .click();
+  await expect(page.locator('#entityRelatedList')).toContainText(
+    'Основной счёт',
+  );
+  await expect(page.locator('#entityRelatedList')).toContainText('140,67 USD');
+
+  await page.locator('#entityRelatedList [data-account-open]').click();
+  await expect(page).toHaveURL(/#\/accounts\//);
+  await expect(page.locator('#entityDetailTitle')).toHaveText('Основной счёт');
+  await expect(page.locator('#entityRelatedList')).toContainText('Доллар');
+  await page.locator('[data-detail-back]').click();
+  await expect(page).toHaveURL(/#\/assets\//);
+  await page.locator('[data-detail-back]').click();
+  await expect(page).toHaveURL(/#\/assets$/);
+  await expect(page.locator('.tab-bar')).toBeVisible();
+
+  await page.locator('[data-nav="historyView"]').click();
+  await expect(page.locator('#historyScope')).toHaveCount(0);
+  await page.locator('#saveSnapshotBtnHistory').click();
+  await expect(page.locator('#historyList .list-card')).toHaveCount(1);
+});
+
+test('shows and persists three configurable rates that open asset details', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  await expect(page.locator('#portfolioRates .rate-row')).toHaveCount(3);
+  await expect(page.locator('#portfolioRates')).toContainText('Bitcoin');
+  await expect(page.locator('#portfolioRates')).toContainText('Tether Gold');
+  await expect(page.locator('#portfolioRates')).toContainText('Dollar');
+  await expect(
+    page.locator('[data-rate-asset="btc"] .rate-change'),
+  ).toContainText('$100.00');
+  await expect(
+    page.locator('[data-rate-asset="btc"] .rate-change > b'),
+  ).toContainText('%');
+  await expect(
+    page.locator('[data-rate-asset="btc"] .rate-status'),
+  ).toContainText('Цена актуальна');
+
+  await page.locator('[data-rate-asset="btc"]').click();
+  await expect(page).toHaveURL(/#\/assets\/btc$/);
+  await expect(page.locator('#entityDetailTitle')).toHaveText('Bitcoin');
+  await expect(page.locator('#entityDetailMetadata')).toContainText('$100.00');
+  await expect(page.locator('#entityDetailMetadata')).toContainText(
+    'Цена актуальна',
+  );
+  await page.locator('[data-detail-back]').click();
+  await expect(page).toHaveURL(/#\/home$/);
+
+  await page.locator('#configureRatesBtn').click();
+  await page.locator('.rate-choice').filter({ hasText: 'Ethereum' }).click();
+  await expect(page.locator('#rateSelectionError')).toContainText(
+    'не больше трёх',
+  );
+  await page.locator('.rate-choice').filter({ hasText: 'Dollar' }).click();
+  await page.locator('.rate-choice').filter({ hasText: 'Ethereum' }).click();
+  await page
+    .locator('#rateSelectionForm')
+    .getByRole('button', { name: 'Сохранить' })
+    .click();
+  await expect(page.locator('#portfolioRates')).toContainText('Ethereum');
+  await expect(page.locator('#portfolioRates')).not.toContainText('Dollar');
+  await page.reload();
+  await expect(page.locator('#portfolioRates')).toContainText('Ethereum');
+  await expect(page.locator('#portfolioRates')).not.toContainText('Dollar');
+
+  const tabMetrics = await page.locator('.tab-bar').evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(tabMetrics.scrollWidth).toBeLessThanOrEqual(tabMetrics.clientWidth);
+
+  await page.locator('#settingsShortcut').click();
+  await page.locator('[data-lang-choice="en"]').click();
+  await page.locator('[data-nav="homeView"]').click();
+  await expect(page.locator('[data-i18n="rates"]')).toHaveText('Rates');
+  await expect(page.locator('[data-rate-asset="btc"] .rate-status')).toHaveText(
+    /Price current/,
+  );
+
+  await page.goto('/#/assets/missing');
+  await expect(page).toHaveURL(/#\/assets$/);
+  await expect(page.locator('#assetsView')).toHaveClass(/active/);
+});
+
+test('inspects exact portfolio and entity history with pointer, touch, and keyboard', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
   await page.reload();
 
   const homeCanvas = page.locator('#homeChart');
-  const homeBox = await homeCanvas.boundingBox();
-  if (!homeBox) throw new Error('Home chart is not visible');
-  await page.mouse.move(homeBox.x + 6, homeBox.y + homeBox.height / 2);
-  await expect(page.locator('#homeChartTooltip')).toBeVisible();
-  await expect(page.locator('#homeChartTooltip')).toContainText('$100.12');
   await homeCanvas.focus();
-  await expect(page.locator('#homeChartTooltip')).toContainText('$140.67');
+  await expect(page.locator('#homeChartTooltip')).toContainText('$700.00');
   await page.keyboard.press('ArrowLeft');
-  await expect(page.locator('#homeChartTooltip')).toContainText('$123.45');
-  await expect(page.locator('#homeChartTooltip small')).toContainText('·');
+  await expect(page.locator('#homeChartTooltip')).toContainText('$620.45');
 
-  await homeCanvas.dispatchEvent('pointermove', {
+  await page.locator('[data-rate-asset="btc"]').click();
+  const detailCanvas = page.locator('#entityDetailChart');
+  await detailCanvas.focus();
+  await expect(page.locator('#entityDetailChartTooltip')).toContainText(
+    '$300.00',
+  );
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#entityDetailChartTooltip')).toContainText(
+    '$285.45',
+  );
+  const detailBox = await detailCanvas.boundingBox();
+  if (!detailBox) throw new Error('Detail chart is not visible');
+  await detailCanvas.dispatchEvent('pointermove', {
     pointerId: 7,
     pointerType: 'touch',
     buttons: 1,
-    clientX: homeBox.x + 6,
-    clientY: homeBox.y + homeBox.height / 2,
+    clientX: detailBox.x + 6,
+    clientY: detailBox.y + detailBox.height / 2,
   });
-  await expect(page.locator('#homeChartTooltip')).toContainText('$100.12');
-  await homeCanvas.dispatchEvent('pointercancel', {
+  await expect(page.locator('#entityDetailChartTooltip')).toContainText(
+    '$240.12',
+  );
+  await detailCanvas.dispatchEvent('pointercancel', {
     pointerId: 7,
     pointerType: 'touch',
   });
-  await expect(page.locator('#homeChartTooltip')).toBeHidden();
+  await expect(page.locator('#entityDetailChartTooltip')).toBeHidden();
 
+  await page.locator('#entityRelatedList [data-account-open]').first().click();
+  await expect(page).toHaveURL(/#\/accounts\/vault$/);
+  await detailCanvas.focus();
+  await expect(page.locator('#entityDetailChartTooltip')).toContainText(
+    '$650.00',
+  );
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#entityDetailChartTooltip')).toContainText(
+    '$575.45',
+  );
+  await page.locator('[data-detail-back]').click();
+
+  await page.locator('[data-detail-back]').click();
   await page.locator('[data-nav="historyView"]').click();
+  await expect(page.locator('#historyScope')).toHaveCount(0);
   const historyCanvas = page.locator('#historyChart');
   const historyBox = await historyCanvas.boundingBox();
   if (!historyBox) throw new Error('History chart is not visible');
@@ -331,14 +437,14 @@ test('shows exact portfolio values while inspecting both charts', async ({
     historyBox.x + historyBox.width - 10,
     historyBox.y + historyBox.height / 2,
   );
-  await expect(page.locator('#historyChartTooltip')).toBeVisible();
-  await expect(page.locator('#historyChartTooltip')).toContainText('$123.45');
+  await expect(page.locator('#historyChartTooltip')).toContainText('$620.45');
   await historyCanvas.focus();
   await page.keyboard.press('ArrowLeft');
-  await expect(page.locator('#historyChartTooltip')).toContainText('$100.12');
-  await expect(historyCanvas).toHaveAttribute('tabindex', '0');
-  await expect(page.locator('#historyChartTooltip')).toHaveAttribute(
-    'aria-live',
-    'polite',
-  );
+  await expect(page.locator('#historyChartTooltip')).toContainText('$500.12');
+
+  await page.locator('[data-nav="homeView"]').click();
+  await page.locator('#privacyToggle').click();
+  await expect(
+    page.locator('[data-rate-asset="btc"] .rate-change'),
+  ).toContainText('••••');
 });

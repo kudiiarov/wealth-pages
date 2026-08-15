@@ -81,12 +81,18 @@ describe('backup validation and serialization', () => {
     expect(backup).toMatchObject({
       app: 'Worth',
       version: 15,
-      appVersion: '3.4.0-final',
+      appVersion: '3.5.0-final',
       baseCurrency: 'USD',
       exportedAt: '2026-08-14T00:00:00.000Z',
       appSettings: settings,
     });
     expect(backup.accounts).not.toBe(validated.data.accounts);
+    expect(backup.appSettings.selectedRateAssetIds).not.toBe(
+      settings.selectedRateAssetIds,
+    );
+    expect(validateBackup(backup).settings?.selectedRateAssetIds).toEqual([
+      'btc',
+    ]);
   });
 
   it('round-trips custom taxonomy without sharing tag arrays', () => {

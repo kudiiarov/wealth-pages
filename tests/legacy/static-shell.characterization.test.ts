@@ -10,6 +10,27 @@ const uiSources = ['src/main.ts', 'src/ui/events.ts', 'src/ui/render.ts'].map(
 );
 
 describe('legacy static application shell', () => {
+  it('uses separate flat asset/account tabs and portfolio-only history', () => {
+    const document = new JSDOM(html).window.document;
+    expect(
+      Array.from(document.querySelectorAll<HTMLElement>('.tab[data-nav]')).map(
+        ({ dataset }) => dataset.nav,
+      ),
+    ).toEqual(['homeView', 'assetsView', 'accountsView', 'historyView']);
+    expect(document.getElementById('positionsView')).toBeNull();
+    expect(document.getElementById('portfolioSegment')).toBeNull();
+    expect(document.getElementById('historyScope')).toBeNull();
+    expect(document.getElementById('assetsList')).not.toBeNull();
+    expect(document.getElementById('accountsList')).not.toBeNull();
+    expect(document.getElementById('entityDetailView')).not.toBeNull();
+    expect(document.getElementById('entityDetailChart')).not.toBeNull();
+    expect(document.getElementById('portfolioRates')).not.toBeNull();
+    expect(document.getElementById('rateSelectionModal')).not.toBeNull();
+    expect(document.querySelector('.build-note')?.textContent).toContain(
+      '3.5.0-final',
+    );
+  });
+
   it('ships every local script, stylesheet, manifest, and icon it references', () => {
     const document = new JSDOM(html).window.document;
     const references = [
