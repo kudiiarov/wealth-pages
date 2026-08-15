@@ -1430,45 +1430,48 @@ html[data-theme='dark'] .security-icon {
   margin-top: 0;
 }
 .compact-allocation.account-allocation-summary {
-  margin: 24px 2px 0;
-  padding: 0 0 24px;
-  border-radius: 0;
-  border-bottom: 1px solid var(--line);
+  margin: 16px 0 0;
+  padding: 15px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 #accountAllocationSummary {
-  border-radius: 0;
+  border-radius: 20px;
 }
 .account-allocation-summary .allocation-bar {
-  height: 10px;
-  margin-bottom: 17px;
+  height: 9px;
+  margin-bottom: 13px;
 }
 .account-allocation-summary .compact-allocation-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0;
+  gap: 9px;
 }
 .account-allocation-summary .compact-allocation-key {
-  min-height: 42px;
-  grid-template-columns: 9px minmax(0, 1fr) auto;
-  gap: 11px;
-  border-bottom: 1px solid var(--line);
-  color: var(--ink);
-  font-size: 14px;
-}
-.account-allocation-summary .compact-allocation-key:last-child {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
   border-bottom: 0;
 }
 .account-allocation-summary .compact-allocation-key > span {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 .account-allocation-summary .compact-allocation-key strong {
-  font-weight: 520;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink);
+  font-weight: 650;
 }
 .account-allocation-summary .compact-allocation-key b {
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .portfolio-list-title {
   margin: 38px 2px 15px;
@@ -2272,9 +2275,14 @@ html[data-theme='dark'] .security-icon {
 }
 .chart-inspector {
   position: relative;
+  border-radius: 18px;
+  overflow: hidden;
 }
 .chart-inspector canvas {
   touch-action: pan-y;
+}
+#entityDetailChart {
+  border-radius: 18px;
 }
 .chart-tooltip {
   position: absolute;
@@ -2587,6 +2595,9 @@ html[data-theme='dark'] .security-icon {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px 15px;
+}
+#assetsView .compact-allocation-list {
+  grid-template-columns: 1fr;
 }
 .compact-allocation-key {
   min-width: 0;

@@ -533,20 +533,20 @@ test('summarizes the four largest assets and accounts without search controls', 
   await expect(page.locator('#accountAllocationList')).toContainText(
     'Остальные 2 счёта',
   );
-  await expect(page.locator('#accountAllocationSummary')).not.toHaveClass(
+  await expect(page.locator('#accountAllocationSummary')).toHaveClass(
     /surface/,
   );
   const allocationRadius = await page
     .locator('#accountAllocationSummary')
     .evaluate((element) => getComputedStyle(element).borderRadius);
-  expect(allocationRadius).toBe('0px');
+  expect(allocationRadius).toBe('20px');
   await expect(page.locator('#allAccountsTitle')).toHaveText('Все счета');
-  await expect(page.locator('#accountsList .portfolio-row')).toHaveCount(6);
+  await expect(page.locator('#accountsList .related-row')).toHaveCount(6);
   await expect(
-    page.locator('#accountsList .portfolio-row-main small'),
-  ).toHaveCount(0);
-  await expect(page.locator('#accountsList')).toHaveClass(
-    /flat-portfolio-list/,
+    page.locator('#accountsList .related-row > span > small'),
+  ).toHaveCount(6);
+  await expect(page.locator('#accountsList .holding-summary')).toHaveClass(
+    /surface/,
   );
 
   const accountLayout = await page.evaluate(() => ({

@@ -52,6 +52,17 @@ export function convertUsdToPriceCurrency(
   return rate > 0 ? usdValue / rate : Number.NaN;
 }
 
+function suggestedFractionDigits(value: number): number {
+  const absolute = Math.abs(value);
+  if (!Number.isFinite(absolute) || absolute === 0) return 2;
+  if (absolute >= 10_000) return 0;
+  if (absolute >= 1_000) return 1;
+  if (absolute >= 1) return 2;
+  if (absolute >= 0.01) return 4;
+  if (absolute >= 0.0001) return 6;
+  return 8;
+}
+
 export function formatMoney(
   usdValue: number,
   language: Language,
@@ -67,8 +78,7 @@ export function formatMoney(
   }
 
   const amount = convertUsdToDisplay(usdValue, displayAsset);
-  const absolute = Math.abs(amount);
-  const maximumFractionDigits = absolute >= 1000 ? 0 : absolute >= 10 ? 2 : 4;
+  const maximumFractionDigits = suggestedFractionDigits(amount);
   const formatted = new Intl.NumberFormat(locale(language), {
     minimumFractionDigits: 0,
     maximumFractionDigits,

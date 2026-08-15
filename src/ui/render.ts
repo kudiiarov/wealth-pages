@@ -783,14 +783,14 @@ export class WorthRenderer {
     this.element('accountPortfolioMeta').textContent =
       `${this.t('accountsCount', rows.length)} · ${snapshotLabel}`;
     this.element('accountsList').innerHTML = rows.length
-      ? rows
+      ? `<div class="holding-summary surface"><div class="related-list">${rows
           .map(({ account, value }) => {
             const pnl = this.homePnl(
               (position) => position.accountId === account.id,
             );
-            return `<button class="portfolio-row portfolio-flat-row" data-account-open="${escapeHtml(account.id)}" type="button"><span class="portfolio-row-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span class="portfolio-row-main"><strong>${escapeHtml(account.name)}</strong></span><span class="portfolio-row-value"><strong>${this.money(value)}</strong><small class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></span><i>›</i></button>`;
+            return `<button class="related-row related-row-valued" data-account-open="${escapeHtml(account.id)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span><strong>${escapeHtml(account.name)}</strong><small>${escapeHtml(this.accountTypeLabel(account.type))}</small></span><b>${this.money(value)}<small class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</small></b><i>›</i></button>`;
           })
-          .join('')
+          .join('')}</div></div>`
       : `<div class="empty-state">${this.t('emptyAccounts')}</div>`;
   }
 
