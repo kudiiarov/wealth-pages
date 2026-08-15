@@ -4,6 +4,7 @@ import type {
   Account,
   Asset,
   Language,
+  RatePair,
   Snapshot,
   SnapshotPosition,
 } from '../domain/models';
@@ -48,10 +49,10 @@ import {
   assetOverviewRows,
   categoryAllocationRows,
   inferAssetProfile,
-  portfolioExposures,
+  normalizeRatePairs,
   portfolioTags,
   priceFreshness,
-  selectedRateAssets,
+  ratePairRows,
   type PortfolioFilter,
 } from './portfolio-view-model';
 import type { AppRoute } from './routes';
@@ -649,18 +650,28 @@ export class WorthRenderer {
     moneyElement.className = `pnl-money ${style}`;
     percentElement.className = `pnl-percent ${style}`;
 
-    const rates = selectedRateAssets(
+    const legacyPairs = this.service.settings.selectedRateAssetIds.map(
+      (sourceAssetId) => ({
+        sourceAssetId,
+        quoteAssetId: this.service.settings.displayCurrency,
+      }),
+    );
+    const rates = ratePairRows(
       this.service.data,
-      this.service.settings.selectedRateAssetIds,
+      normalizeRatePairs(
+        this.service.data,
+        this.service.settings.ratePairs.length
+          ? this.service.settings.ratePairs
+          : legacyPairs,
+        this.service.settings.displayCurrency,
+      ),
     );
     this.element('portfolioRates').innerHTML = rates.length
       ? rates
-          .map((asset) => {
-            const pnl = this.homePnl(
-              (position) => position.assetId === asset.id,
-            );
-            return `<button class="rate-row" data-rate-asset="${escapeHtml(asset.id)}" type="button"><span class="driver-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span class="rate-identity"><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(asset.code)}</small><em class="rate-status ${this.assetPriceStatusClass(asset)}">${escapeHtml(this.assetPriceStatus(asset))}</em></span><span class="rate-change"><b class="${this.pnlClass(pnl)}">${this.pnlPercent(pnl)}</b><em>${this.money(Number(asset.price) || 0)}</em></span><i aria-hidden="true">›</i></button>`;
-          })
+          .map(
+            ({ source, quote, value }) =>
+              `<button class="rate-row" data-rate-asset="${escapeHtml(source.id)}" type="button"><span class="driver-icon ${this.iconLengthClass(this.assetIcon(source))}" style="background:${this.assetColor(source)}">${escapeHtml(this.assetIcon(source))}</span><span class="rate-identity"><strong>${escapeHtml(source.name)}</strong><em class="rate-status ${this.assetPriceStatusClass(source)}">${escapeHtml(this.assetPriceStatus(source))}</em></span><span class="rate-value">${value === undefined ? '—' : formatMoney(Number(source.price) || 0, this.language, quote.code === 'USD' ? undefined : quote)}</span><i aria-hidden="true">›</i></button>`,
+          )
           .join('')
       : `<div class="empty-state compact-empty">${this.t('emptyAssets')}</div>`;
 
@@ -679,16 +690,6 @@ export class WorthRenderer {
           )
           .join('')
       : `<div class="empty-state compact-empty">${this.t('emptyAllocation')}</div>`;
-
-    const exposures = portfolioExposures(this.service.data).slice(0, 6);
-    this.element('exposureList').innerHTML = exposures.length
-      ? exposures
-          .map(
-            ({ tag, percentage }) =>
-              `<button class="exposure-chip" data-nav="assetsView" data-exposure-filter="${escapeHtml(tag)}" type="button"><span>${escapeHtml(this.tagLabel(tag))}</span><b>${percentage.toFixed(0)}%</b></button>`,
-          )
-          .join('')
-      : `<span class="muted-inline">${this.t('noExposures')}</span>`;
 
     const freshness = priceFreshness(
       this.service.data,
@@ -812,21 +813,24 @@ export class WorthRenderer {
       : `<div class="empty-state">${this.t('emptyAccounts')}</div>`;
   }
 
-  renderRateSelection(): void {
-    const selected = new Set(
-      selectedRateAssets(
-        this.service.data,
-        this.service.settings.selectedRateAssetIds,
-      ).map(({ id }) => id),
-    );
-    this.element('rateSelectionList').innerHTML = assetOverviewRows(
-      this.service.data,
-    )
-      .map(
-        ({ asset }) =>
-          `<label class="rate-choice"><input type="checkbox" name="rateAsset" value="${escapeHtml(asset.id)}" ${selected.has(asset.id) ? 'checked' : ''}><span class="portfolio-row-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(asset.code)}</small></span></label>`,
-      )
+  renderRateSelection(pairs: readonly RatePair[]): void {
+    const options = (selectedId: string) =>
+      this.service.data.assets
+        .map(
+          (asset) =>
+            `<option value="${escapeHtml(asset.id)}" ${asset.id === selectedId ? 'selected' : ''}>${escapeHtml(asset.name)}</option>`,
+        )
+        .join('');
+    this.element('rateSelectionList').innerHTML = pairs
+      .map((pair, index) => {
+        const source = this.assetBy(pair.sourceAssetId);
+        return `<div class="rate-pair-row" data-rate-pair-index="${index}"><span class="portfolio-row-icon ${this.iconLengthClass(this.assetIcon(source))}" style="background:${this.assetColor(source)}">${escapeHtml(this.assetIcon(source))}</span><label><span>${this.t('sourceAsset')}</span><select name="rateSource">${options(pair.sourceAssetId)}</select></label><i aria-hidden="true">→</i><label><span>${this.t('quoteAsset')}</span><select name="rateQuote">${options(pair.quoteAssetId)}</select></label><button data-rate-pair-remove="${index}" aria-label="${escapeHtml(this.t('removeRate'))}" type="button">×</button></div>`;
+      })
       .join('');
+    const add = this.documentRef.querySelector<HTMLButtonElement>(
+      '[data-rate-pair-add]',
+    );
+    if (add) add.disabled = pairs.length >= 3;
     this.element('rateSelectionError').classList.add('hidden');
   }
 

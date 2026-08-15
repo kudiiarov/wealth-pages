@@ -47,7 +47,6 @@
 <h2 data-i18n="portfolioStructure">Структура портфеля</h2>
 <div class="structure-panel surface"><div aria-hidden="true" class="allocation-bar" id="categoryAllocationBar"></div><div class="category-list" id="categoryAllocationList"></div><button class="structure-link" data-nav="assetsView" type="button"><span data-i18n="viewAssets">Открыть активы</span><b>›</b></button></div>
 </section>
-<section class="home-insight-section exposure-section"><h2 data-i18n="exposures">Экспозиции</h2><div class="exposure-list" id="exposureList"></div></section>
 </section>
 <section aria-labelledby="assetsTitle" class="view" id="assetsView">
 <div class="page-heading portfolio-heading">
@@ -162,9 +161,10 @@
 <dialog class="modal" id="rateSelectionModal">
 <form class="sheet compact-sheet" id="rateSelectionForm">
 <div class="sheet-handle"></div>
-<div class="sheet-head"><div><div class="section-kicker" data-i18n="home">Главная</div><h2 data-i18n="chooseRates">Выберите курсы</h2></div><button class="close-button" data-close="rateSelectionModal" type="button">×</button></div>
-<p class="sheet-note" data-i18n="chooseRatesHint">От одного до трёх активов</p>
+<div class="sheet-head"><div><div class="section-kicker" data-i18n="home">Главная</div><h2 data-i18n="chooseRates">Курсы валют</h2></div><button class="close-button" data-close="rateSelectionModal" type="button">×</button></div>
+<p class="sheet-note" data-i18n="chooseRatesHint">Выберите актив и единицу отображения</p>
 <div class="rate-choice-list" id="rateSelectionList"></div>
+<button class="text-button rate-pair-add" data-rate-pair-add data-i18n="addRate" type="button">Добавить курс</button>
 <p aria-live="polite" class="inline-warning hidden" id="rateSelectionError"></p>
 <button class="sheet-primary" data-i18n="save" type="submit">Сохранить</button>
 </form>

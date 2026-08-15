@@ -4,6 +4,7 @@ import type {
   Asset,
   AutomationInterval,
   Position,
+  RatePair,
 } from '../domain/models';
 import {
   convertPriceCurrencyToUsd,
@@ -20,7 +21,7 @@ import {
   readPositionForm,
 } from './forms';
 import type { WorthRenderer } from './render';
-import { selectedRateAssets } from './portfolio-view-model';
+import { normalizeRatePairs } from './portfolio-view-model';
 import { formatAppRoute, parseAppRoute, type AppRoute } from './routes';
 
 interface ActionItem {
@@ -32,7 +33,7 @@ interface ActionItem {
 export class WorthController {
   private pendingActions: ActionItem[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
-  private rateSelectionOrder: string[] = [];
+  private ratePairDraft: RatePair[] = [];
 
   constructor(
     private readonly service: PortfolioService,
@@ -439,30 +440,66 @@ export class WorthController {
       this.openDialog('accountModal'),
     );
     this.element('configureRatesBtn').addEventListener('click', () => {
-      this.renderer.renderRateSelection();
-      this.rateSelectionOrder = selectedRateAssets(
+      const legacyPairs = this.service.settings.selectedRateAssetIds.map(
+        (sourceAssetId) => ({
+          sourceAssetId,
+          quoteAssetId: this.service.settings.displayCurrency,
+        }),
+      );
+      this.ratePairDraft = normalizeRatePairs(
         this.service.data,
-        this.service.settings.selectedRateAssetIds,
-      ).map(({ id }) => id);
+        this.service.settings.ratePairs.length
+          ? this.service.settings.ratePairs
+          : legacyPairs,
+        this.service.settings.displayCurrency,
+      );
+      this.renderer.renderRateSelection(this.ratePairDraft);
       this.openDialog('rateSelectionModal');
     });
     this.form('rateSelectionForm').addEventListener('change', (event) => {
       const input = event.target;
-      if (!(input instanceof HTMLInputElement) || input.name !== 'rateAsset')
-        return;
-      if (input.checked) {
-        if (this.rateSelectionOrder.length >= 3) {
-          input.checked = false;
-          this.showRateSelectionError(this.renderer.t('rateLimit'));
-          return;
-        }
-        this.rateSelectionOrder.push(input.value);
-      } else {
-        this.rateSelectionOrder = this.rateSelectionOrder.filter(
-          (id) => id !== input.value,
-        );
+      if (!(input instanceof HTMLSelectElement)) return;
+      if (input.name !== 'rateSource' && input.name !== 'rateQuote') return;
+      this.readRatePairDraft();
+      if (input.name === 'rateSource') {
+        this.renderer.renderRateSelection(this.ratePairDraft);
       }
       this.element('rateSelectionError').classList.add('hidden');
+    });
+    this.form('rateSelectionForm').addEventListener('click', (event) => {
+      const remove = closestElement<HTMLElement>(
+        event.target,
+        '[data-rate-pair-remove]',
+      );
+      if (remove?.dataset.ratePairRemove) {
+        this.readRatePairDraft();
+        this.ratePairDraft.splice(Number(remove.dataset.ratePairRemove), 1);
+        this.renderer.renderRateSelection(this.ratePairDraft);
+        return;
+      }
+      if (!closestElement<HTMLElement>(event.target, '[data-rate-pair-add]'))
+        return;
+      this.readRatePairDraft();
+      if (this.ratePairDraft.length >= 3) {
+        this.showRateSelectionError(this.renderer.t('rateLimit'));
+        return;
+      }
+      const used = new Set(
+        this.ratePairDraft.map(({ sourceAssetId }) => sourceAssetId),
+      );
+      const source = this.service.data.assets.find(({ id }) => !used.has(id));
+      const quote =
+        this.service.data.assets.find(
+          ({ code }) => code === this.service.settings.displayCurrency,
+        ) ??
+        this.service.data.assets.find(({ code }) => code === 'USD') ??
+        this.service.data.assets[0];
+      if (!source || !quote) return;
+      this.ratePairDraft.push({
+        sourceAssetId: source.id,
+        quoteAssetId: quote.id,
+      });
+      this.renderer.renderRateSelection(this.ratePairDraft);
     });
     this.element('displayCurrencyBtn').addEventListener('click', () => {
       this.renderer.renderCurrencyOptions();
@@ -539,15 +576,40 @@ export class WorthController {
     );
     this.form('rateSelectionForm').addEventListener('submit', (event) => {
       event.preventDefault();
-      if (!this.rateSelectionOrder.length) {
+      this.readRatePairDraft();
+      const ratePairs = normalizeRatePairs(
+        this.service.data,
+        this.ratePairDraft,
+        this.service.settings.displayCurrency,
+      );
+      if (!ratePairs.length) {
         this.showRateSelectionError(this.renderer.t('rateRequired'));
         return;
       }
       this.service.saveSettings({
-        selectedRateAssetIds: this.rateSelectionOrder.slice(0, 3),
+        ratePairs,
+        selectedRateAssetIds: ratePairs.map(
+          ({ sourceAssetId }) => sourceAssetId,
+        ),
       });
       this.closeDialog('rateSelectionModal');
       this.renderer.renderAll();
+    });
+  }
+
+  private readRatePairDraft(): void {
+    this.ratePairDraft = all<HTMLElement>(
+      '.rate-pair-row',
+      this.form('rateSelectionForm'),
+    ).flatMap((row) => {
+      const sourceAssetId = row.querySelector<HTMLSelectElement>(
+        '[name="rateSource"]',
+      )?.value;
+      const quoteAssetId =
+        row.querySelector<HTMLSelectElement>('[name="rateQuote"]')?.value;
+      return sourceAssetId && quoteAssetId
+        ? [{ sourceAssetId, quoteAssetId }]
+        : [];
     });
   }
 

@@ -80,6 +80,18 @@ async function seedPortfolio(page: Page): Promise<void> {
               tags: ['crypto'],
               priceUpdatedAt: currentTime,
             },
+            {
+              id: 'rub',
+              name: 'Ruble',
+              code: 'RUB',
+              icon: '₽',
+              color: '#d76032',
+              price: 1 / 86,
+              autoUpdateSource: 'frankfurter',
+              category: 'cash-currencies',
+              tags: ['currency'],
+              priceUpdatedAt: currentTime,
+            },
           ])
             assets.put(asset);
           for (const position of [
@@ -307,7 +319,7 @@ test('creates entities and opens their dedicated detail screens', async ({
   await expect(page.locator('#historyList .list-card')).toHaveCount(1);
 });
 
-test('shows and persists three configurable rates that open asset details', async ({
+test('shows and persists configurable asset pairs that open asset details', async ({
   page,
 }) => {
   await page.goto('/');
@@ -320,15 +332,17 @@ test('shows and persists three configurable rates that open asset details', asyn
   await expect(page.locator('#portfolioRates')).toContainText('Bitcoin');
   await expect(page.locator('#portfolioRates')).toContainText('Tether Gold');
   await expect(page.locator('#portfolioRates')).toContainText('Dollar');
-  await expect(
-    page.locator('[data-rate-asset="btc"] .rate-change'),
-  ).toContainText('$100.00');
-  await expect(
-    page.locator('[data-rate-asset="btc"] .rate-change > b'),
-  ).toContainText('%');
+  await expect(page.locator('[data-rate-asset="btc"]')).not.toContainText(
+    'BTC',
+  );
   await expect(
     page.locator('[data-rate-asset="btc"] .rate-status'),
   ).toContainText('Цена актуальна');
+  await expect(page.locator('.exposure-section')).toHaveCount(0);
+  const configureStyle = await page
+    .locator('#configureRatesBtn')
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(configureStyle).toBe('rgba(0, 0, 0, 0)');
 
   await page.locator('[data-rate-asset="btc"]').click();
   await expect(page).toHaveURL(/#\/assets\/btc$/);
@@ -345,57 +359,26 @@ test('shows and persists three configurable rates that open asset details', asyn
   await expect(page).toHaveURL(/#\/home$/);
 
   await page.locator('#configureRatesBtn').click();
-  await page.locator('.rate-choice').filter({ hasText: 'Ethereum' }).click();
-  await expect(page.locator('#rateSelectionError')).toContainText(
-    'не больше трёх',
-  );
-  await page.locator('.rate-choice').filter({ hasText: 'Dollar' }).click();
-  await page.locator('.rate-choice').filter({ hasText: 'Ethereum' }).click();
+  const dollarPair = page.locator('.rate-pair-row').filter({
+    has: page.locator('[name="rateSource"] option:checked', {
+      hasText: 'Dollar',
+    }),
+  });
+  await dollarPair.locator('[name="rateQuote"]').selectOption('rub');
   await page
     .locator('#rateSelectionForm')
     .getByRole('button', { name: 'Сохранить' })
     .click();
-  await expect(page.locator('#portfolioRates')).toContainText('Ethereum');
-  await expect(page.locator('#portfolioRates')).not.toContainText('Dollar');
+  await expect(
+    page.locator('[data-rate-asset="usd"] .rate-value'),
+  ).toContainText('86');
+  await expect(
+    page.locator('[data-rate-asset="usd"] .rate-value'),
+  ).toContainText('₽');
   await page.reload();
-  await expect(page.locator('#portfolioRates')).toContainText('Ethereum');
-  await expect(page.locator('#portfolioRates')).not.toContainText('Dollar');
-
-  await page.locator('#configureRatesBtn').click();
-  const checkedRates = page.locator(
-    '#rateSelectionForm [name="rateAsset"]:checked',
-  );
-  for (let index = (await checkedRates.count()) - 1; index >= 0; index -= 1) {
-    await checkedRates.nth(index).uncheck();
-  }
-  await page
-    .locator('.rate-choice')
-    .filter({ hasText: 'Ethereum' })
-    .locator('input')
-    .check();
-  await page
-    .locator('.rate-choice')
-    .filter({ hasText: 'Bitcoin' })
-    .locator('input')
-    .check();
-  await page
-    .locator('#rateSelectionForm')
-    .getByRole('button', { name: 'Сохранить' })
-    .click();
-  await expect(page.locator('#portfolioRates .rate-row').nth(0)).toContainText(
-    'Ethereum',
-  );
-  await expect(page.locator('#portfolioRates .rate-row').nth(1)).toContainText(
-    'Bitcoin',
-  );
-  await page.locator('#configureRatesBtn').click();
-  await page
-    .locator('#rateSelectionForm')
-    .getByRole('button', { name: 'Сохранить' })
-    .click();
-  await expect(page.locator('#portfolioRates .rate-row').nth(0)).toContainText(
-    'Ethereum',
-  );
+  await expect(
+    page.locator('[data-rate-asset="usd"] .rate-value'),
+  ).toContainText('86');
 
   const tabMetrics = await page.locator('.tab-bar').evaluate((element) => ({
     clientWidth: element.clientWidth,
