@@ -1006,7 +1006,7 @@ test('overview period updates row performance without changing totals or allocat
   await page.goto('/');
   await seedPortfolio(page);
   await page.evaluate(
-    ({ currentTime }) =>
+    () =>
       new Promise<void>((resolve, reject) => {
         const request = indexedDB.open('worth-local-portfolio', 2);
         request.onerror = () =>
@@ -1016,7 +1016,7 @@ test('overview period updates row performance without changing totals or allocat
           const transaction = database.transaction('snapshots', 'readwrite');
           transaction.objectStore('snapshots').put({
             id: 'today-is-not-a-baseline',
-            createdAt: currentTime,
+            createdAt: Date.now(),
             total: 9_999,
             accounts: [
               { accountId: 'vault', name: 'Vault', total: 9_000 },
@@ -1083,7 +1083,6 @@ test('overview period updates row performance without changing totals or allocat
             reject(transaction.error ?? new Error('Could not save snapshot'));
         };
       }),
-    { currentTime: Date.now() },
   );
   await page.reload();
   await page.locator('.tab[data-nav="assetsView"]').click();
