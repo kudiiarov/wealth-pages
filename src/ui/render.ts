@@ -972,7 +972,7 @@ export class WorthRenderer {
           );
           const previous = data[index - 1];
           const difference = previous ? item.value - previous.value : null;
-          return `<div class="list-card"><span class="history-dot"></span><div class="list-main"><strong>${formatDate(item.snapshot.createdAt, this.language)}</strong><small>${formatTime(item.snapshot.createdAt, this.language)}${difference === null ? ` · ${this.t('firstSnapshot')}` : ` · ${difference >= 0 ? '+' : '−'}${this.money(Math.abs(difference))}`}</small></div><div class="list-value"><strong>${this.money(item.value)}</strong></div><button class="menu-button" data-snapshot-menu="${item.snapshot.id}" aria-label="${this.t('actions')}">···</button></div>`;
+          return `<div class="list-card"><div class="list-main"><strong>${formatDate(item.snapshot.createdAt, this.language)}</strong><small>${formatTime(item.snapshot.createdAt, this.language)}${difference === null ? ` · ${this.t('firstSnapshot')}` : ` · ${difference >= 0 ? '+' : '−'}${this.money(Math.abs(difference))}`}</small></div><div class="list-value"><strong>${this.money(item.value)}</strong></div><button class="menu-button" data-snapshot-menu="${item.snapshot.id}" aria-label="${this.t('actions')}">···</button></div>`;
         })
         .join('');
     }
@@ -1078,11 +1078,10 @@ export class WorthRenderer {
     const start = this.detailPeriodStart();
     const historical = assetPriceHistorySeries(
       this.detailRoute.id,
-      this.service.data.snapshots,
+      this.service.data.priceHistory,
     ).filter(({ createdAt }) => start === undefined || createdAt >= start);
     if (historical.length < 2) return [];
-    const current = Number(this.assetBy(this.detailRoute.id)?.price) || 0;
-    return [...historical, { createdAt: Date.now(), value: current }];
+    return historical;
   }
 
   private detailPeriodStart(): number | undefined {

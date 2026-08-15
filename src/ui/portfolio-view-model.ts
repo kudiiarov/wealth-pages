@@ -3,6 +3,7 @@ import type {
   Asset,
   AssetCategory,
   PortfolioData,
+  PriceHistoryPoint,
   RatePair,
   Snapshot,
 } from '../domain/models';
@@ -301,17 +302,14 @@ export function assetHistorySeries(
 
 export function assetPriceHistorySeries(
   assetId: string,
-  snapshots: readonly Snapshot[],
+  points: readonly PriceHistoryPoint[],
 ): HistoryDatum[] {
-  return snapshots
-    .flatMap((snapshot) => {
-      const price = snapshot.assets?.find(
-        (asset) => asset.assetId === assetId,
-      )?.price;
-      return typeof price === 'number' && Number.isFinite(price)
-        ? [{ createdAt: snapshot.createdAt, value: price }]
-        : [];
-    })
+  return points
+    .filter(
+      (point) =>
+        point.assetId === assetId && Number.isFinite(point.usdPrice),
+    )
+    .map((point) => ({ createdAt: point.createdAt, value: point.usdPrice }))
     .sort((left, right) => left.createdAt - right.createdAt);
 }
 

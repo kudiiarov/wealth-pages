@@ -154,22 +154,25 @@ it('extracts chronological unit-price history independently of holding value', (
   expect(
     assetPriceHistorySeries('btc', [
       {
-        id: 'later',
+        id: 'daily-price:btc:later',
+        assetId: 'btc',
+        dayKey: 'later',
         createdAt: 200,
-        total: 2,
-        assets: [{ assetId: 'btc', code: 'BTC', price: 45_000, value: 900 }],
+        usdPrice: 45_000,
       },
       {
-        id: 'invalid',
+        id: 'daily-price:eth:middle',
+        assetId: 'eth',
+        dayKey: 'middle',
         createdAt: 150,
-        total: 1,
-        assets: [{ assetId: 'btc', code: 'BTC', value: 800 }],
+        usdPrice: 3_000,
       },
       {
-        id: 'earlier',
+        id: 'daily-price:btc:earlier',
+        assetId: 'btc',
+        dayKey: 'earlier',
         createdAt: 100,
-        total: 1,
-        assets: [{ assetId: 'btc', code: 'BTC', price: 44_000, value: 440 }],
+        usdPrice: 44_000,
       },
     ]),
   ).toEqual([

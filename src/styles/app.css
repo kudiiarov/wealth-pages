@@ -438,13 +438,6 @@ svg {
 .history-list {
   margin-top: 14px;
 }
-.history-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 0 5px rgba(33, 194, 107, 0.1);
-}
 .info-surface {
   text-align: center;
   padding: 28px 22px;
