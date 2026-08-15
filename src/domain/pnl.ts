@@ -1,4 +1,7 @@
-import type { PnlPeriod, SnapshotPosition } from './models';
+import type { PnlPeriod, PriceHistoryPoint, SnapshotPosition } from './models';
+import { localDayKey } from './daily-history';
+
+export type OverviewPnlPeriod = '24h' | 'all';
 
 export interface PnlPointAsset {
   assetId: string;
@@ -17,6 +20,96 @@ export interface PnlResult {
   baseCapital: number;
   positiveFlows: number;
   baselineAt: number;
+}
+
+const finitePositive = (value: unknown): number | undefined => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : undefined;
+};
+
+function quotePriceForPoint(
+  point: PnlPoint,
+  quoteAssetId: string,
+  priceHistory: readonly PriceHistoryPoint[],
+): number | undefined {
+  const inPoint = finitePositive(
+    point.assets.find((asset) => asset.assetId === quoteAssetId)?.price,
+  );
+  if (inPoint !== undefined) return inPoint;
+  const dayKey = localDayKey(point.createdAt);
+  const matching = priceHistory
+    .filter(
+      (history) =>
+        history.assetId === quoteAssetId &&
+        (history.dayKey === dayKey ||
+          localDayKey(history.createdAt) === dayKey),
+    )
+    .map((history) => finitePositive(history.usdPrice))
+    .filter((price): price is number => price !== undefined);
+  return matching.at(-1);
+}
+
+export function normalizePnlPointInQuote(
+  point: PnlPoint,
+  quoteAssetId: string | undefined,
+  priceHistory: readonly PriceHistoryPoint[],
+): PnlPoint | null {
+  if (!quoteAssetId)
+    return {
+      ...point,
+      positions: point.positions.map((position) => ({ ...position })),
+      assets: point.assets.map((asset) => ({ ...asset })),
+    };
+
+  const quotePrice = quotePriceForPoint(point, quoteAssetId, priceHistory);
+  const hasNonQuotePosition = point.positions.some(
+    (position) => position.assetId !== quoteAssetId,
+  );
+  if (hasNonQuotePosition && quotePrice === undefined) return null;
+  const divisor = quotePrice ?? 1;
+  const assets = point.assets.map((asset) => ({
+    ...asset,
+    price:
+      asset.assetId === quoteAssetId
+        ? 1
+        : (finitePositive(asset.price) ?? 0) / divisor,
+  }));
+  if (!assets.some((asset) => asset.assetId === quoteAssetId)) {
+    assets.push({ assetId: quoteAssetId, price: 1 });
+  }
+  const positions = point.positions.map((position) => {
+    const sourcePrice =
+      finitePositive(
+        point.assets.find((asset) => asset.assetId === position.assetId)?.price,
+      ) ??
+      finitePositive(position.price) ??
+      0;
+    const price = position.assetId === quoteAssetId ? 1 : sourcePrice / divisor;
+    return { ...position, price, value: Number(position.quantity) * price };
+  });
+  return { ...point, positions, assets };
+}
+
+export function normalizePnlSeriesInQuote(
+  points: readonly PnlPoint[],
+  quoteAssetId: string | undefined,
+  priceHistory: readonly PriceHistoryPoint[],
+): PnlPoint[] {
+  return points.flatMap((point) => {
+    const normalized = normalizePnlPointInQuote(
+      point,
+      quoteAssetId,
+      priceHistory,
+    );
+    return normalized ? [normalized] : [];
+  });
+}
+
+export function pnlPointTotal(point: PnlPoint): number {
+  return point.positions.reduce(
+    (total, position) => total + numeric(position.value),
+    0,
+  );
 }
 
 interface IntervalResult {
@@ -142,4 +235,40 @@ export function selectPnlSeriesSince(
     else break;
   }
   return [...snapshots.slice(baselineIndex), current];
+}
+
+export function selectOverviewPnlSeries(
+  snapshots: readonly PnlPoint[],
+  current: PnlPoint,
+  period: OverviewPnlPeriod,
+  now: number,
+  currentDayKey: string,
+): PnlPoint[] {
+  if (snapshots.length === 0) return [];
+  const sorted = [...snapshots].sort(
+    (left, right) => left.createdAt - right.createdAt,
+  );
+  if (period === 'all') return [...sorted, current];
+
+  const cutoff = now - 86_400_000;
+  let baseline: PnlPoint | undefined;
+  for (const snapshot of sorted) {
+    if (
+      snapshot.createdAt <= cutoff &&
+      localDayKey(snapshot.createdAt) !== currentDayKey
+    ) {
+      baseline = snapshot;
+    }
+  }
+  if (!baseline) return [];
+  const baselineCreatedAt = baseline.createdAt;
+  return [
+    baseline,
+    ...sorted.filter(
+      (snapshot) =>
+        snapshot.createdAt > baselineCreatedAt &&
+        localDayKey(snapshot.createdAt) !== currentDayKey,
+    ),
+    current,
+  ];
 }
