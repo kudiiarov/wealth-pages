@@ -4,15 +4,20 @@ import {
   accountOverviewRows,
   accountHistorySeries,
   allocationRows,
+  assetPriceHistorySeries,
   assetHistorySeries,
   assetMatchesPortfolioFilter,
   assetOverviewRows,
   categoryAllocationRows,
+  compactAccountAllocation,
+  compactAssetAllocation,
   inferAssetProfile,
   portfolioDrivers,
   portfolioExposures,
   portfolioTags,
   priceFreshness,
+  ratePairRows,
+  normalizeRatePairs,
   selectedRateAssets,
 } from '../../src/ui/portfolio-view-model';
 import type { PortfolioData } from '../../src/domain/models';
@@ -77,6 +82,148 @@ it('orders allocation by absolute value without truncating the bar data', () => 
     ['z', 20],
     ['w', 10],
   ]);
+});
+
+it('normalizes arbitrary asset pairs and converts through USD prices', () => {
+  const data: PortfolioData = {
+    accounts: [],
+    assets: [
+      {
+        id: 'usd',
+        name: 'Dollar',
+        code: 'USD',
+        icon: '$',
+        color: '#111111',
+        price: 1,
+        autoUpdateSource: 'none',
+      },
+      {
+        id: 'rub',
+        name: 'Ruble',
+        code: 'RUB',
+        icon: '₽',
+        color: '#222222',
+        price: 1 / 86,
+        autoUpdateSource: 'frankfurter',
+      },
+      {
+        id: 'btc',
+        name: 'Bitcoin',
+        code: 'BTC',
+        icon: 'B',
+        color: '#333333',
+        price: 45_000,
+        autoUpdateSource: 'coingecko',
+      },
+      {
+        id: 'broken',
+        name: 'Broken',
+        code: 'BAD',
+        icon: '!',
+        color: '#444444',
+        price: 0,
+        autoUpdateSource: 'none',
+      },
+    ],
+    positions: [],
+    snapshots: [],
+  };
+
+  const pairs = normalizeRatePairs(data, [
+    { sourceAssetId: 'usd', quoteAssetId: 'rub' },
+    { sourceAssetId: 'btc', quoteAssetId: 'USD' },
+    { sourceAssetId: 'usd', quoteAssetId: 'btc' },
+    { sourceAssetId: 'deleted', quoteAssetId: 'usd' },
+  ]);
+  expect(pairs).toEqual([
+    { sourceAssetId: 'usd', quoteAssetId: 'rub' },
+    { sourceAssetId: 'btc', quoteAssetId: 'usd' },
+  ]);
+  expect(ratePairRows(data, pairs).map(({ value }) => value)).toEqual([
+    86, 45_000,
+  ]);
+  expect(
+    ratePairRows(data, [{ sourceAssetId: 'btc', quoteAssetId: 'broken' }])[0]
+      ?.value,
+  ).toBeUndefined();
+});
+
+it('extracts chronological unit-price history independently of holding value', () => {
+  expect(
+    assetPriceHistorySeries('btc', [
+      {
+        id: 'later',
+        createdAt: 200,
+        total: 2,
+        assets: [{ assetId: 'btc', code: 'BTC', price: 45_000, value: 900 }],
+      },
+      {
+        id: 'invalid',
+        createdAt: 150,
+        total: 1,
+        assets: [{ assetId: 'btc', code: 'BTC', value: 800 }],
+      },
+      {
+        id: 'earlier',
+        createdAt: 100,
+        total: 1,
+        assets: [{ assetId: 'btc', code: 'BTC', price: 44_000, value: 440 }],
+      },
+    ]),
+  ).toEqual([
+    { createdAt: 100, value: 44_000 },
+    { createdAt: 200, value: 45_000 },
+  ]);
+});
+
+it('collapses asset and account allocation after the four largest rows', () => {
+  const data: PortfolioData = {
+    accounts: Array.from({ length: 6 }, (_, index) => ({
+      id: `account-${index + 1}`,
+      name: `Account ${index + 1}`,
+      type: 'bank',
+      icon: String(index + 1),
+      color: '#111111',
+    })),
+    assets: Array.from({ length: 6 }, (_, index) => ({
+      id: `asset-${index + 1}`,
+      name: `Asset ${index + 1}`,
+      code: `A${index + 1}`,
+      icon: String(index + 1),
+      color: '#111111',
+      price: 1,
+      autoUpdateSource: 'none' as const,
+    })),
+    positions: [60, 50, 40, 30, 20, 10].map((quantity, index) => ({
+      id: `position-${index + 1}`,
+      accountId: `account-${index + 1}`,
+      assetId: `asset-${index + 1}`,
+      quantity,
+      comment: '',
+    })),
+    snapshots: [],
+  };
+
+  expect(compactAssetAllocation(data)).toMatchObject([
+    { kind: 'asset', id: 'asset-1', value: 60 },
+    { kind: 'asset', id: 'asset-2', value: 50 },
+    { kind: 'asset', id: 'asset-3', value: 40 },
+    { kind: 'asset', id: 'asset-4', value: 30 },
+    { kind: 'other', count: 2, value: 30 },
+  ]);
+  expect(compactAccountAllocation(data)).toMatchObject([
+    { kind: 'account', id: 'account-1', value: 60 },
+    { kind: 'account', id: 'account-2', value: 50 },
+    { kind: 'account', id: 'account-3', value: 40 },
+    { kind: 'account', id: 'account-4', value: 30 },
+    { kind: 'other', count: 2, value: 30 },
+  ]);
+  expect(
+    compactAssetAllocation(data).reduce(
+      (sum, { percentage }) => sum + percentage,
+      0,
+    ),
+  ).toBeCloseTo(100);
 });
 
 it('orders account and asset overviews by absolute value including empty entities', () => {

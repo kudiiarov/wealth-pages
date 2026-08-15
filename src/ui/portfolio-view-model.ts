@@ -3,6 +3,7 @@ import type {
   Asset,
   AssetCategory,
   PortfolioData,
+  RatePair,
   Snapshot,
 } from '../domain/models';
 import { flowAdjustedPnl, type PnlPoint } from '../domain/pnl';
@@ -19,6 +20,29 @@ export interface AccountOverviewRow {
   account: Account;
   value: number;
 }
+
+export interface RatePairRow {
+  pair: RatePair;
+  source: Asset;
+  quote: Asset;
+  value?: number;
+}
+
+export type CompactAllocationRow =
+  | {
+      kind: 'asset' | 'account';
+      id: string;
+      name: string;
+      color: string;
+      value: number;
+      percentage: number;
+    }
+  | {
+      kind: 'other';
+      count: number;
+      value: number;
+      percentage: number;
+    };
 
 export interface AssetProfile {
   category: AssetCategory;
@@ -112,6 +136,134 @@ export function assetOverviewRows(data: PortfolioData): AllocationRow[] {
     .sort((left, right) => Math.abs(right.value) - Math.abs(left.value));
 }
 
+function resolveAsset(
+  data: PortfolioData,
+  reference: string,
+): Asset | undefined {
+  const normalized = reference.toLocaleUpperCase();
+  return data.assets.find(
+    ({ id, code }) =>
+      id === reference || code.toLocaleUpperCase() === normalized,
+  );
+}
+
+export function normalizeRatePairs(
+  data: PortfolioData,
+  configured: readonly RatePair[],
+  fallbackQuoteCode = 'USD',
+  limit = 3,
+): RatePair[] {
+  const sources = new Set<string>();
+  const normalized = configured.flatMap((pair) => {
+    const source = resolveAsset(data, pair.sourceAssetId);
+    const quote = resolveAsset(data, pair.quoteAssetId);
+    if (!source || !quote || sources.has(source.id)) return [];
+    sources.add(source.id);
+    return [{ sourceAssetId: source.id, quoteAssetId: quote.id }];
+  });
+  if (normalized.length) return normalized.slice(0, limit);
+
+  const quote =
+    resolveAsset(data, fallbackQuoteCode) ??
+    resolveAsset(data, 'USD') ??
+    data.assets[0];
+  if (!quote) return [];
+  return assetOverviewRows(data)
+    .slice(0, limit)
+    .map(({ asset }) => ({
+      sourceAssetId: asset.id,
+      quoteAssetId: quote.id,
+    }));
+}
+
+export function ratePairRows(
+  data: PortfolioData,
+  pairs: readonly RatePair[],
+): RatePairRow[] {
+  return pairs.flatMap((pair) => {
+    const source = resolveAsset(data, pair.sourceAssetId);
+    const quote = resolveAsset(data, pair.quoteAssetId);
+    if (!source || !quote) return [];
+    const sourcePrice = Number(source.price);
+    const quotePrice = Number(quote.price);
+    const value =
+      Number.isFinite(sourcePrice) &&
+      Number.isFinite(quotePrice) &&
+      quotePrice > 0
+        ? sourcePrice / quotePrice
+        : undefined;
+    return [{ pair, source, quote, ...(value === undefined ? {} : { value }) }];
+  });
+}
+
+function compactAllocation(
+  rows: readonly { id: string; name: string; color: string; value: number }[],
+  kind: 'asset' | 'account',
+  limit: number,
+): CompactAllocationRow[] {
+  const nonEmpty = rows.filter(({ value }) => value !== 0);
+  const gross = nonEmpty.reduce((sum, { value }) => sum + Math.abs(value), 0);
+  if (!gross) return [];
+  const visible = nonEmpty
+    .slice(0, limit)
+    .map(({ id, name, color, value }) => ({
+      kind,
+      id,
+      name,
+      color,
+      value,
+      percentage: (Math.abs(value) / gross) * 100,
+    }));
+  const remainder = nonEmpty.slice(limit);
+  const otherValue = remainder.reduce(
+    (sum, { value }) => sum + Math.abs(value),
+    0,
+  );
+  return otherValue
+    ? [
+        ...visible,
+        {
+          kind: 'other',
+          count: remainder.length,
+          value: otherValue,
+          percentage: (otherValue / gross) * 100,
+        },
+      ]
+    : visible;
+}
+
+export function compactAssetAllocation(
+  data: PortfolioData,
+  limit = 4,
+): CompactAllocationRow[] {
+  return compactAllocation(
+    assetOverviewRows(data).map(({ asset, value }) => ({
+      id: asset.id,
+      name: asset.name,
+      color: asset.color,
+      value,
+    })),
+    'asset',
+    limit,
+  );
+}
+
+export function compactAccountAllocation(
+  data: PortfolioData,
+  limit = 4,
+): CompactAllocationRow[] {
+  return compactAllocation(
+    accountOverviewRows(data).map(({ account, value }) => ({
+      id: account.id,
+      name: account.name,
+      color: account.color,
+      value,
+    })),
+    'account',
+    limit,
+  );
+}
+
 export function selectedRateAssets(
   data: PortfolioData,
   selectedIds: readonly string[],
@@ -142,6 +294,22 @@ export function assetHistorySeries(
       )?.value;
       return typeof value === 'number' && Number.isFinite(value)
         ? [{ createdAt: snapshot.createdAt, value }]
+        : [];
+    })
+    .sort((left, right) => left.createdAt - right.createdAt);
+}
+
+export function assetPriceHistorySeries(
+  assetId: string,
+  snapshots: readonly Snapshot[],
+): HistoryDatum[] {
+  return snapshots
+    .flatMap((snapshot) => {
+      const price = snapshot.assets?.find(
+        (asset) => asset.assetId === assetId,
+      )?.price;
+      return typeof price === 'number' && Number.isFinite(price)
+        ? [{ createdAt: snapshot.createdAt, value: price }]
         : [];
     })
     .sort((left, right) => left.createdAt - right.createdAt);
