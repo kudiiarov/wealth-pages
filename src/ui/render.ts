@@ -12,13 +12,17 @@ import { validColor } from '../domain/normalize';
 import { assetTotal, portfolioTotal } from '../domain/portfolio';
 import {
   flowAdjustedPnl,
+  normalizePnlSeriesInQuote,
+  pnlPointTotal,
+  selectOverviewPnlSeries,
   selectPnlSeriesSince,
   type PnlPoint,
   type PnlResult,
 } from '../domain/pnl';
+import { localDayKey } from '../domain/daily-history';
 import {
-  convertUsdToDisplay,
   formatDate,
+  formatDisplayMoney,
   formatExactMoney,
   formatMoney,
   formatNumber,
@@ -73,6 +77,7 @@ const palette = [
 export interface UiState {
   homePeriod: '1d' | '1w' | '1m' | '1y' | 'all';
   detailPeriod: '1d' | '1w' | '1m' | '1y' | 'all';
+  overviewPeriod: '24h' | 'all';
   portfolioFilter: PortfolioFilter;
   assetQuery: string;
   accountQuery: string;
@@ -97,6 +102,7 @@ export class WorthRenderer {
   readonly ui: UiState = {
     homePeriod: 'all',
     detailPeriod: 'all',
+    overviewPeriod: 'all',
     portfolioFilter: { kind: 'all' },
     assetQuery: '',
     accountQuery: '',
@@ -250,10 +256,9 @@ export class WorthRenderer {
         value,
       })),
       {
-        displayValue: (value) =>
-          convertUsdToDisplay(value, this.displayAsset()),
+        displayValue: (value) => value,
         displayUnit: () => this.displayAsset()?.icon || '$',
-        money: (value) => this.money(value),
+        money: (value) => this.displayPnlMoney(value),
         language: this.language,
       },
       this.historyChartSelection,
@@ -429,6 +434,12 @@ export class WorthRenderer {
   money(value: number): string {
     if (this.service.settings.balancesHidden) return '••••';
     return formatMoney(value, this.language, this.displayAsset());
+  }
+
+  private displayPnlMoney(value: number): string {
+    return this.service.settings.balancesHidden
+      ? '••••'
+      : formatDisplayMoney(value, this.language, this.displayAsset());
   }
 
   private renderPrivacyToggle(): void {
@@ -639,8 +650,8 @@ export class WorthRenderer {
           : '';
     moneyElement.textContent = result
       ? this.service.settings.balancesHidden
-        ? this.money(Math.abs(result.pnl))
-        : `${sign}${this.money(Math.abs(result.pnl))}`
+        ? this.displayPnlMoney(Math.abs(result.pnl))
+        : `${sign}${this.displayPnlMoney(Math.abs(result.pnl))}`
       : '—';
     percentElement.textContent = result
       ? `${sign}${Math.abs(result.pct || 0).toFixed(2)}%`
@@ -868,7 +879,7 @@ export class WorthRenderer {
       metadata.classList.remove('hidden');
       metadata.classList.remove('account-detail-metadata');
       holding.classList.remove('hidden');
-      holding.innerHTML = `<div class="holding-summary-head"><strong>${this.money(value)}</strong><small>${formatNumber(quantity, this.language)} ${escapeHtml(asset.code)} · ${share.toFixed(1)}% ${this.t('ofPortfolio')}</small><span class="${this.pnlClass(pnl)}">${pnl ? `${pnlSign}${this.money(Math.abs(pnl.pnl))}` : '—'}<small>${this.pnlPercent(pnl)} · ${this.t('pnlVsFirst').toLocaleLowerCase(locale(this.language))}</small></span></div>`;
+      holding.innerHTML = `<div class="holding-summary-head"><strong>${this.money(value)}</strong><small>${formatNumber(quantity, this.language)} ${escapeHtml(asset.code)} · ${share.toFixed(1)}% ${this.t('ofPortfolio')}</small><span class="${this.pnlClass(pnl)}">${pnl ? `${pnlSign}${this.displayPnlMoney(Math.abs(pnl.pnl))}` : '—'}<small>${this.pnlPercent(pnl)} · ${this.t('pnlVsFirst').toLocaleLowerCase(locale(this.language))}</small></span></div>`;
       const positions = this.service.data.positions.filter(
         ({ assetId }) => assetId === asset.id,
       );
@@ -887,7 +898,7 @@ export class WorthRenderer {
                   : positionPnl?.pnl && positionPnl.pnl < 0
                     ? '−'
                     : '';
-              return `<button class="related-row related-row-valued" data-position-open="${escapeHtml(position.id)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}</small></span><b>${this.money(Number(position.quantity) * Number(asset.price))}<small class="${this.pnlClass(positionPnl)}">${positionPnl ? `${positionSign}${this.money(Math.abs(positionPnl.pnl))}` : '—'}</small></b><i>›</i></button>`;
+              return `<button class="related-row related-row-valued" data-position-open="${escapeHtml(position.id)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}</small></span><b>${this.money(Number(position.quantity) * Number(asset.price))}<small class="${this.pnlClass(positionPnl)}">${positionPnl ? `${positionSign}${this.displayPnlMoney(Math.abs(positionPnl.pnl))}` : '—'}</small></b><i>›</i></button>`;
             })
             .join('')
         : `<div class="empty-state compact-empty">${this.t('emptyAsset')}</div>`;
@@ -945,7 +956,7 @@ export class WorthRenderer {
           );
           const previous = data[index - 1];
           const difference = previous ? item.value - previous.value : null;
-          return `<div class="list-card ui-list-row ui-surface history-row"><div class="list-main"><strong>${formatDate(item.snapshot.createdAt, this.language)}</strong><small>${formatTime(item.snapshot.createdAt, this.language)}${difference === null ? ` · ${this.t('firstSnapshot')}` : ` · ${difference >= 0 ? '+' : '−'}${this.money(Math.abs(difference))}`}</small></div><div class="list-value"><strong>${this.money(item.value)}</strong></div><button class="ui-icon-button menu-button" data-snapshot-menu="${item.snapshot.id}" aria-label="${this.t('actions')}">···</button></div>`;
+          return `<div class="list-card ui-list-row ui-surface history-row"><div class="list-main"><strong>${formatDate(item.snapshot.createdAt, this.language)}</strong><small>${formatTime(item.snapshot.createdAt, this.language)}${difference === null ? ` · ${this.t('firstSnapshot')}` : ` · ${difference >= 0 ? '+' : '−'}${this.displayPnlMoney(Math.abs(difference))}`}</small></div><div class="list-value"><strong>${this.displayPnlMoney(item.value)}</strong></div><button class="ui-icon-button menu-button" data-snapshot-menu="${item.snapshot.id}" aria-label="${this.t('actions')}">···</button></div>`;
         })
         .join('');
     }
@@ -1010,10 +1021,13 @@ export class WorthRenderer {
   }
 
   private historyData(): HistoryItem[] {
-    return this.service.data.snapshots.map((snapshot) => ({
-      snapshot,
-      value: Number(snapshot.total) || 0,
-    }));
+    const pointsByCreatedAt = new Map(
+      this.normalizedPnlPoints().map((point) => [point.createdAt, point]),
+    );
+    return this.service.data.snapshots.flatMap((snapshot) => {
+      const point = pointsByCreatedAt.get(snapshot.createdAt);
+      return point ? [{ snapshot, value: pnlPointTotal(point) }] : [];
+    });
   }
 
   private homePeriodStart(): number | undefined {
@@ -1028,48 +1042,28 @@ export class WorthRenderer {
       : Date.now() - durations[this.ui.homePeriod];
   }
 
-  private homeReferencePoint(): PnlPoint | undefined {
-    const series = this.homePnlSeries();
-    return series.length > 1 ? series[0] : undefined;
-  }
-
-  private homeReferenceSnapshot(): Snapshot | undefined {
-    const point = this.homeReferencePoint();
-    return point
-      ? this.service.data.snapshots.find(
-          ({ createdAt }) => createdAt === point.createdAt,
-        )
-      : undefined;
-  }
-
   private homePnl(
     include: (position: SnapshotPosition) => boolean,
   ): PnlResult | null {
-    return flowAdjustedPnl(this.homePnlSeries(), include);
+    return flowAdjustedPnl(this.overviewPnlSeries(), include);
   }
 
-  private homePnlSeries(): PnlPoint[] {
+  private homeChartPnlSeries(): PnlPoint[] {
+    const points = this.normalizedPnlPoints();
+    const current = points.at(-1);
+    if (!current) return [];
     return selectPnlSeriesSince(
-      this.compatibleSnapshots(),
-      this.currentPnlPoint(),
+      points.slice(0, -1),
+      current,
       this.homePeriodStart(),
     );
   }
 
   private homeSeries(): HistoryDatum[] {
-    const start = this.homePeriodStart();
-    const snapshots = this.service.data.snapshots.filter(
-      ({ createdAt }) => start === undefined || createdAt >= start,
-    );
-    const reference = this.homeReferenceSnapshot();
-    const series =
-      reference && !snapshots.some(({ id }) => id === reference.id)
-        ? [reference, ...snapshots]
-        : snapshots;
-    return [
-      ...series.map(({ createdAt, total }) => ({ createdAt, value: total })),
-      { createdAt: Date.now(), value: portfolioTotal(this.service.data) },
-    ];
+    return this.homeChartPnlSeries().map((point) => ({
+      createdAt: point.createdAt,
+      value: pnlPointTotal(point),
+    }));
   }
 
   private detailSeries(): HistoryDatum[] {
@@ -1193,6 +1187,28 @@ export class WorthRenderer {
             },
           ]
         : [],
+    );
+  }
+
+  private normalizedPnlPoints(): PnlPoint[] {
+    return normalizePnlSeriesInQuote(
+      [...this.compatibleSnapshots(), this.currentPnlPoint()],
+      this.displayAsset()?.id,
+      this.service.data.priceHistory,
+    );
+  }
+
+  private overviewPnlSeries(): PnlPoint[] {
+    const points = this.normalizedPnlPoints();
+    const current = points.at(-1);
+    if (!current) return [];
+    const now = current.createdAt;
+    return selectOverviewPnlSeries(
+      points.slice(0, -1),
+      current,
+      this.ui.overviewPeriod,
+      now,
+      localDayKey(now),
     );
   }
 

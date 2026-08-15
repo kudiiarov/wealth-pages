@@ -4,6 +4,7 @@ import type { Asset } from '../../src/domain/models';
 import {
   convertPriceCurrencyToUsd,
   convertUsdToDisplay,
+  formatDisplayMoney,
   formatExactMoney,
   formatMoney,
   formatPrice,
@@ -44,6 +45,20 @@ describe('locale and currency formatting', () => {
   it('formats USD and asset-denominated money like the legacy interface', () => {
     expect(formatMoney(12.5, 'en')).toBe('$12.50');
     expect(formatMoney(100, 'en', euro)).toBe('50 €');
+  });
+
+  it('formats already converted display money without converting it again', () => {
+    const rubAsset: Asset = {
+      ...euro,
+      id: 'rub',
+      name: 'Ruble',
+      code: 'RUB',
+      icon: '₽',
+      price: 0.011,
+    };
+
+    expect(formatDisplayMoney(15.48, 'en', rubAsset)).toBe('15.48 ₽');
+    expect(formatMoney(15.48 * rubAsset.price, 'en', rubAsset)).toBe('15.48 ₽');
   });
 
   it('keeps two decimal places for exact chart inspection values', () => {

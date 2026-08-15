@@ -283,6 +283,174 @@ async function seedPortfolio(page: Page): Promise<void> {
   );
 }
 
+async function seedCurrencyAwarePerformance(
+  page: Page,
+  includeHistoricalXautQuote = true,
+): Promise<void> {
+  const now = Date.now();
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await page.evaluate(
+    ({ currentTime, hasHistoricalXautQuote }) =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 2);
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction(
+            ['accounts', 'assets', 'positions', 'snapshots', 'priceHistory'],
+            'readwrite',
+          );
+          const accounts = transaction.objectStore('accounts');
+          const assets = transaction.objectStore('assets');
+          const positions = transaction.objectStore('positions');
+          const snapshots = transaction.objectStore('snapshots');
+          const priceHistory = transaction.objectStore('priceHistory');
+          accounts.put({
+            id: 'vault',
+            name: 'Vault',
+            type: 'bank',
+            icon: 'V',
+            color: '#17181b',
+          });
+          for (const asset of [
+            {
+              id: 'eur',
+              name: 'Euro',
+              code: 'EUR',
+              icon: '€',
+              color: '#5667ff',
+              price: 1.089,
+              autoUpdateSource: 'none',
+              category: 'cash-currencies',
+              tags: ['currency'],
+            },
+            {
+              id: 'rub',
+              name: 'Ruble',
+              code: 'RUB',
+              icon: '₽',
+              color: '#d76032',
+              price: 1.089 / 96.8,
+              autoUpdateSource: 'none',
+              category: 'cash-currencies',
+              tags: ['currency'],
+            },
+            {
+              id: 'xaut',
+              name: 'Tether Gold',
+              code: 'XAUT',
+              icon: 'Au',
+              color: '#d8a700',
+              price: 2.2,
+              autoUpdateSource: 'none',
+              category: 'precious-metals',
+              tags: ['gold'],
+            },
+          ]) {
+            assets.put(asset);
+          }
+          positions.put({
+            id: 'eur-vault',
+            accountId: 'vault',
+            assetId: 'eur',
+            quantity: 50,
+            comment: '',
+          });
+          snapshots.put({
+            id: 'currency-performance',
+            createdAt: currentTime - 2 * 24 * 60 * 60 * 1_000,
+            total: 55,
+            accounts: [{ accountId: 'vault', name: 'Vault', total: 55 }],
+            assets: [
+              { assetId: 'eur', code: 'EUR', value: 55, price: 1.1 },
+              { assetId: 'rub', code: 'RUB', value: 0, price: 1.1 / 96.4904 },
+              ...(hasHistoricalXautQuote
+                ? [
+                    {
+                      assetId: 'xaut',
+                      code: 'XAUT',
+                      value: 0,
+                      price: 2,
+                    },
+                  ]
+                : []),
+            ],
+            positions: [
+              {
+                positionId: 'eur-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'eur',
+                assetCode: 'EUR',
+                comment: '',
+                quantity: 50,
+                price: 1.1,
+                value: 55,
+              },
+            ],
+          });
+          for (const [assetId, usdPrice] of [
+            ['eur', 1.1],
+            ['rub', 1.1 / 96.4904],
+            ...(hasHistoricalXautQuote ? [['xaut', 2]] : []),
+          ]) {
+            priceHistory.put({
+              id: `currency-performance:${assetId}`,
+              assetId,
+              dayKey: 'currency-performance',
+              createdAt: currentTime - 2 * 24 * 60 * 60 * 1_000,
+              usdPrice,
+            });
+          }
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not seed portfolio'));
+        };
+      }),
+    { currentTime: now, hasHistoricalXautQuote: includeHistoricalXautQuote },
+  );
+}
+
+test('currency-aware performance preserves selected-currency gains and losses', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedCurrencyAwarePerformance(page);
+  await page.reload();
+
+  const currencies: ReadonlyArray<readonly [string, string, string]> = [
+    ['RUB', '15,48', '+0.32%'],
+    ['USD', '0.55', '−1.00%'],
+    ['EUR', '0', '0.00%'],
+    ['XAUT', '2,75', '−10.00%'],
+  ];
+  for (const [code, money, percent] of currencies) {
+    await page.locator('#displayCurrencyBtn').click();
+    await page.locator(`[data-currency-code="${code}"]`).click();
+    await expect(page.locator('#pnlMoney')).toContainText(money);
+    await expect(page.locator('#pnlPercent')).toHaveText(percent);
+  }
+});
+
+test('currency-aware performance hides values without a historical quote', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedCurrencyAwarePerformance(page, false);
+  await page.reload();
+
+  await page.locator('#displayCurrencyBtn').click();
+  await page.locator('[data-currency-code="XAUT"]').click();
+  await expect(page.locator('#pnlMoney')).toHaveText('—');
+  await expect(
+    page.locator('[data-asset-open="eur"] .portfolio-row-value small'),
+  ).toHaveText('—');
+});
+
 test('keeps self currency price history flat', async ({ page }) => {
   await page.goto('/');
   await seedPortfolio(page);
@@ -753,7 +921,7 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
   await homeCanvas.focus();
   await expect(page.locator('#homeChartTooltip')).toContainText('$700.00');
   await page.keyboard.press('ArrowLeft');
-  await expect(page.locator('#homeChartTooltip')).toContainText('$620.45');
+  await expect(page.locator('#homeChartTooltip')).toContainText('$620.00');
 
   await page.locator('[data-rate-asset="btc"]').click();
   const detailCanvas = page.locator('#entityDetailChart');
@@ -809,10 +977,10 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
     historyBox.x + historyBox.width - 10,
     historyBox.y + historyBox.height / 2,
   );
-  await expect(page.locator('#historyChartTooltip')).toContainText('$620.45');
+  await expect(page.locator('#historyChartTooltip')).toContainText('$620.00');
   await historyCanvas.focus();
   await page.keyboard.press('ArrowLeft');
-  await expect(page.locator('#historyChartTooltip')).toContainText('$500.12');
+  await expect(page.locator('#historyChartTooltip')).toContainText('$500.00');
 
   await page.locator('[data-nav="homeView"]').click();
   await page.locator('#privacyToggle').click();

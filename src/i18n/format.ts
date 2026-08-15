@@ -90,16 +90,28 @@ export function formatMoney(
   language: Language,
   displayAsset?: Asset,
 ): string {
+  return formatDisplayMoney(
+    convertUsdToDisplay(usdValue, displayAsset),
+    language,
+    displayAsset,
+  );
+}
+
+export function formatDisplayMoney(
+  value: number,
+  language: Language,
+  displayAsset?: Asset,
+): string {
   if (!displayAsset || !(Number(displayAsset.price) > 0)) {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(Number(usdValue) || 0);
+    }).format(Number(value) || 0);
   }
 
-  const amount = convertUsdToDisplay(usdValue, displayAsset);
+  const amount = Number(value) || 0;
   const absolute = Math.abs(amount);
   const maximumFractionDigits = absolute >= 1000 ? 0 : absolute >= 10 ? 2 : 4;
   const formatted = new Intl.NumberFormat(locale(language), {
