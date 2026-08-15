@@ -1025,6 +1025,38 @@ test('overview period updates row performance without changing totals or allocat
     .toEqual(overviewSummaries.accounts.widths);
 });
 
+test('overview period visibly distinguishes the selected segment', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  for (const theme of ['light', 'dark'] as const) {
+    await page.locator('#settingsShortcut').click();
+    await page.locator(`[data-theme-choice="${theme}"]`).click();
+    await page.locator('.tab[data-nav="assetsView"]').click();
+
+    const styles = await page
+      .locator('#assetsView [data-overview-period]')
+      .evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const style = getComputedStyle(button);
+          return {
+            active: button.getAttribute('aria-pressed') === 'true',
+            backgroundColor: style.backgroundColor,
+            color: style.color,
+          };
+        }),
+      );
+    const active = styles.find(({ active }) => active);
+    const inactive = styles.find(({ active }) => !active);
+
+    expect(active).toBeDefined();
+    expect(inactive).toBeDefined();
+    expect(active?.backgroundColor).not.toBe(inactive?.backgroundColor);
+    expect(active?.color).not.toBe(inactive?.color);
+  }
+});
+
 test('overview period shows a dash when no eligible 24 hour baseline exists', async ({
   page,
 }) => {

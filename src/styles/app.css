@@ -2693,10 +2693,31 @@ html[data-theme='dark'] .security-icon {
 }
 .overview-periods {
   flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface-soft);
 }
 .overview-periods button {
   min-width: 52px;
   min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 720;
+}
+.overview-periods button.active,
+.overview-periods button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
+}
+.overview-periods button:active {
+  transform: scale(0.97);
 }
 .portfolio-explorer-list {
   display: grid;
