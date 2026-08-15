@@ -70,6 +70,7 @@ describe('backup validation and serialization', () => {
       lastSnapshotAt: 1_700_000_100_000,
       positionGrouping: 'assets',
       balancesHidden: true,
+      selectedRateAssetIds: ['btc'],
     };
     const backup = createBackup(
       validated.data,

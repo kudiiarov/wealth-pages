@@ -15,6 +15,7 @@ export const SETTINGS_KEYS = {
   lastSnapshotAt: 'worth-last-snapshot',
   positionGrouping: 'worth-position-grouping',
   balancesHidden: 'worth-balances-hidden',
+  selectedRateAssetIds: 'worth-selected-rate-assets',
 } as const;
 
 const AUTOMATION_INTERVALS: readonly AutomationInterval[] = [1, 3, 6, 12, 24];
@@ -34,6 +35,27 @@ function timestamp(value: string | null): number | undefined {
   return value !== null && Number.isFinite(parsed) && parsed >= 0
     ? parsed
     : undefined;
+}
+
+function normalizeSelectedRateAssetIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value.filter(
+        (item): item is string =>
+          typeof item === 'string' && item.trim().length > 0,
+      ),
+    ),
+  ).slice(0, 3);
+}
+
+function selectedRateAssetIds(value: string | null): string[] {
+  if (value === null) return [];
+  try {
+    return normalizeSelectedRateAssetIds(JSON.parse(value));
+  } catch {
+    return [];
+  }
 }
 
 export class BrowserSettingsStore implements SettingsStore {
@@ -80,6 +102,9 @@ export class BrowserSettingsStore implements SettingsStore {
           : 'accounts',
       balancesHidden:
         this.storage.getItem(SETTINGS_KEYS.balancesHidden) === '1',
+      selectedRateAssetIds: selectedRateAssetIds(
+        this.storage.getItem(SETTINGS_KEYS.selectedRateAssetIds),
+      ),
     };
   }
 
@@ -139,6 +164,13 @@ export class BrowserSettingsStore implements SettingsStore {
       this.storage.setItem(
         SETTINGS_KEYS.balancesHidden,
         settings.balancesHidden ? '1' : '0',
+      );
+    if (settings.selectedRateAssetIds !== undefined)
+      this.storage.setItem(
+        SETTINGS_KEYS.selectedRateAssetIds,
+        JSON.stringify(
+          normalizeSelectedRateAssetIds(settings.selectedRateAssetIds),
+        ),
       );
   }
 }

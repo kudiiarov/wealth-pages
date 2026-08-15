@@ -116,6 +116,7 @@ export interface AppSettings {
   lastSnapshotAt?: number;
   positionGrouping: PositionGrouping;
   balancesHidden: boolean;
+  selectedRateAssetIds: string[];
 }
 
 export type StoreName = keyof PortfolioData;

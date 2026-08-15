@@ -20,6 +20,7 @@ function settings(overrides: Partial<AppSettings> = {}): AppSettings {
     snapshotIntervalHours: 6,
     positionGrouping: 'accounts',
     balancesHidden: false,
+    selectedRateAssetIds: [],
     ...overrides,
   };
 }

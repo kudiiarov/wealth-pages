@@ -54,6 +54,7 @@ describe('BrowserSettingsStore', () => {
       snapshotIntervalHours: 6,
       positionGrouping: 'accounts',
       balancesHidden: false,
+      selectedRateAssetIds: [],
     });
   });
 
@@ -117,5 +118,24 @@ describe('BrowserSettingsStore', () => {
     });
     expect(store.load()).not.toHaveProperty('lastPriceRefreshAt');
     expect(store.load()).not.toHaveProperty('lastSnapshotAt');
+  });
+
+  it('round-trips up to three unique selected rate assets', () => {
+    store.save({
+      selectedRateAssetIds: ['btc', 'usd', 'btc', '', 'xaut', 'eth'],
+    });
+
+    expect(store.load().selectedRateAssetIds).toEqual(['btc', 'usd', 'xaut']);
+  });
+
+  it('ignores malformed selected rate storage', () => {
+    storage.setItem(SETTINGS_KEYS.selectedRateAssetIds, 'not-json');
+    expect(store.load().selectedRateAssetIds).toEqual([]);
+
+    storage.setItem(
+      SETTINGS_KEYS.selectedRateAssetIds,
+      JSON.stringify(['btc', 42, '  ', 'eth']),
+    );
+    expect(store.load().selectedRateAssetIds).toEqual(['btc', 'eth']);
   });
 });
