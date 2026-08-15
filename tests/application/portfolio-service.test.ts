@@ -40,6 +40,7 @@ class MemoryRepository implements PortfolioRepository {
     assets: [],
     positions: [],
     snapshots: [],
+    priceHistory: [],
   };
   replacements = 0;
 
@@ -68,7 +69,13 @@ class MemoryRepository implements PortfolioRepository {
   }
 
   clearAll(): Promise<void> {
-    this.data = { accounts: [], assets: [], positions: [], snapshots: [] };
+    this.data = {
+      accounts: [],
+      assets: [],
+      positions: [],
+      snapshots: [],
+      priceHistory: [],
+    };
     return Promise.resolve();
   }
 }

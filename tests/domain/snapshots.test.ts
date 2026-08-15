@@ -34,6 +34,7 @@ const data: PortfolioData = {
     },
   ],
   snapshots: [],
+  priceHistory: [],
 };
 
 describe('snapshot construction', () => {

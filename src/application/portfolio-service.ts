@@ -72,6 +72,7 @@ const emptyData = (): PortfolioData => ({
   assets: [],
   positions: [],
   snapshots: [],
+  priceHistory: [],
 });
 
 export class PortfolioService {

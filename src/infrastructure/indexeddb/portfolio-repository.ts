@@ -8,14 +8,16 @@ import type {
   StoreName,
   UnknownRecord,
 } from '../../domain/models';
+import { compactDailyHistory } from '../../domain/daily-history';
 import { normalizeData } from '../../domain/normalize';
 
 export const DB_NAME = 'worth-local-portfolio';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 export const STORE_NAMES = [
   'accounts',
   'assets',
   'positions',
+  'priceHistory',
   'snapshots',
 ] as const satisfies readonly StoreName[];
 
@@ -46,7 +48,8 @@ export class IndexedDbPortfolioRepository implements PortfolioRepository {
     const database = await this.database();
     const transaction = database.transaction(STORE_NAMES, 'readonly');
     const done = transactionDone(transaction);
-    const [accounts, assets, positions, snapshots] = await Promise.all(
+    const [accounts, assets, positions, priceHistory, snapshots] =
+      await Promise.all(
       STORE_NAMES.map((storeName) =>
         requestResult<UnknownRecord[]>(
           transaction.objectStore(storeName).getAll() as IDBRequest<
@@ -56,7 +59,18 @@ export class IndexedDbPortfolioRepository implements PortfolioRepository {
       ),
     );
     await done;
-    return normalizeData({ accounts, assets, positions, snapshots });
+    const normalized = normalizeData({
+      accounts,
+      assets,
+      positions,
+      snapshots,
+      priceHistory,
+    });
+    const compacted = compactDailyHistory(normalized);
+    if (JSON.stringify(compacted) !== JSON.stringify(normalized)) {
+      await this.replaceAll(compacted);
+    }
+    return compacted;
   }
 
   async put<K extends StoreName>(

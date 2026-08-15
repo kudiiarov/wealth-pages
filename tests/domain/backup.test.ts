@@ -27,7 +27,7 @@ describe('backup validation and serialization', () => {
   });
 
   it('accepts every published backup schema version', () => {
-    for (let version = 1; version <= 15; version += 1) {
+    for (let version = 1; version <= 16; version += 1) {
       expect(validateBackup({ ...currentV14, version }).version).toBe(version);
     }
   });
@@ -50,7 +50,7 @@ describe('backup validation and serialization', () => {
         assets: [{ ...currentV14.assets[0], price: 'not-a-number' }],
       }),
     ).toThrow('Повреждены активы');
-    expect(() => validateBackup({ ...currentV14, version: 16 })).toThrow(
+    expect(() => validateBackup({ ...currentV14, version: 17 })).toThrow(
       'Неподдерживаемая версия резервной копии',
     );
   });
@@ -81,13 +81,14 @@ describe('backup validation and serialization', () => {
 
     expect(backup).toMatchObject({
       app: 'Worth',
-      version: 15,
-      appVersion: '3.6.2-final',
+      version: 16,
+      appVersion: '3.7.0-final',
       baseCurrency: 'USD',
       exportedAt: '2026-08-14T00:00:00.000Z',
       appSettings: settings,
     });
     expect(backup.accounts).not.toBe(validated.data.accounts);
+    expect(backup.priceHistory).not.toBe(validated.data.priceHistory);
     expect(backup.appSettings.selectedRateAssetIds).not.toBe(
       settings.selectedRateAssetIds,
     );
