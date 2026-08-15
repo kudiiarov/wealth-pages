@@ -650,7 +650,9 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   await expect(page.locator('#assetsView')).toHaveClass(/active/);
 });
 
-test('freshness and asset headings stay aligned and code-free', async ({ page }) => {
+test('freshness and asset headings stay aligned and code-free', async ({
+  page,
+}) => {
   await page.goto('/');
   await seedPortfolio(page);
   await page.reload();
@@ -669,9 +671,9 @@ test('freshness and asset headings stay aligned and code-free', async ({ page })
       text: textBox.top + textBox.height / 2,
     };
   });
-  expect(Math.abs(verticalCenters.dot - verticalCenters.text)).toBeLessThanOrEqual(
-    1,
-  );
+  expect(
+    Math.abs(verticalCenters.dot - verticalCenters.text),
+  ).toBeLessThanOrEqual(1);
 
   await page.locator('.tab[data-nav="assetsView"]').click();
   const assetHeading = page.locator(
