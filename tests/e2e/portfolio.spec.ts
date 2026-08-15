@@ -1016,7 +1016,7 @@ test('overview period updates row performance without changing totals or allocat
           const transaction = database.transaction('snapshots', 'readwrite');
           transaction.objectStore('snapshots').put({
             id: 'today-is-not-a-baseline',
-            createdAt: currentTime - 60 * 60 * 1_000,
+            createdAt: currentTime,
             total: 9_999,
             accounts: [
               { accountId: 'vault', name: 'Vault', total: 9_000 },
