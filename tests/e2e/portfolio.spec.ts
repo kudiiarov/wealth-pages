@@ -399,6 +399,9 @@ test('shows and persists configurable asset pairs that open asset details', asyn
     'Actions',
   );
 
+  await page.goto('/#/assets/rub');
+  await expect(page.locator('#entityDetailHero')).toContainText('$0.0116');
+
   await page.goto('/#/assets/missing');
   await expect(page).toHaveURL(/#\/assets$/);
   await expect(page.locator('#assetsView')).toHaveClass(/active/);
@@ -438,6 +441,10 @@ test('matches the approved asset detail hierarchy and header actions', async ({
     .locator('#entityDetailChartSection')
     .evaluate((element) => element.classList.contains('surface'));
   expect(chartHasCardSurface).toBe(false);
+  const chartRadius = await page
+    .locator('#entityDetailChart')
+    .evaluate((element) => getComputedStyle(element).borderRadius);
+  expect(chartRadius).toBe('0px');
   await expect(
     page.locator('#entityDetailMetadata #entityRelatedList'),
   ).toHaveCount(1);
@@ -541,13 +548,26 @@ test('summarizes the four largest assets and accounts without search controls', 
     .evaluate((element) => getComputedStyle(element).borderRadius);
   expect(allocationRadius).toBe('20px');
   await expect(page.locator('#allAccountsTitle')).toHaveText('Все счета');
-  await expect(page.locator('#accountsList .related-row')).toHaveCount(6);
-  await expect(
-    page.locator('#accountsList .related-row > span > small'),
-  ).toHaveCount(6);
-  await expect(page.locator('#accountsList .holding-summary')).toHaveClass(
-    /surface/,
-  );
+  await expect(page.locator('#accountsList > .portfolio-row')).toHaveCount(6);
+  await expect(page.locator('#accountsList .holding-summary')).toHaveCount(0);
+  const listSurfaces = await page.evaluate(() => {
+    const asset = document.querySelector<HTMLElement>(
+      '#assetsList > .portfolio-row',
+    )!;
+    const account = document.querySelector<HTMLElement>(
+      '#accountsList > .portfolio-row',
+    )!;
+    const accountsList = document.getElementById('accountsList')!;
+    return {
+      assetRadius: getComputedStyle(asset).borderRadius,
+      accountRadius: getComputedStyle(account).borderRadius,
+      accountsGap: getComputedStyle(accountsList).gap,
+      accountsTopBorder: getComputedStyle(accountsList).borderTopWidth,
+    };
+  });
+  expect(listSurfaces.accountRadius).toBe(listSurfaces.assetRadius);
+  expect(listSurfaces.accountsGap).not.toBe('0px');
+  expect(listSurfaces.accountsTopBorder).toBe('0px');
 
   const accountLayout = await page.evaluate(() => ({
     overline: document

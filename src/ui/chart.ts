@@ -24,36 +24,14 @@ export interface ChartGeometry {
   data: readonly HistoryDatum[];
 }
 
-export interface SmoothChartSegment {
-  controlX: number;
-  controlY: number;
-  endX: number;
-  endY: number;
-}
-
-export function smoothChartSegments(
+export function traceAngularChartLine(
+  context: CanvasRenderingContext2D,
   points: readonly ChartPoint[],
-): SmoothChartSegment[] {
-  return points.slice(1).flatMap((point, index) => {
-    const previous = points[index];
-    if (!previous) return [];
-    const midpointX = (previous.x + point.x) / 2;
-    const midpointY = (previous.y + point.y) / 2;
-    return [
-      {
-        controlX: midpointX,
-        controlY: previous.y,
-        endX: midpointX,
-        endY: midpointY,
-      },
-      {
-        controlX: midpointX,
-        controlY: point.y,
-        endX: point.x,
-        endY: point.y,
-      },
-    ];
-  });
+): void {
+  const first = points[0];
+  if (!first) return;
+  context.moveTo(first.x, first.y);
+  points.slice(1).forEach((point) => context.lineTo(point.x, point.y));
 }
 
 export function nearestChartPointIndex(
@@ -140,22 +118,18 @@ export function drawPortfolioSparkline(
   const first = points[0]!;
   const last = points.at(-1)!;
   context.beginPath();
-  points.forEach((point, index) =>
-    index ? context.lineTo(point.x, point.y) : context.moveTo(point.x, point.y),
-  );
+  traceAngularChartLine(context, points);
   context.lineTo(last.x, height);
   context.lineTo(first.x, height);
   context.closePath();
   context.fillStyle = gradient;
   context.fill();
   context.beginPath();
-  points.forEach((point, index) =>
-    index ? context.lineTo(point.x, point.y) : context.moveTo(point.x, point.y),
-  );
+  traceAngularChartLine(context, points);
   context.strokeStyle = color;
   context.lineWidth = 2.25;
-  context.lineJoin = 'round';
-  context.lineCap = 'round';
+  context.lineJoin = 'miter';
+  context.lineCap = 'butt';
   context.stroke();
   context.beginPath();
   context.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
@@ -292,19 +266,7 @@ export function drawHistoryChart(
   const firstPoint = points[0];
   if (!lastPoint || !firstPoint) return;
   const traceLine = (): void => {
-    context.moveTo(firstPoint.x, firstPoint.y);
-    if (formatting.minimal) {
-      for (const segment of smoothChartSegments(points)) {
-        context.quadraticCurveTo(
-          segment.controlX,
-          segment.controlY,
-          segment.endX,
-          segment.endY,
-        );
-      }
-      return;
-    }
-    points.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+    traceAngularChartLine(context, points);
   };
   context.beginPath();
   traceLine();
@@ -318,8 +280,8 @@ export function drawHistoryChart(
   traceLine();
   context.strokeStyle = lineColor;
   context.lineWidth = 2.5;
-  context.lineJoin = 'round';
-  context.lineCap = 'round';
+  context.lineJoin = 'miter';
+  context.lineCap = 'butt';
   context.stroke();
 
   points.forEach((point, index) => {

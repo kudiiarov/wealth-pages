@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   nearestChartPointIndex,
-  smoothChartSegments,
+  traceAngularChartLine,
 } from '../../src/ui/chart';
 
 describe('chart inspection', () => {
@@ -24,18 +24,24 @@ describe('chart inspection', () => {
 });
 
 describe('minimal asset chart path', () => {
-  it('builds midpoint control segments for a smooth price line', () => {
-    expect(
-      smoothChartSegments([
-        { x: 10, y: 80 },
-        { x: 50, y: 40 },
-        { x: 90, y: 60 },
-      ]),
-    ).toEqual([
-      { controlX: 30, controlY: 80, endX: 30, endY: 60 },
-      { controlX: 30, controlY: 40, endX: 50, endY: 40 },
-      { controlX: 70, controlY: 40, endX: 70, endY: 50 },
-      { controlX: 70, controlY: 60, endX: 90, endY: 60 },
+  it('connects every price point with straight segments', () => {
+    const context = {
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      quadraticCurveTo: vi.fn(),
+    };
+
+    traceAngularChartLine(context as unknown as CanvasRenderingContext2D, [
+      { x: 10, y: 80 },
+      { x: 50, y: 40 },
+      { x: 90, y: 60 },
     ]);
+
+    expect(context.moveTo).toHaveBeenCalledWith(10, 80);
+    expect(context.lineTo.mock.calls).toEqual([
+      [50, 40],
+      [90, 60],
+    ]);
+    expect(context.quadraticCurveTo).not.toHaveBeenCalled();
   });
 });

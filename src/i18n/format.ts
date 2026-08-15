@@ -52,15 +52,37 @@ export function convertUsdToPriceCurrency(
   return rate > 0 ? usdValue / rate : Number.NaN;
 }
 
-function suggestedFractionDigits(value: number): number {
+function suggestedPriceFractionDigits(value: number): number {
   const absolute = Math.abs(value);
   if (!Number.isFinite(absolute) || absolute === 0) return 2;
-  if (absolute >= 10_000) return 0;
-  if (absolute >= 1_000) return 1;
   if (absolute >= 1) return 2;
   if (absolute >= 0.01) return 4;
   if (absolute >= 0.0001) return 6;
   return 8;
+}
+
+export function formatPrice(
+  usdValue: number,
+  language: Language,
+  displayAsset?: Asset,
+): string {
+  const amount = displayAsset
+    ? convertUsdToDisplay(usdValue, displayAsset)
+    : Number(usdValue) || 0;
+  const maximumFractionDigits = suggestedPriceFractionDigits(amount);
+  if (!displayAsset || !(Number(displayAsset.price) > 0)) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: Math.min(2, maximumFractionDigits),
+      maximumFractionDigits,
+    }).format(amount);
+  }
+  const formatted = new Intl.NumberFormat(locale(language), {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  }).format(amount);
+  return `${formatted} ${displayAsset.icon || displayAsset.code}`;
 }
 
 export function formatMoney(
@@ -78,7 +100,8 @@ export function formatMoney(
   }
 
   const amount = convertUsdToDisplay(usdValue, displayAsset);
-  const maximumFractionDigits = suggestedFractionDigits(amount);
+  const absolute = Math.abs(amount);
+  const maximumFractionDigits = absolute >= 1000 ? 0 : absolute >= 10 ? 2 : 4;
   const formatted = new Intl.NumberFormat(locale(language), {
     minimumFractionDigits: 0,
     maximumFractionDigits,

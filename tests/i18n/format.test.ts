@@ -6,6 +6,7 @@ import {
   convertUsdToDisplay,
   formatExactMoney,
   formatMoney,
+  formatPrice,
   formatRelativeTime,
   inputDecimal,
   parseDecimal,
@@ -48,6 +49,12 @@ describe('locale and currency formatting', () => {
   it('keeps two decimal places for exact chart inspection values', () => {
     expect(formatExactMoney(12.345, 'en')).toBe('$12.35');
     expect(formatExactMoney(2_469.12, 'en', euro)).toBe('1,234.56 €');
+  });
+
+  it('shows enough precision for sub-dollar asset prices without changing balances', () => {
+    expect(formatPrice(1 / 86, 'en')).toBe('$0.0116');
+    expect(formatMoney(1 / 86, 'en')).toBe('$0.01');
+    expect(formatMoney(2_469.12, 'en', euro)).toBe('1,235 €');
   });
 
   it('formats relative update times in both languages', () => {
