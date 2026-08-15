@@ -22,6 +22,7 @@ import {
 import { localDayKey } from '../domain/daily-history';
 import {
   formatDate,
+  formatDisplayExactMoney,
   formatDisplayMoney,
   formatExactMoney,
   formatMoney,
@@ -347,7 +348,11 @@ export class WorthRenderer {
       ? '••••'
       : kind === 'detail'
         ? this.formatDisplayExactPrice(datum.value)
-        : formatExactMoney(datum.value, this.language, this.displayAsset());
+        : formatDisplayExactMoney(
+            datum.value,
+            this.language,
+            this.displayAsset(),
+          );
     tooltip.innerHTML = `<strong>${escapeHtml(exactValue)}</strong><small>${escapeHtml(formatDate(datum.createdAt, this.language))} · ${escapeHtml(formatTime(datum.createdAt, this.language))}</small>`;
     tooltip.style.left = `${Math.min(Math.max(point.x, 58), Math.max(58, canvas.clientWidth - 58))}px`;
     tooltip.classList.remove('hidden');

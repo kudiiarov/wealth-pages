@@ -126,15 +126,27 @@ export function formatExactMoney(
   language: Language,
   displayAsset?: Asset,
 ): string {
+  return formatDisplayExactMoney(
+    convertUsdToDisplay(usdValue, displayAsset),
+    language,
+    displayAsset,
+  );
+}
+
+export function formatDisplayExactMoney(
+  value: number,
+  language: Language,
+  displayAsset?: Asset,
+): string {
   if (!displayAsset || !(Number(displayAsset.price) > 0)) {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(Number(usdValue) || 0);
+    }).format(Number(value) || 0);
   }
-  const amount = convertUsdToDisplay(usdValue, displayAsset);
+  const amount = Number(value) || 0;
   const formatted = new Intl.NumberFormat(locale(language), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

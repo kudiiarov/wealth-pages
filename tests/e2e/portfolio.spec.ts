@@ -451,6 +451,27 @@ test('currency-aware performance hides values without a historical quote', async
   ).toHaveText('—');
 });
 
+test('currency-aware performance inspects normalized Home and History values', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  await page.locator('#displayCurrencyBtn').click();
+  await page.locator('[data-currency-code="RUB"]').click();
+  await page.locator('#homeChart').focus();
+  await expect(page.locator('#homeChartTooltip strong')).toHaveText(
+    '60 200,00 ₽',
+  );
+
+  await page.locator('[data-nav="historyView"]').click();
+  await page.locator('#historyChart').focus();
+  await expect(page.locator('#historyChartTooltip strong')).toHaveText(
+    '52 080,00 ₽',
+  );
+});
+
 test('keeps self currency price history flat', async ({ page }) => {
   await page.goto('/');
   await seedPortfolio(page);

@@ -4,6 +4,7 @@ import type { Asset } from '../../src/domain/models';
 import {
   convertPriceCurrencyToUsd,
   convertUsdToDisplay,
+  formatDisplayExactMoney,
   formatDisplayMoney,
   formatExactMoney,
   formatMoney,
@@ -64,6 +65,22 @@ describe('locale and currency formatting', () => {
   it('keeps two decimal places for exact chart inspection values', () => {
     expect(formatExactMoney(12.345, 'en')).toBe('$12.35');
     expect(formatExactMoney(2_469.12, 'en', euro)).toBe('1,234.56 €');
+  });
+
+  it('formats already converted exact chart money without converting it again', () => {
+    const rubAsset: Asset = {
+      ...euro,
+      id: 'rub',
+      name: 'Ruble',
+      code: 'RUB',
+      icon: '₽',
+      price: 0.011,
+    };
+
+    expect(formatDisplayExactMoney(4_840, 'en', rubAsset)).toBe('4,840.00 ₽');
+    expect(formatExactMoney(4_840 * rubAsset.price, 'en', rubAsset)).toBe(
+      '4,840.00 ₽',
+    );
   });
 
   it('shows enough precision for sub-dollar asset prices without changing balances', () => {
