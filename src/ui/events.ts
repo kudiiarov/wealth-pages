@@ -35,6 +35,8 @@ export class WorthController {
   private pendingActions: ActionItem[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
   private ratePairDraft: RatePair[] = [];
+  private positionSourceRoute:
+    Extract<AppRoute, { kind: 'asset' | 'account' }> | undefined;
 
   constructor(
     private readonly service: PortfolioService,
@@ -214,6 +216,39 @@ export class WorthController {
     );
     if (rateAsset?.dataset.rateAsset) {
       this.openEntity({ kind: 'asset', id: rateAsset.dataset.rateAsset });
+      return;
+    }
+    const positionOpen = closestElement<HTMLElement>(
+      event.target,
+      '[data-position-open]',
+    );
+    if (positionOpen?.dataset.positionOpen) {
+      const position = this.service.data.positions.find(
+        ({ id }) => id === positionOpen.dataset.positionOpen,
+      );
+      if (position) this.openPositionEdit(position, this.currentDetailRoute());
+      return;
+    }
+    const positionAssetLink = closestElement<HTMLElement>(
+      event.target,
+      '[data-position-asset-link]',
+    );
+    if (positionAssetLink?.dataset.positionAssetLink) {
+      const assetId = positionAssetLink.dataset.positionAssetLink;
+      this.closeDialog('positionModal');
+      this.resetPositionForm();
+      this.openEntity({ kind: 'asset', id: assetId });
+      return;
+    }
+    const positionAccountLink = closestElement<HTMLElement>(
+      event.target,
+      '[data-position-account-link]',
+    );
+    if (positionAccountLink?.dataset.positionAccountLink) {
+      const accountId = positionAccountLink.dataset.positionAccountLink;
+      this.closeDialog('positionModal');
+      this.resetPositionForm();
+      this.openEntity({ kind: 'account', id: accountId });
       return;
     }
     const assetOpen = closestElement<HTMLElement>(
@@ -523,6 +558,13 @@ export class WorthController {
       'submit',
       (event) => void this.submitPosition(event),
     );
+    this.form('positionForm').addEventListener('input', () =>
+      this.updatePositionValue(),
+    );
+    this.element('positionDeleteBtn').addEventListener(
+      'click',
+      () => void this.deleteEditedPosition(),
+    );
     this.form('priceForm').addEventListener(
       'submit',
       (event) => void this.submitPrice(event),
@@ -648,9 +690,11 @@ export class WorthController {
     const input = readPositionForm(form);
     if (!input) return;
     await this.service.savePosition(input);
+    const sourceRoute = this.positionSourceRoute;
     this.closeDialog('positionModal');
     this.resetPositionForm();
-    this.renderer.renderAll();
+    if (sourceRoute) this.goToRoute(sourceRoute);
+    else this.renderer.renderAll();
     this.toast(this.renderer.t('positionSaved'));
   }
 
@@ -874,10 +918,15 @@ export class WorthController {
     this.openDialog('priceModal');
   }
 
-  private openPositionEdit(position: Position): void {
+  private openPositionEdit(
+    position: Position,
+    sourceRoute = this.currentDetailRoute(),
+  ): void {
     this.openDialog('positionModal');
     const form = this.form('positionForm');
+    this.positionSourceRoute = sourceRoute;
     form.dataset.editId = position.id;
+    form.classList.add('editing');
     formControl(form, 'accountId').value = position.accountId;
     formControl(form, 'assetId').value = position.assetId;
     formControl(form, 'quantity').value = inputDecimal(
@@ -886,6 +935,61 @@ export class WorthController {
     );
     formControl(form, 'comment').value = position.comment;
     this.element('positionModeLabel').textContent = this.renderer.t('editing');
+    const asset = this.renderer.assetBy(position.assetId);
+    const account = this.renderer.accountBy(position.accountId);
+    const assetLink = this.element(
+      'positionContext',
+    ).querySelector<HTMLElement>('[data-position-asset-link]');
+    const accountLink = this.element(
+      'positionContext',
+    ).querySelector<HTMLElement>('[data-position-account-link]');
+    if (assetLink) assetLink.dataset.positionAssetLink = position.assetId;
+    if (accountLink)
+      accountLink.dataset.positionAccountLink = position.accountId;
+    this.element('positionAssetIcon').textContent = asset?.icon || '•';
+    this.element('positionAssetIcon').style.background =
+      asset?.color || '#5667ff';
+    this.element('positionAssetName').textContent =
+      asset?.name || this.renderer.t('asset');
+    this.element('positionAccountIcon').textContent = account?.icon || '•';
+    this.element('positionAccountIcon').style.background =
+      account?.color || '#17181b';
+    this.element('positionAccountName').textContent =
+      account?.name || this.renderer.t('deletedAccount');
+    this.element('positionUnitPrice').textContent = this.renderer.money(
+      Number(asset?.price || 0),
+    );
+    this.element('positionContext').classList.remove('hidden');
+    this.element('positionDeleteBtn').classList.remove('hidden');
+    this.updatePositionValue();
+  }
+
+  private updatePositionValue(): void {
+    const form = this.form('positionForm');
+    if (!form.classList.contains('editing')) return;
+    const asset = this.renderer.assetBy(formControl(form, 'assetId').value);
+    const quantity = parseDecimal(formControl(form, 'quantity').value);
+    this.element('positionCalculatedValue').textContent = this.renderer.money(
+      Number.isFinite(quantity) ? quantity * Number(asset?.price || 0) : 0,
+    );
+  }
+
+  private async deleteEditedPosition(): Promise<void> {
+    const form = this.form('positionForm');
+    const id = form.dataset.editId;
+    if (
+      !id ||
+      !this.windowRef.confirm(this.renderer.t('confirmDeletePosition'))
+    ) {
+      return;
+    }
+    const sourceRoute = this.positionSourceRoute;
+    await this.service.deletePosition(id);
+    this.closeDialog('positionModal');
+    this.resetPositionForm();
+    if (sourceRoute) this.goToRoute(sourceRoute);
+    else this.renderer.renderAll();
+    this.toast(this.renderer.t('positionDeleted'));
   }
 
   private showActionMenu(title: string, actions: ActionItem[]): void {
@@ -987,8 +1091,20 @@ export class WorthController {
     const form = this.form('positionForm');
     form.reset();
     delete form.dataset.editId;
+    form.classList.remove('editing');
+    this.positionSourceRoute = undefined;
+    this.element('positionContext').classList.add('hidden');
+    this.element('positionDeleteBtn').classList.add('hidden');
     this.element('positionModeLabel').textContent = this.renderer.t('newPos');
     this.renderer.refreshPositionForm();
+  }
+
+  private currentDetailRoute():
+    Extract<AppRoute, { kind: 'asset' | 'account' }> | undefined {
+    const route = parseAppRoute(this.windowRef.location.hash);
+    return route.kind === 'asset' || route.kind === 'account'
+      ? route
+      : undefined;
   }
 
   private navigate(id: string): void {

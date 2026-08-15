@@ -1,8 +1,4 @@
-import type {
-  PortfolioData,
-  PriceHistoryPoint,
-  Snapshot,
-} from './models';
+import type { PortfolioData, PriceHistoryPoint, Snapshot } from './models';
 
 function twoDigits(value: number): string {
   return String(value).padStart(2, '0');
@@ -17,10 +13,7 @@ export function dailySnapshotId(dayKey: string): string {
   return `daily-snapshot:${dayKey}`;
 }
 
-export function dailyPriceHistoryId(
-  assetId: string,
-  dayKey: string,
-): string {
+export function dailyPriceHistoryId(assetId: string, dayKey: string): string {
   return `daily-price:${assetId}:${dayKey}`;
 }
 
@@ -81,25 +74,32 @@ export function upsertDailyPricePoint(
   return compactPricePoints([...points, point]);
 }
 
-export function compactDailyHistory(data: PortfolioData): PortfolioData {
-  const legacyPricePoints = data.snapshots.flatMap((snapshot) =>
-    (snapshot.assets ?? []).flatMap((asset): PriceHistoryPoint[] => {
-      const usdPrice = Number(asset.price);
-      if (!asset.assetId || !Number.isFinite(usdPrice) || usdPrice < 0) {
-        return [];
-      }
-      const dayKey = localDayKey(snapshot.createdAt);
-      return [
-        {
-          id: dailyPriceHistoryId(asset.assetId, dayKey),
-          assetId: asset.assetId,
-          dayKey,
-          createdAt: snapshot.createdAt,
-          usdPrice,
-        },
-      ];
-    }),
-  );
+export function compactDailyHistory(
+  data: PortfolioData,
+  options: { extractSnapshotPrices?: boolean } = {
+    extractSnapshotPrices: true,
+  },
+): PortfolioData {
+  const legacyPricePoints = options.extractSnapshotPrices
+    ? data.snapshots.flatMap((snapshot) =>
+        (snapshot.assets ?? []).flatMap((asset): PriceHistoryPoint[] => {
+          const usdPrice = Number(asset.price);
+          if (!asset.assetId || !Number.isFinite(usdPrice) || usdPrice < 0) {
+            return [];
+          }
+          const dayKey = localDayKey(snapshot.createdAt);
+          return [
+            {
+              id: dailyPriceHistoryId(asset.assetId, dayKey),
+              assetId: asset.assetId,
+              dayKey,
+              createdAt: snapshot.createdAt,
+              usdPrice,
+            },
+          ];
+        }),
+      )
+    : [];
 
   return {
     ...data,

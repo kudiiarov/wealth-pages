@@ -308,12 +308,7 @@ export class PortfolioService {
         priceUpdatedAt: now,
         updatedAt: now,
       });
-      await this.saveDailyPrice(
-        asset.id,
-        quote.usdPrice,
-        now,
-        quote.source,
-      );
+      await this.saveDailyPrice(asset.id, quote.usdPrice, now, quote.source);
       updated += 1;
     }
 

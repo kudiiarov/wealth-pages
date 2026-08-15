@@ -54,8 +54,10 @@ async function start(): Promise<void> {
     controller.bind();
     renderer.renderAll();
     scheduler.start();
+    document.documentElement.dataset.appReady = 'true';
   } catch (error) {
     console.error(error);
+    document.documentElement.dataset.appReady = 'error';
     renderStartupError(document.body, settings.load().language, () =>
       window.location.reload(),
     );

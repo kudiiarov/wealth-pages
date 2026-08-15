@@ -306,8 +306,7 @@ export function assetPriceHistorySeries(
 ): HistoryDatum[] {
   return points
     .filter(
-      (point) =>
-        point.assetId === assetId && Number.isFinite(point.usdPrice),
+      (point) => point.assetId === assetId && Number.isFinite(point.usdPrice),
     )
     .map((point) => ({ createdAt: point.createdAt, value: point.usdPrice }))
     .sort((left, right) => left.createdAt - right.createdAt);

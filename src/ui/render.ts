@@ -914,7 +914,7 @@ export class WorthRenderer {
                   : positionPnl?.pnl && positionPnl.pnl < 0
                     ? '−'
                     : '';
-              return `<button class="related-row related-row-valued" data-account-open="${escapeHtml(position.accountId)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}</small></span><b>${this.money(Number(position.quantity) * currentPrice)}<small class="${this.pnlClass(positionPnl)}">${positionPnl ? `${positionSign}${this.money(Math.abs(positionPnl.pnl))}` : '—'}</small></b><i>›</i></button>`;
+              return `<button class="related-row related-row-valued" data-position-open="${escapeHtml(position.id)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}</small></span><b>${this.money(Number(position.quantity) * currentPrice)}<small class="${this.pnlClass(positionPnl)}">${positionPnl ? `${positionSign}${this.money(Math.abs(positionPnl.pnl))}` : '—'}</small></b><i>›</i></button>`;
             })
             .join('')
         : `<div class="empty-state compact-empty">${this.t('emptyAsset')}</div>`;
@@ -944,7 +944,7 @@ export class WorthRenderer {
         ? positions
             .map((position) => {
               const asset = this.assetBy(position.assetId);
-              return `<button class="related-row related-row-valued" data-asset-open="${escapeHtml(position.assetId)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span><strong>${escapeHtml(asset?.name || this.t('asset'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset?.code || '')}</small></span><b>${this.money(Number(position.quantity) * Number(asset?.price || 0))}</b><i>›</i></button>`;
+              return `<button class="related-row related-row-valued" data-position-open="${escapeHtml(position.id)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span><strong>${escapeHtml(asset?.name || this.t('asset'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset?.code || '')}</small></span><b>${this.money(Number(position.quantity) * Number(asset?.price || 0))}</b><i>›</i></button>`;
             })
             .join('')
         : `<div class="empty-state compact-empty">${this.t('emptyAccount')}</div>`;

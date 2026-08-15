@@ -29,9 +29,7 @@ describe('daily history', () => {
   });
 
   it('builds canonical daily record ids', () => {
-    expect(dailySnapshotId('2026-08-15')).toBe(
-      'daily-snapshot:2026-08-15',
-    );
+    expect(dailySnapshotId('2026-08-15')).toBe('daily-snapshot:2026-08-15');
     expect(dailyPriceHistoryId('btc', '2026-08-15')).toBe(
       'daily-price:btc:2026-08-15',
     );
