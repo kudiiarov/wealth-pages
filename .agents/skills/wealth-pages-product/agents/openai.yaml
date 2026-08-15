@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Wealth Pages Product'
+  short_description: 'Правила разработки и выпуска Wealth Pages'
+  default_prompt: 'Use $wealth-pages-product to make a safe, production-ready change to Wealth Pages.'
