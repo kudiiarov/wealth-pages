@@ -146,6 +146,10 @@ const ru = {
     `Удалить ${name} (${code}) и все позиции с этим активом?`,
   assetsCount: (count: number) =>
     `${count} ${declineRussian(count, 'актив', 'актива', 'активов')}`,
+  allAssets: 'Все активы',
+  period24h: '24 ч',
+  periodAllTime: 'Всё время',
+  overviewPnlPeriodAria: 'Период доходности обзора',
   qtyCode: (code: string) => `Количество ${code}`,
   qtyAccount: (code: string, name: string) =>
     `Количество ${code} на счёте ${name}`,
@@ -435,6 +439,10 @@ const en = {
   confirmDeleteAsset: (name: string, code: string) =>
     `Delete ${name} (${code}) and all positions using this asset?`,
   assetsCount: (count: number) => `${count} asset${count === 1 ? '' : 's'}`,
+  allAssets: 'All assets',
+  period24h: '24h',
+  periodAllTime: 'All time',
+  overviewPnlPeriodAria: 'Overview performance period',
   qtyCode: (code: string) => `${code} quantity`,
   qtyAccount: (code: string, name: string) => `${code} quantity in ${name}`,
   priceUsd: (code: string) => `${code} price in USD`,

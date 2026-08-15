@@ -1522,78 +1522,6 @@ html[data-theme='dark'] .security-icon {
 }
 
 /* 3.6.1 — approved portfolio hierarchy */
-.portfolio-page-intro {
-  display: grid;
-  justify-items: start;
-}
-.portfolio-page-value {
-  margin-top: 12px;
-  font-size: 34px;
-  line-height: 1;
-  letter-spacing: -0.045em;
-  font-variant-numeric: tabular-nums;
-}
-.portfolio-page-meta {
-  margin-top: 7px;
-  color: var(--muted);
-  font-size: 12px;
-}
-#accountsView .portfolio-heading {
-  align-items: flex-start;
-  margin-bottom: 0;
-}
-#accountsView .portfolio-add {
-  margin-top: 0;
-}
-.compact-allocation.account-allocation-summary {
-  margin: 16px 0 0;
-  padding: 15px;
-  border-radius: 20px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-#accountAllocationSummary {
-  border-radius: 20px;
-}
-.account-allocation-summary .allocation-bar {
-  height: 9px;
-  margin-bottom: 13px;
-}
-.account-allocation-summary .compact-allocation-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 9px;
-}
-.account-allocation-summary .compact-allocation-key {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 11px;
-  border-bottom: 0;
-}
-.account-allocation-summary .compact-allocation-key > span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-.account-allocation-summary .compact-allocation-key strong {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--ink);
-  font-weight: 650;
-}
-.account-allocation-summary .compact-allocation-key b {
-  font-variant-numeric: tabular-nums;
-}
-.portfolio-list-title {
-  margin: 38px 2px 15px;
-  font-size: 23px;
-  letter-spacing: -0.035em;
-}
 .flat-portfolio-list {
   gap: 0;
   border-top: 1px solid var(--line);
@@ -2683,16 +2611,6 @@ html[data-theme='dark'] .security-icon {
   border-color: var(--ink);
   color: var(--bg);
 }
-.portfolio-summary {
-  min-height: 45px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 11px;
-  padding: 6px 2px 0;
-}
 .compact-allocation {
   margin-top: 16px;
   padding: 15px;
@@ -2704,11 +2622,8 @@ html[data-theme='dark'] .security-icon {
 }
 .compact-allocation-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px 15px;
-}
-#assetsView .compact-allocation-list {
   grid-template-columns: 1fr;
+  gap: 9px;
 }
 .compact-allocation-key {
   min-width: 0;
@@ -2733,6 +2648,55 @@ html[data-theme='dark'] .security-icon {
 }
 .compact-allocation-key b {
   font-variant-numeric: tabular-nums;
+}
+.allocation-metrics,
+.portfolio-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+.allocation-metrics {
+  margin-bottom: 14px;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.allocation-metrics strong {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 18px;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asset-freshness-summary {
+  min-height: 31px;
+  display: flex;
+  align-items: center;
+  padding: 6px 2px 0;
+}
+.portfolio-list-heading {
+  gap: 12px;
+  margin: 30px 2px 14px;
+}
+.portfolio-list-heading h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 23px;
+  letter-spacing: -0.035em;
+}
+.overview-periods {
+  flex: 0 0 auto;
+}
+.overview-periods button {
+  min-width: 52px;
+  min-height: 44px;
 }
 .portfolio-explorer-list {
   display: grid;

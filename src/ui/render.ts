@@ -735,8 +735,14 @@ export class WorthRenderer {
       'assetAllocationList',
       compactAssetAllocation(this.service.data),
     );
-    this.element('assetSummary').textContent =
-      `${rows.length} ${this.t('assets').toLocaleLowerCase(locale(this.language))} · ${this.money(portfolioTotal(this.service.data))}`;
+    this.element('assetAllocationCount').textContent = this.t(
+      'assetsCount',
+      rows.length,
+    );
+    this.element('assetAllocationTotal').textContent = this.money(
+      portfolioTotal(this.service.data),
+    );
+    this.renderOverviewPeriodControls();
     list.innerHTML = rows.length
       ? rows
           .map(({ asset, value }) => {
@@ -757,10 +763,10 @@ export class WorthRenderer {
       'accountAllocationList',
       compactAccountAllocation(this.service.data),
     );
-    this.element('accountPortfolioValue').textContent = this.money(
+    this.element('accountAllocationTotal').textContent = this.money(
       portfolioTotal(this.service.data),
     );
-    this.element('accountPortfolioMeta').textContent = this.t(
+    this.element('accountAllocationCount').textContent = this.t(
       'accountsCount',
       rows.length,
     );
@@ -774,6 +780,22 @@ export class WorthRenderer {
           })
           .join('')
       : `<div class="empty-state">${this.t('emptyAccounts')}</div>`;
+  }
+
+  private renderOverviewPeriodControls(): void {
+    all<HTMLElement>('[data-overview-period]', this.documentRef).forEach(
+      (button) => {
+        const active = button.dataset.overviewPeriod === this.ui.overviewPeriod;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      },
+    );
+    all<HTMLElement>(
+      '[data-overview-period-controls]',
+      this.documentRef,
+    ).forEach((control) =>
+      control.setAttribute('aria-label', this.t('overviewPnlPeriodAria')),
+    );
   }
 
   private renderCompactAllocation(

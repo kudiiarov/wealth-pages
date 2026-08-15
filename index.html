@@ -52,17 +52,18 @@
 <div><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="assets" id="assetsTitle">Активы</h1></div>
 <button aria-label="Добавить актив" class="portfolio-add" id="assetAdd" type="button">+</button>
 </div>
-<section class="compact-allocation surface"><div aria-hidden="true" class="allocation-bar" id="assetAllocationBar"></div><div class="compact-allocation-list" id="assetAllocationList"></div></section>
-<div class="portfolio-summary"><span id="assetSummary">—</span><span id="assetFreshness">—</span></div>
+<section class="compact-allocation surface" id="assetAllocationSummary"><div class="allocation-metrics"><span id="assetAllocationCount">—</span><strong id="assetAllocationTotal">—</strong></div><div aria-hidden="true" class="allocation-bar" id="assetAllocationBar"></div><div class="compact-allocation-list" id="assetAllocationList"></div></section>
+<div class="asset-freshness-summary"><span class="muted-inline" id="assetFreshness">—</span></div>
+<div class="portfolio-list-heading"><h2 data-i18n="allAssets" id="allAssetsTitle">Все активы</h2><div aria-label="Период доходности обзора" class="overview-periods ui-segmented" data-overview-period-controls role="group"><button data-i18n="period24h" data-overview-period="24h" type="button">24 ч</button><button class="active" data-i18n="periodAllTime" data-overview-period="all" type="button">Всё время</button></div></div>
 <div class="portfolio-explorer-list" id="assetsList"></div>
 </section>
 <section aria-labelledby="accountsTitle" class="view" id="accountsView">
 <div class="page-heading portfolio-heading">
-<div class="portfolio-page-intro"><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="accounts" id="accountsTitle">Счета</h1><strong class="portfolio-page-value" id="accountPortfolioValue">—</strong><small class="portfolio-page-meta" id="accountPortfolioMeta">—</small></div>
+<div><div class="overline" data-i18n="portfolio">Портфель</div><h1 data-i18n="accounts" id="accountsTitle">Счета</h1></div>
 <button aria-label="Добавить счёт" class="portfolio-add" id="accountAdd" type="button">+</button>
 </div>
-<section class="compact-allocation account-allocation-summary surface" id="accountAllocationSummary"><div aria-hidden="true" class="allocation-bar" id="accountAllocationBar"></div><div class="compact-allocation-list" id="accountAllocationList"></div></section>
-<h2 class="portfolio-list-title" data-i18n="allAccounts" id="allAccountsTitle">Все счета</h2>
+<section class="compact-allocation surface" id="accountAllocationSummary"><div class="allocation-metrics"><span id="accountAllocationCount">—</span><strong id="accountAllocationTotal">—</strong></div><div aria-hidden="true" class="allocation-bar" id="accountAllocationBar"></div><div class="compact-allocation-list" id="accountAllocationList"></div></section>
+<div class="portfolio-list-heading"><h2 data-i18n="allAccounts" id="allAccountsTitle">Все счета</h2><div aria-label="Период доходности обзора" class="overview-periods ui-segmented" data-overview-period-controls role="group"><button data-i18n="period24h" data-overview-period="24h" type="button">24 ч</button><button class="active" data-i18n="periodAllTime" data-overview-period="all" type="button">Всё время</button></div></div>
 <div class="portfolio-explorer-list" id="accountsList"></div>
 </section>
 <section aria-labelledby="entityDetailTitle" class="view detail-view" id="entityDetailView">

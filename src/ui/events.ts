@@ -194,6 +194,18 @@ export class WorthController {
       this.renderer.renderAll();
       return;
     }
+    const overviewPeriod = closestElement<HTMLElement>(
+      event.target,
+      '[data-overview-period]',
+    );
+    if (
+      overviewPeriod?.dataset.overviewPeriod === '24h' ||
+      overviewPeriod?.dataset.overviewPeriod === 'all'
+    ) {
+      this.renderer.ui.overviewPeriod = overviewPeriod.dataset.overviewPeriod;
+      this.renderer.renderAll();
+      return;
+    }
     const categoryFilter = closestElement<HTMLElement>(
       event.target,
       '[data-category-filter]',

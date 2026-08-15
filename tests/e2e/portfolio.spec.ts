@@ -797,10 +797,11 @@ test('summarizes the four largest assets and accounts without search controls', 
 
   await page.locator('[data-nav="accountsView"]').click();
   await expect(page.locator('#accountSearch')).toHaveCount(0);
-  await expect(page.locator('#accountPortfolioValue')).toContainText('$750.00');
-  await expect(page.locator('#accountPortfolioMeta')).toContainText('6 счетов');
-  await expect(page.locator('#accountPortfolioMeta')).not.toContainText(
-    'снимок',
+  await expect(page.locator('#accountAllocationTotal')).toContainText(
+    '$750.00',
+  );
+  await expect(page.locator('#accountAllocationCount')).toContainText(
+    '6 счетов',
   );
   await expect(
     page.locator('#accountAllocationList .compact-allocation-key'),
@@ -862,7 +863,7 @@ test('summarizes the four largest assets and accounts without search controls', 
       .getBoundingClientRect().top,
     add: document.getElementById('accountAdd')!.getBoundingClientRect().top,
     metrics: document
-      .getElementById('accountPortfolioValue')!
+      .getElementById('accountAllocationTotal')!
       .getBoundingClientRect().top,
     allocation: document
       .getElementById('accountAllocationSummary')!
@@ -872,8 +873,188 @@ test('summarizes the four largest assets and accounts without search controls', 
       .getBoundingClientRect().top,
   }));
   expect(Math.abs(accountLayout.add - accountLayout.overline)).toBeLessThan(20);
-  expect(accountLayout.metrics).toBeLessThan(accountLayout.allocation);
+  expect(accountLayout.metrics).toBeGreaterThan(accountLayout.allocation);
   expect(accountLayout.allocation).toBeLessThan(accountLayout.listTitle);
+});
+
+test('overview period updates row performance without changing totals or allocation', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.evaluate(
+    ({ currentTime }) =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 2);
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction('snapshots', 'readwrite');
+          transaction.objectStore('snapshots').put({
+            id: 'today-is-not-a-baseline',
+            createdAt: currentTime - 60 * 60 * 1_000,
+            total: 9_999,
+            accounts: [
+              { accountId: 'vault', name: 'Vault', total: 9_000 },
+              { accountId: 'exchange', name: 'Exchange', total: 999 },
+            ],
+            assets: [
+              { assetId: 'btc', code: 'BTC', value: 3, price: 1 },
+              { assetId: 'xaut', code: 'XAUT', value: 1, price: 1 },
+              { assetId: 'usd', code: 'USD', value: 150, price: 1 },
+              { assetId: 'eth', code: 'ETH', value: 1, price: 1 },
+            ],
+            positions: [
+              {
+                positionId: 'btc-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'btc',
+                assetCode: 'BTC',
+                comment: '',
+                quantity: 3,
+                price: 1,
+                value: 3,
+              },
+              {
+                positionId: 'xaut-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'xaut',
+                assetCode: 'XAUT',
+                comment: '',
+                quantity: 1,
+                price: 1,
+                value: 1,
+              },
+              {
+                positionId: 'usd-vault',
+                accountId: 'vault',
+                accountName: 'Vault',
+                assetId: 'usd',
+                assetCode: 'USD',
+                comment: '',
+                quantity: 150,
+                price: 1,
+                value: 150,
+              },
+              {
+                positionId: 'eth-exchange',
+                accountId: 'exchange',
+                accountName: 'Exchange',
+                assetId: 'eth',
+                assetCode: 'ETH',
+                comment: '',
+                quantity: 1,
+                price: 1,
+                value: 1,
+              },
+            ],
+          });
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not save snapshot'));
+        };
+      }),
+    { currentTime: Date.now() },
+  );
+  await page.reload();
+  await page.locator('.tab[data-nav="assetsView"]').click();
+
+  const overviewSummaries = await page.evaluate(() => {
+    const summary = (totalId: string, barId: string) => ({
+      total: document.getElementById(totalId)!.textContent,
+      widths: Array.from(
+        document.querySelectorAll<HTMLElement>(`#${barId} span`),
+        ({ style }) => style.width,
+      ),
+    });
+    return {
+      assets: summary('assetAllocationTotal', 'assetAllocationBar'),
+      accounts: summary('accountAllocationTotal', 'accountAllocationBar'),
+    };
+  });
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
+  ).toHaveText('+25.0%');
+
+  await page.locator('#assetsView [data-overview-period="24h"]').click();
+  await expect(
+    page.locator('#assetsView [data-overview-period="24h"]'),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
+  ).toHaveText('+5.3%');
+  await expect(page.locator('#assetAllocationTotal')).toHaveText(
+    overviewSummaries.assets.total ?? '',
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Array.from(
+          document.querySelectorAll<HTMLElement>('#assetAllocationBar span'),
+          ({ style }) => style.width,
+        ),
+      ),
+    )
+    .toEqual(overviewSummaries.assets.widths);
+
+  await page.locator('.tab[data-nav="accountsView"]').click();
+  await expect(
+    page.locator('#accountsView [data-overview-period="24h"]'),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.locator('[data-account-open="exchange"] .portfolio-row-value small'),
+  ).toHaveText('+11.1%');
+  await expect(page.locator('#accountAllocationTotal')).toHaveText(
+    overviewSummaries.accounts.total ?? '',
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Array.from(
+          document.querySelectorAll<HTMLElement>('#accountAllocationBar span'),
+          ({ style }) => style.width,
+        ),
+      ),
+    )
+    .toEqual(overviewSummaries.accounts.widths);
+});
+
+test('overview period shows a dash when no eligible 24 hour baseline exists', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 2);
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction('snapshots', 'readwrite');
+          transaction.objectStore('snapshots').clear();
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not clear snapshots'));
+        };
+      }),
+  );
+  await page.reload();
+  await page.locator('.tab[data-nav="assetsView"]').click();
+  await page.locator('#assetsView [data-overview-period="24h"]').click();
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
+  ).toHaveText('—');
 });
 
 test('requires two historical prices before drawing an asset chart', async ({

@@ -59,6 +59,23 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('autoSnapshot')).toBeNull();
   });
 
+  it('places overview metrics and period controls in both portfolio tabs', () => {
+    const document = new JSDOM(html).window.document;
+
+    expect(
+      document.querySelectorAll('[data-overview-period="24h"]'),
+    ).toHaveLength(2);
+    expect(
+      document.querySelectorAll('[data-overview-period="all"]'),
+    ).toHaveLength(2);
+    expect(document.getElementById('assetAllocationCount')).not.toBeNull();
+    expect(document.getElementById('assetAllocationTotal')).not.toBeNull();
+    expect(document.getElementById('accountAllocationCount')).not.toBeNull();
+    expect(document.getElementById('accountAllocationTotal')).not.toBeNull();
+    expect(document.getElementById('assetSummary')).toBeNull();
+    expect(document.getElementById('accountPortfolioValue')).toBeNull();
+  });
+
   it('defines shared UI primitives and a dedicated history row layout', () => {
     const renderSource = uiSources.find((source) =>
       source.includes('class WorthRenderer'),
