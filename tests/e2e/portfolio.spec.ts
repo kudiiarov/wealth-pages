@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function seedPortfolio(page: Page): Promise<void> {
-  const now = Date.now();
+async function seedPortfolio(page: Page, currentTime = Date.now()): Promise<void> {
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await page.evaluate(
     ({ currentTime }) =>
@@ -279,7 +278,7 @@ async function seedPortfolio(page: Page): Promise<void> {
             reject(transaction.error ?? new Error('Could not seed portfolio'));
         };
       }),
-    { currentTime: now },
+    { currentTime },
   );
 }
 
@@ -1003,10 +1002,12 @@ test('summarizes the four largest assets and accounts without search controls', 
 test('overview period updates row performance without changing totals or allocation', async ({
   page,
 }) => {
+  const fixedNow = new Date(2026, 7, 15, 12, 0, 0, 0).getTime();
+  await page.clock.setFixedTime(fixedNow);
   await page.goto('/');
-  await seedPortfolio(page);
+  await seedPortfolio(page, fixedNow);
   await page.evaluate(
-    () =>
+    ({ currentTime }) =>
       new Promise<void>((resolve, reject) => {
         const request = indexedDB.open('worth-local-portfolio', 2);
         request.onerror = () =>
@@ -1016,7 +1017,7 @@ test('overview period updates row performance without changing totals or allocat
           const transaction = database.transaction('snapshots', 'readwrite');
           transaction.objectStore('snapshots').put({
             id: 'today-is-not-a-baseline',
-            createdAt: Date.now(),
+            createdAt: currentTime,
             total: 9_999,
             accounts: [
               { accountId: 'vault', name: 'Vault', total: 9_000 },
@@ -1083,6 +1084,7 @@ test('overview period updates row performance without changing totals or allocat
             reject(transaction.error ?? new Error('Could not save snapshot'));
         };
       }),
+    { currentTime: fixedNow - 60 * 60 * 1_000 },
   );
   await page.reload();
   await page.locator('.tab[data-nav="assetsView"]').click();

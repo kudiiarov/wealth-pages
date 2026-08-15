@@ -12,6 +12,17 @@ This keeps the fixture on the current local calendar day while remaining earlier
 - Full E2E: 34 passed (desktop Chromium and mobile Chromium).
 - `git diff --check`: passed.
 
+## Review round 2 follow-up
+
+Made the fixture fully deterministic with Playwright clock control. `seedPortfolio` now accepts an optional `currentTime = Date.now()` parameter. The overview-period test fixes the browser clock at `new Date(2026, 7, 15, 12, 0, 0, 0).getTime()`, calls `page.clock.setFixedTime(fixedNow)` before navigation, seeds with `fixedNow`, and inserts `today-is-not-a-baseline` at `fixedNow - 60 * 60 * 1_000`. Thus the intended 24-hour baseline is on the prior local day, the bogus snapshot is on the fixed current local day, and renderer time cannot roll over during async IndexedDB work or reload.
+
+Exact verification evidence after the follow-up:
+
+- `bun run build`: passed (`tsc --noEmit && vite build`; Vite build completed successfully).
+- `npm run test:e2e -- --grep "overview period updates row performance"` equivalent via Bun with a temporary npm shim: 2 passed (mobile Chromium and desktop Chromium), 7.6s.
+- `npm run test:e2e` equivalent via Bun with a temporary npm shim: 34 passed (mobile Chromium and desktop Chromium), 20.5s.
+- `git diff --check`: passed.
+
 The repository environment did not provide `npm`; tests were run with the installed Bun runtime and a temporary `npm` compatibility shim because the Playwright web-server configuration invokes `npm`.
 
 ## Self-review
