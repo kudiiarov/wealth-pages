@@ -33,11 +33,10 @@
 <span class="pnl-money" id="pnlMoney">—</span>
 <span class="pnl-percent" id="pnlPercent">—</span>
 </div>
-<div aria-label="Период доходности" class="home-periods" id="homePeriods" role="group">
+<div aria-label="Период доходности" class="home-periods ui-segmented" id="homePeriods" role="group">
 <button data-home-period="1d" type="button">1D</button><button data-home-period="1w" type="button">1W</button><button data-home-period="1m" type="button">1M</button><button data-home-period="1y" type="button">1Y</button><button class="active" data-home-period="all" type="button">ALL</button>
 </div>
 <div class="chart-inspector home-chart-inspector"><canvas aria-describedby="homeChartTooltip" aria-label="Динамика стоимости портфеля" id="homeChart" tabindex="0"></canvas><output aria-live="polite" class="chart-tooltip hidden" id="homeChartTooltip" role="status"></output></div>
-<button class="price-trust" data-nav="settingsView" id="priceTrust" type="button"><span></span><b id="priceTrustText">—</b></button>
 </div>
 <section class="home-insight-section">
 <div class="section-heading-row"><h2 data-i18n="rates">Курсы</h2><button class="section-action" data-i18n="configure" id="configureRatesBtn" type="button">Настроить</button></div>
@@ -74,7 +73,7 @@
 <div class="chart-inspector history-chart-inspector"><canvas aria-describedby="entityDetailChartTooltip" aria-label="История стоимости" id="entityDetailChart" tabindex="0"></canvas><output aria-live="polite" class="chart-tooltip hidden" id="entityDetailChartTooltip" role="status"></output></div>
 <div class="empty-state overlay-empty" data-i18n="needTwo" id="entityDetailEmpty">Нужно минимум два снимка для графика.</div>
 <div class="chart-dates" id="entityDetailChartDates"><span></span><span></span></div>
-<div aria-label="Период цены" class="detail-periods" id="detailPeriods" role="group"><button data-detail-period="1d" type="button">1Д</button><button data-detail-period="1w" type="button">1Н</button><button data-detail-period="1m" type="button">1М</button><button data-detail-period="1y" type="button">1Г</button><button class="active" data-detail-period="all" type="button">ВСЕ</button></div>
+<div aria-label="Период цены" class="detail-periods ui-segmented" id="detailPeriods" role="group"><button data-detail-period="1d" type="button">1Д</button><button data-detail-period="1w" type="button">1Н</button><button data-detail-period="1m" type="button">1М</button><button data-detail-period="1y" type="button">1Г</button><button class="active" data-detail-period="all" type="button">ВСЕ</button></div>
 </section>
 <section class="detail-metadata" id="entityDetailMetadata"><h2 id="entityRelatedTitle">—</h2><div class="holding-summary surface"><div id="entityHoldingSummary"></div><div class="related-list" id="entityRelatedList"></div></div></section>
 </section>

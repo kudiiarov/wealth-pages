@@ -312,6 +312,47 @@ export function assetPriceHistorySeries(
     .sort((left, right) => left.createdAt - right.createdAt);
 }
 
+export function assetPriceHistoryInQuote(
+  sourceAssetId: string,
+  quoteAssetId: string | undefined,
+  data: PortfolioData,
+): HistoryDatum[] {
+  const sourcePoints = data.priceHistory.filter(
+    (point) =>
+      point.assetId === sourceAssetId &&
+      Number.isFinite(point.usdPrice) &&
+      point.usdPrice >= 0,
+  );
+  if (!quoteAssetId) {
+    return sourcePoints
+      .map(({ createdAt, usdPrice: value }) => ({ createdAt, value }))
+      .sort((left, right) => left.createdAt - right.createdAt);
+  }
+  if (sourceAssetId === quoteAssetId) {
+    return sourcePoints
+      .filter(({ usdPrice }) => usdPrice > 0)
+      .map(({ createdAt }) => ({ createdAt, value: 1 }))
+      .sort((left, right) => left.createdAt - right.createdAt);
+  }
+
+  const quotePrices = new Map(
+    data.priceHistory
+      .filter(
+        (point) =>
+          point.assetId === quoteAssetId &&
+          Number.isFinite(point.usdPrice) &&
+          point.usdPrice > 0,
+      )
+      .map(({ dayKey, usdPrice }) => [dayKey, usdPrice]),
+  );
+  return sourcePoints
+    .flatMap(({ createdAt, dayKey, usdPrice }) => {
+      const quotePrice = quotePrices.get(dayKey);
+      return quotePrice ? [{ createdAt, value: usdPrice / quotePrice }] : [];
+    })
+    .sort((left, right) => left.createdAt - right.createdAt);
+}
+
 export function accountHistorySeries(
   accountId: string,
   snapshots: readonly Snapshot[],

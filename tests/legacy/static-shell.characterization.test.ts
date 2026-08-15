@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const projectRoot = new URL('../../', import.meta.url);
 const html = readFileSync(new URL('index.html', projectRoot), 'utf8');
+const styles = readFileSync(new URL('src/styles/app.css', projectRoot), 'utf8');
 const uiSources = ['src/main.ts', 'src/ui/events.ts', 'src/ui/render.ts'].map(
   (path) => readFileSync(new URL(path, projectRoot), 'utf8'),
 );
@@ -25,6 +26,8 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('entityDetailView')).not.toBeNull();
     expect(document.getElementById('entityDetailChart')).not.toBeNull();
     expect(document.getElementById('portfolioRates')).not.toBeNull();
+    expect(document.getElementById('priceTrust')).toBeNull();
+    expect(document.getElementById('priceTrustText')).toBeNull();
     expect(document.getElementById('rateSelectionModal')).not.toBeNull();
     expect(document.querySelector('.build-note')?.textContent).toContain(
       '3.7.0-final',
@@ -54,6 +57,21 @@ describe('legacy static application shell', () => {
     ]);
     expect(document.getElementById('autoPriceRefresh')).toBeNull();
     expect(document.getElementById('autoSnapshot')).toBeNull();
+  });
+
+  it('defines shared UI primitives and a dedicated history row layout', () => {
+    const renderSource = uiSources.find((source) =>
+      source.includes('class WorthRenderer'),
+    );
+
+    expect(styles).toContain('--ui-control-height');
+    expect(styles).toContain('.ui-list-row');
+    expect(styles).toContain('.ui-freshness');
+    expect(styles).toContain('.history-row');
+    expect(renderSource).toContain(
+      'list-card ui-list-row ui-surface history-row',
+    );
+    expect(renderSource).toContain('ui-icon-button menu-button');
   });
 
   it('ships every local script, stylesheet, manifest, and icon it references', () => {

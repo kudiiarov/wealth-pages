@@ -15,6 +15,19 @@
   --radius: 24px;
   --shadow: 0 8px 30px rgba(18, 20, 24, 0.06);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ui-control-height: 44px;
+  --ui-control-height-large: 48px;
+  --ui-icon-size-compact: 36px;
+  --ui-icon-size-row: 46px;
+  --ui-icon-size-hero: 72px;
+  --ui-radius-control: 14px;
+  --ui-radius-row: 18px;
+  --ui-radius-card: 24px;
+  --ui-row-padding-block: 10px;
+  --ui-row-padding-inline: 12px;
+  --ui-row-gap: 10px;
+  --ui-section-gap: 28px;
+  --ui-transition: 160ms ease-out;
 }
 * {
   box-sizing: border-box;
@@ -40,6 +53,84 @@ select {
 }
 button {
   cursor: pointer;
+}
+.ui-icon-button {
+  width: var(--ui-control-height);
+  height: var(--ui-control-height);
+  min-width: var(--ui-control-height);
+  min-height: var(--ui-control-height);
+  display: grid;
+  place-items: center;
+  border: 0;
+}
+.ui-icon-tile {
+  width: var(--ui-icon-size-row);
+  height: var(--ui-icon-size-row);
+  border-radius: var(--ui-radius-control);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.ui-icon-tile.compact {
+  width: var(--ui-icon-size-compact);
+  height: var(--ui-icon-size-compact);
+}
+.ui-icon-tile.hero {
+  width: var(--ui-icon-size-hero);
+  height: var(--ui-icon-size-hero);
+}
+.ui-surface {
+  background: var(--surface);
+  border-radius: var(--ui-radius-row);
+}
+.ui-list-row {
+  min-width: 0;
+  min-height: var(--ui-control-height);
+  gap: var(--ui-row-gap);
+  padding: var(--ui-row-padding-block) var(--ui-row-padding-inline);
+}
+.ui-segmented button {
+  min-height: var(--ui-control-height);
+  transition:
+    transform var(--ui-transition),
+    background var(--ui-transition),
+    color var(--ui-transition);
+}
+.ui-freshness {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  color: var(--muted);
+  font-style: normal;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.ui-freshness small {
+  margin: 0;
+  color: inherit;
+  font-size: 10px;
+  font-weight: 520;
+}
+.freshness-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.ui-freshness.current .freshness-dot {
+  background: var(--green);
+}
+.ui-freshness.stale {
+  color: var(--orange);
+}
+.ui-freshness.manual .freshness-dot {
+  display: none;
+}
+.rate-status.current::before {
+  content: none;
 }
 svg {
   fill: none;
@@ -1396,6 +1487,38 @@ html[data-theme='dark'] .security-icon {
 /* 3.5 — dedicated portfolio navigation and entity details */
 .tab-bar {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Shared UI foundation */
+.history-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto) var(--ui-control-height);
+  align-items: center;
+  overflow: hidden;
+}
+.history-row .list-value {
+  max-width: min(42vw, 220px);
+  overflow: hidden;
+}
+.history-row .menu-button {
+  margin: 0;
+  padding: 0;
+  border-radius: var(--ui-radius-control);
+}
+.detail-price-status .ui-freshness {
+  width: 100%;
+}
+@media (max-width: 430px) {
+  .history-row {
+    grid-template-columns: minmax(0, 1fr) minmax(64px, auto) var(
+        --ui-control-height
+      );
+    gap: 8px;
+  }
+  .history-row .list-value {
+    max-width: 34vw;
+  }
 }
 
 /* 3.6.1 — approved portfolio hierarchy */

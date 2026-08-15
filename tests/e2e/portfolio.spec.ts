@@ -254,6 +254,7 @@ async function seedPortfolio(page: Page): Promise<void> {
             ['xaut', 180, 195],
             ['usd', 1, 1],
             ['eth', 40, 45],
+            ['rub', 1 / 80, 1 / 84],
           ] as const) {
             priceHistory.put({
               id: `legacy-price:${assetId}:first`,
@@ -281,6 +282,22 @@ async function seedPortfolio(page: Page): Promise<void> {
     { currentTime: now },
   );
 }
+
+test('keeps self currency price history flat', async ({ page }) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  await page.locator('#displayCurrencyBtn').click();
+  await page.locator('[data-currency-code="RUB"]').click();
+  await page.goto('/#/assets/rub');
+
+  await expect(
+    page.locator('#entityDetailHero > .detail-hero-main > strong'),
+  ).toHaveText('1 ₽');
+  await expect(page.locator('#entityDetailPriceChange')).toContainText('0 ₽');
+  await expect(page.locator('#entityDetailPriceChange')).toContainText('0.0%');
+});
 
 test('creates entities and opens their dedicated detail screens', async ({
   page,
@@ -341,6 +358,12 @@ test('creates entities and opens their dedicated detail screens', async ({
   await expect(page.locator('#historyScope')).toHaveCount(0);
   await page.locator('#saveSnapshotBtnHistory').click();
   await expect(page.locator('#historyList .list-card')).toHaveCount(1);
+  await expect(page.locator('#historyList .history-row')).toHaveCount(1);
+  const historyMenuBox = await page
+    .locator('#historyList [data-snapshot-menu]')
+    .boundingBox();
+  expect(historyMenuBox?.width).toBeGreaterThanOrEqual(44);
+  expect(historyMenuBox?.height).toBeGreaterThanOrEqual(44);
 });
 
 test('shows and persists configurable asset pairs that open asset details', async ({
@@ -361,7 +384,13 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   );
   await expect(
     page.locator('[data-rate-asset="btc"] .rate-status'),
-  ).toContainText('Цена актуальна');
+  ).not.toContainText('Цена актуальна');
+  await expect(
+    page.locator('[data-rate-asset="btc"] .rate-status .freshness-dot'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('[data-rate-asset="btc"] .rate-status small'),
+  ).not.toBeEmpty();
   await expect(page.locator('.exposure-section')).toHaveCount(0);
   const configureStyle = await page
     .locator('#configureRatesBtn')
@@ -372,7 +401,7 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   await expect(page).toHaveURL(/#\/assets\/btc$/);
   await expect(page.locator('#entityDetailTitle')).toHaveText('Bitcoin');
   await expect(page.locator('#entityDetailHero')).toContainText('$100.00');
-  await expect(page.locator('#entityDetailHero')).toContainText(
+  await expect(page.locator('#entityDetailHero')).not.toContainText(
     'Цена актуальна',
   );
   await page.locator('#entityRelatedList [data-position-open]').first().click();
@@ -415,9 +444,9 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   await page.locator('[data-lang-choice="en"]').click();
   await page.locator('[data-nav="homeView"]').click();
   await expect(page.locator('[data-i18n="rates"]')).toHaveText('Rates');
-  await expect(page.locator('[data-rate-asset="btc"] .rate-status')).toHaveText(
-    /Price current/,
-  );
+  await expect(
+    page.locator('[data-rate-asset="btc"] .rate-status'),
+  ).not.toContainText('Price current');
   await page.locator('[data-rate-asset="btc"]').click();
   await expect(page.locator('#entityDetailMenu')).toHaveAttribute(
     'aria-label',
@@ -452,9 +481,13 @@ test('matches the approved asset detail hierarchy and header actions', async ({
   await expect(page.locator('#entityDetailPriceChange')).toContainText(
     '+25.0%',
   );
-  await expect(page.locator('#entityDetailFreshness')).toContainText(
+  await expect(page.locator('#entityDetailFreshness')).not.toContainText(
     'Цена актуальна',
   );
+  await expect(
+    page.locator('#entityDetailFreshness .freshness-dot'),
+  ).toHaveCount(1);
+  await expect(page.locator('#entityDetailFreshness small')).not.toBeEmpty();
   const freshnessWhiteSpace = await page
     .locator('#entityDetailFreshness')
     .evaluate((element) => getComputedStyle(element).whiteSpace);
@@ -577,7 +610,9 @@ test('summarizes the four largest assets and accounts without search controls', 
   await expect(page.locator('#accountSearch')).toHaveCount(0);
   await expect(page.locator('#accountPortfolioValue')).toContainText('$750.00');
   await expect(page.locator('#accountPortfolioMeta')).toContainText('6 счетов');
-  await expect(page.locator('#accountPortfolioMeta')).toContainText('снимок');
+  await expect(page.locator('#accountPortfolioMeta')).not.toContainText(
+    'снимок',
+  );
   await expect(
     page.locator('#accountAllocationList .compact-allocation-key'),
   ).toHaveCount(5);
@@ -723,7 +758,7 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
   await page.locator('[data-rate-asset="btc"]').click();
   const detailCanvas = page.locator('#entityDetailChart');
   await expect(page.locator('#entityDetailHero')).toContainText('$100.00');
-  await expect(page.locator('#entityDetailHero')).toContainText(
+  await expect(page.locator('#entityDetailHero')).not.toContainText(
     'Цена актуальна',
   );
   await expect(page.locator('#entityDetailMetadata')).toContainText(

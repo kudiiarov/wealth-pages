@@ -265,8 +265,6 @@ const ru = {
           : 'счетов';
     return `Остальные ${count} ${noun}`;
   },
-  snapshotTodayAt: (time: string) => `снимок сегодня, ${time}`,
-  snapshotAt: (date: string, time: string) => `снимок ${date}, ${time}`,
   currentRate: 'Текущий курс',
   totalQuantity: 'Общее количество',
   addPosition: 'Добавить позицию',
@@ -285,12 +283,10 @@ const ru = {
   pricesNotTracked: 'Автоцены не настроены',
   pricesCurrent: (current: number, total: number) =>
     `${current} из ${total} цен актуальны`,
-  pricesUpdatedAgo: (time: string) => `Цены обновлены ${time}`,
   updatedAgo: (time: string) => `Обновлено ${time}`,
   manageAccount: 'Настроить счёт',
   manageAsset: 'Настроить актив',
   stalePrice: 'Устарела',
-  currentPriceStatus: 'Цена актуальна',
   performancePeriod: 'Период доходности',
   portfolioTrend: 'Динамика стоимости портфеля',
   chartInspectionHelp: 'Используйте стрелки влево и вправо для точных значений',
@@ -540,8 +536,6 @@ const en = {
     `${count} more ${count === 1 ? 'account' : 'accounts'}`,
   accountsCount: (count: number) =>
     `${count} ${count === 1 ? 'account' : 'accounts'}`,
-  snapshotTodayAt: (time: string) => `snapshot today, ${time}`,
-  snapshotAt: (date: string, time: string) => `snapshot ${date}, ${time}`,
   currentRate: 'Current rate',
   totalQuantity: 'Total quantity',
   addPosition: 'Add position',
@@ -560,12 +554,10 @@ const en = {
   pricesNotTracked: 'Automatic prices are not configured',
   pricesCurrent: (current: number, total: number) =>
     `${current} of ${total} prices are current`,
-  pricesUpdatedAgo: (time: string) => `Prices updated ${time}`,
   updatedAgo: (time: string) => `Updated ${time}`,
   manageAccount: 'Manage account',
   manageAsset: 'Manage asset',
   stalePrice: 'Stale',
-  currentPriceStatus: 'Price current',
   performancePeriod: 'Performance period',
   portfolioTrend: 'Portfolio value trend',
   chartInspectionHelp: 'Use the left and right arrow keys for exact values',

@@ -4,6 +4,7 @@ import {
   accountOverviewRows,
   accountHistorySeries,
   allocationRows,
+  assetPriceHistoryInQuote,
   assetPriceHistorySeries,
   assetHistorySeries,
   assetMatchesPortfolioFilter,
@@ -178,6 +179,99 @@ it('extracts chronological unit-price history independently of holding value', (
   ).toEqual([
     { createdAt: 100, value: 44_000 },
     { createdAt: 200, value: 45_000 },
+  ]);
+});
+
+it('builds historical cross-rates from matching daily observations', () => {
+  const data: PortfolioData = {
+    accounts: [],
+    assets: [
+      {
+        id: 'rub',
+        name: 'Ruble',
+        code: 'RUB',
+        icon: '₽',
+        color: '#299bc6',
+        price: 0.01,
+        autoUpdateSource: 'frankfurter',
+      },
+      {
+        id: 'btc',
+        name: 'Bitcoin',
+        code: 'BTC',
+        icon: 'B',
+        color: '#f5a341',
+        price: 43_000,
+        autoUpdateSource: 'coingecko',
+      },
+    ],
+    positions: [],
+    snapshots: [],
+    priceHistory: [
+      {
+        id: 'rub-1',
+        assetId: 'rub',
+        dayKey: '2026-08-14',
+        createdAt: 100,
+        usdPrice: 0.01,
+      },
+      {
+        id: 'btc-1',
+        assetId: 'btc',
+        dayKey: '2026-08-14',
+        createdAt: 110,
+        usdPrice: 40_000,
+      },
+      {
+        id: 'rub-2',
+        assetId: 'rub',
+        dayKey: '2026-08-15',
+        createdAt: 200,
+        usdPrice: 0.01,
+      },
+      {
+        id: 'btc-2',
+        assetId: 'btc',
+        dayKey: '2026-08-15',
+        createdAt: 210,
+        usdPrice: 43_000,
+      },
+      {
+        id: 'rub-zero',
+        assetId: 'rub',
+        dayKey: '2026-08-16',
+        createdAt: 300,
+        usdPrice: 0,
+      },
+      {
+        id: 'btc-3',
+        assetId: 'btc',
+        dayKey: '2026-08-16',
+        createdAt: 310,
+        usdPrice: 44_000,
+      },
+      {
+        id: 'btc-4',
+        assetId: 'btc',
+        dayKey: '2026-08-17',
+        createdAt: 410,
+        usdPrice: 45_000,
+      },
+    ],
+  };
+
+  expect(
+    assetPriceHistoryInQuote('rub', 'rub', data).map(({ value }) => value),
+  ).toEqual([1, 1]);
+  expect(assetPriceHistoryInQuote('btc', undefined, data)).toEqual([
+    { createdAt: 110, value: 40_000 },
+    { createdAt: 210, value: 43_000 },
+    { createdAt: 310, value: 44_000 },
+    { createdAt: 410, value: 45_000 },
+  ]);
+  expect(assetPriceHistoryInQuote('btc', 'rub', data)).toEqual([
+    { createdAt: 110, value: 4_000_000 },
+    { createdAt: 210, value: 4_300_000 },
   ]);
 });
 
