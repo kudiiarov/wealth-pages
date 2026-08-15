@@ -2,7 +2,9 @@ import { expect, it } from 'vitest';
 
 import {
   accountOverviewRows,
+  accountHistorySeries,
   allocationRows,
+  assetHistorySeries,
   assetMatchesPortfolioFilter,
   assetOverviewRows,
   categoryAllocationRows,
@@ -11,6 +13,7 @@ import {
   portfolioExposures,
   portfolioTags,
   priceFreshness,
+  selectedRateAssets,
 } from '../../src/ui/portfolio-view-model';
 import type { PortfolioData } from '../../src/domain/models';
 
@@ -517,4 +520,122 @@ it('reports freshness only for active automatically priced assets', () => {
     staleAssetIds: ['stale'],
     latestUpdateAt: now - 60_000,
   });
+});
+
+it('uses the three largest assets until a valid explicit rate selection exists', () => {
+  const data: PortfolioData = {
+    accounts: [
+      { id: 'a', name: 'A', type: 'cash', icon: 'A', color: '#111111' },
+    ],
+    assets: [
+      {
+        id: 'small',
+        name: 'Small',
+        code: 'S',
+        icon: 'S',
+        color: '#111111',
+        price: 1,
+        autoUpdateSource: 'none',
+      },
+      {
+        id: 'third',
+        name: 'Third',
+        code: 'T',
+        icon: 'T',
+        color: '#222222',
+        price: 3,
+        autoUpdateSource: 'none',
+      },
+      {
+        id: 'largest',
+        name: 'Largest',
+        code: 'L',
+        icon: 'L',
+        color: '#333333',
+        price: 10,
+        autoUpdateSource: 'none',
+      },
+      {
+        id: 'second',
+        name: 'Second',
+        code: 'M',
+        icon: 'M',
+        color: '#444444',
+        price: 5,
+        autoUpdateSource: 'none',
+      },
+    ],
+    positions: [
+      { id: 'p1', accountId: 'a', assetId: 'small', quantity: 1, comment: '' },
+      { id: 'p2', accountId: 'a', assetId: 'third', quantity: 1, comment: '' },
+      {
+        id: 'p3',
+        accountId: 'a',
+        assetId: 'largest',
+        quantity: 1,
+        comment: '',
+      },
+      { id: 'p4', accountId: 'a', assetId: 'second', quantity: 1, comment: '' },
+    ],
+    snapshots: [],
+  };
+
+  expect(selectedRateAssets(data, []).map(({ id }) => id)).toEqual([
+    'largest',
+    'second',
+    'third',
+  ]);
+  expect(
+    selectedRateAssets(data, ['small', 'largest', 'small', 'third']).map(
+      ({ id }) => id,
+    ),
+  ).toEqual(['small', 'largest', 'third']);
+  expect(selectedRateAssets(data, ['deleted']).map(({ id }) => id)).toEqual([
+    'largest',
+    'second',
+    'third',
+  ]);
+});
+
+it('extracts chronological asset and account history from compatible snapshots', () => {
+  const snapshots = [
+    {
+      id: 'later',
+      createdAt: 200,
+      total: 100,
+      assets: [{ assetId: 'btc', code: 'BTC', value: 18.9 }],
+      accounts: [{ accountId: 'vault', name: 'Vault', total: 24 }],
+    },
+    {
+      id: 'legacy',
+      createdAt: 50,
+      total: 50,
+    },
+    {
+      id: 'earlier',
+      createdAt: 100,
+      total: 80,
+      assets: [
+        { assetId: 'btc', code: 'BTC', value: 12.34 },
+        { assetId: 'eth', code: 'ETH', value: 4 },
+      ],
+      accounts: [{ accountId: 'vault', name: 'Vault', total: 20 }],
+    },
+    {
+      id: 'invalid',
+      createdAt: 150,
+      total: 90,
+      assets: [{ assetId: 'btc', code: 'BTC', value: Number.NaN }],
+      accounts: [{ accountId: 'vault', name: 'Vault', total: Number.NaN }],
+    },
+  ];
+
+  expect(assetHistorySeries('btc', snapshots)).toEqual([
+    { createdAt: 100, value: 12.34 },
+    { createdAt: 200, value: 18.9 },
+  ]);
+  expect(accountHistorySeries('vault', snapshots)).toEqual([
+    { createdAt: 100, value: 20 },
+    { createdAt: 200, value: 24 },
+  ]);
 });

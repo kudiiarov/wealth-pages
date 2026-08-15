@@ -3,9 +3,11 @@ import type {
   Asset,
   AssetCategory,
   PortfolioData,
+  Snapshot,
 } from '../domain/models';
 import { flowAdjustedPnl, type PnlPoint } from '../domain/pnl';
 import { accountTotal, assetQuantity, assetTotal } from '../domain/portfolio';
+import type { HistoryDatum } from './chart';
 
 export interface AllocationRow {
   asset: Asset;
@@ -108,6 +110,57 @@ export function assetOverviewRows(data: PortfolioData): AllocationRow[] {
       value: assetTotal(asset.id, data),
     }))
     .sort((left, right) => Math.abs(right.value) - Math.abs(left.value));
+}
+
+export function selectedRateAssets(
+  data: PortfolioData,
+  selectedIds: readonly string[],
+  limit = 3,
+): Asset[] {
+  const assetsById = new Map(data.assets.map((asset) => [asset.id, asset]));
+  const selected = Array.from(new Set(selectedIds))
+    .flatMap((id) => {
+      const asset = assetsById.get(id);
+      return asset ? [asset] : [];
+    })
+    .slice(0, limit);
+  return selected.length
+    ? selected
+    : assetOverviewRows(data)
+        .slice(0, limit)
+        .map(({ asset }) => asset);
+}
+
+export function assetHistorySeries(
+  assetId: string,
+  snapshots: readonly Snapshot[],
+): HistoryDatum[] {
+  return snapshots
+    .flatMap((snapshot) => {
+      const value = snapshot.assets?.find(
+        (asset) => asset.assetId === assetId,
+      )?.value;
+      return typeof value === 'number' && Number.isFinite(value)
+        ? [{ createdAt: snapshot.createdAt, value }]
+        : [];
+    })
+    .sort((left, right) => left.createdAt - right.createdAt);
+}
+
+export function accountHistorySeries(
+  accountId: string,
+  snapshots: readonly Snapshot[],
+): HistoryDatum[] {
+  return snapshots
+    .flatMap((snapshot) => {
+      const value = snapshot.accounts?.find(
+        (account) => account.accountId === accountId,
+      )?.total;
+      return typeof value === 'number' && Number.isFinite(value)
+        ? [{ createdAt: snapshot.createdAt, value }]
+        : [];
+    })
+    .sort((left, right) => left.createdAt - right.createdAt);
 }
 
 export function allocationRows(data: PortfolioData): AllocationRow[] {
