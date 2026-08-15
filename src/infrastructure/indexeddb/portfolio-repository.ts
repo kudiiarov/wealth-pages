@@ -8,14 +8,16 @@ import type {
   StoreName,
   UnknownRecord,
 } from '../../domain/models';
+import { compactDailyHistory } from '../../domain/daily-history';
 import { normalizeData } from '../../domain/normalize';
 
 export const DB_NAME = 'worth-local-portfolio';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 export const STORE_NAMES = [
   'accounts',
   'assets',
   'positions',
+  'priceHistory',
   'snapshots',
 ] as const satisfies readonly StoreName[];
 
@@ -46,17 +48,31 @@ export class IndexedDbPortfolioRepository implements PortfolioRepository {
     const database = await this.database();
     const transaction = database.transaction(STORE_NAMES, 'readonly');
     const done = transactionDone(transaction);
-    const [accounts, assets, positions, snapshots] = await Promise.all(
-      STORE_NAMES.map((storeName) =>
-        requestResult<UnknownRecord[]>(
-          transaction.objectStore(storeName).getAll() as IDBRequest<
-            UnknownRecord[]
-          >,
+    const [accounts, assets, positions, priceHistory, snapshots] =
+      await Promise.all(
+        STORE_NAMES.map((storeName) =>
+          requestResult<UnknownRecord[]>(
+            transaction.objectStore(storeName).getAll() as IDBRequest<
+              UnknownRecord[]
+            >,
+          ),
         ),
-      ),
-    );
+      );
     await done;
-    return normalizeData({ accounts, assets, positions, snapshots });
+    const normalized = normalizeData({
+      accounts,
+      assets,
+      positions,
+      snapshots,
+      priceHistory,
+    });
+    const compacted = compactDailyHistory(normalized, {
+      extractSnapshotPrices: false,
+    });
+    if (JSON.stringify(compacted) !== JSON.stringify(normalized)) {
+      await this.replaceAll(compacted);
+    }
+    return compacted;
   }
 
   async put<K extends StoreName>(
@@ -112,11 +128,31 @@ export class IndexedDbPortfolioRepository implements PortfolioRepository {
   private database(): Promise<IDBDatabase> {
     this.databasePromise ??= new Promise((resolve, reject) => {
       const request = this.factory.open(DB_NAME, DB_VERSION);
-      request.onupgradeneeded = () => {
+      request.onupgradeneeded = (event) => {
         for (const storeName of STORE_NAMES) {
           if (!request.result.objectStoreNames.contains(storeName)) {
             request.result.createObjectStore(storeName, { keyPath: 'id' });
           }
+        }
+        if (event.oldVersion < 2 && request.transaction) {
+          const transaction = request.transaction;
+          const snapshots = transaction.objectStore('snapshots');
+          const priceHistory = transaction.objectStore('priceHistory');
+          const legacy = snapshots.getAll() as IDBRequest<UnknownRecord[]>;
+          legacy.onsuccess = () => {
+            const migrated = compactDailyHistory(
+              normalizeData({
+                accounts: [],
+                assets: [],
+                positions: [],
+                snapshots: legacy.result,
+                priceHistory: [],
+              }),
+            );
+            snapshots.clear();
+            for (const snapshot of migrated.snapshots) snapshots.put(snapshot);
+            for (const point of migrated.priceHistory) priceHistory.put(point);
+          };
         }
       };
       request.onsuccess = () => resolve(request.result);

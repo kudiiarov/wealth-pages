@@ -34,6 +34,7 @@ const data: PortfolioData = {
     { id: '3', accountId: 'b', assetId: 'x', quantity: 1, comment: '' },
   ],
   snapshots: [],
+  priceHistory: [],
 };
 
 it('groups and orders positions by accounts or assets', () => {

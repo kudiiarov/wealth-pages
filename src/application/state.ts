@@ -11,6 +11,7 @@ export function createInitialState(settings: AppSettings): AppState {
     assets: [],
     positions: [],
     snapshots: [],
+    priceHistory: [],
     ...settings,
     expandedAccounts: new Set(),
     expandedAssets: new Set(),

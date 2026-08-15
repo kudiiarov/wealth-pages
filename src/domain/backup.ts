@@ -1,14 +1,16 @@
 import type {
   AppSettings,
-  AutomationInterval,
+  PriceRefreshIntervalMinutes,
   PortfolioData,
   RatePair,
+  SnapshotIntervalMinutes,
   UnknownRecord,
 } from './models';
+import { compactDailyHistory } from './daily-history';
 import { normalizeData } from './normalize';
 
-export const BACKUP_VERSION = 15;
-export const APP_VERSION = '3.6.2-final';
+export const BACKUP_VERSION = 16;
+export const APP_VERSION = '3.7.0-final';
 
 export interface ValidatedBackup {
   version: number;
@@ -16,9 +18,9 @@ export interface ValidatedBackup {
   settings?: Partial<AppSettings>;
 }
 
-export interface BackupV15 extends PortfolioData {
+export interface BackupV16 extends PortfolioData {
   app: 'Worth';
-  version: 15;
+  version: 16;
   appVersion: typeof APP_VERSION;
   baseCurrency: 'USD';
   exportedAt: string;
@@ -39,10 +41,14 @@ function finiteNumber(value: unknown): boolean {
   return value !== '' && Number.isFinite(Number(value));
 }
 
-function automationInterval(value: unknown): value is AutomationInterval {
+function priceInterval(value: unknown): value is PriceRefreshIntervalMinutes {
   return (
-    value === 1 || value === 3 || value === 6 || value === 12 || value === 24
+    value === 0 || value === 5 || value === 15 || value === 30 || value === 60
   );
+}
+
+function snapshotInterval(value: unknown): value is SnapshotIntervalMinutes {
+  return value === 0 || value === 30 || value === 60;
 }
 
 function validTimestamp(value: unknown): value is number {
@@ -72,19 +78,22 @@ function parseSettings(value: unknown): Partial<AppSettings> | undefined {
     settings.displayCurrency = value.displayCurrency;
   if (value.pnlPeriod === 'all' || value.pnlPeriod === 'last')
     settings.pnlPeriod = value.pnlPeriod;
-  if (typeof value.autoRefreshOnLaunch === 'boolean') {
-    settings.autoPriceRefresh = value.autoRefreshOnLaunch;
+  if (priceInterval(value.priceRefreshIntervalMinutes)) {
+    settings.priceRefreshIntervalMinutes = value.priceRefreshIntervalMinutes;
+  } else if (typeof value.autoPriceRefresh === 'boolean') {
+    settings.priceRefreshIntervalMinutes = value.autoPriceRefresh ? 60 : 0;
+  } else if (typeof value.autoRefreshOnLaunch === 'boolean') {
+    settings.priceRefreshIntervalMinutes = value.autoRefreshOnLaunch ? 60 : 0;
+  } else {
+    settings.priceRefreshIntervalMinutes = 60;
   }
-  if (typeof value.autoPriceRefresh === 'boolean')
-    settings.autoPriceRefresh = value.autoPriceRefresh;
-  if (automationInterval(value.priceRefreshIntervalHours))
-    settings.priceRefreshIntervalHours = value.priceRefreshIntervalHours;
   if (validTimestamp(value.lastPriceRefreshAt))
     settings.lastPriceRefreshAt = value.lastPriceRefreshAt;
-  if (typeof value.autoSnapshot === 'boolean')
-    settings.autoSnapshot = value.autoSnapshot;
-  if (automationInterval(value.snapshotIntervalHours))
-    settings.snapshotIntervalHours = value.snapshotIntervalHours;
+  if (snapshotInterval(value.snapshotIntervalMinutes)) {
+    settings.snapshotIntervalMinutes = value.snapshotIntervalMinutes;
+  } else {
+    settings.snapshotIntervalMinutes = value.autoSnapshot === true ? 60 : 0;
+  }
   if (validTimestamp(value.lastSnapshotAt))
     settings.lastSnapshotAt = value.lastSnapshotAt;
   if (
@@ -133,6 +142,9 @@ export function validateBackup(value: unknown): ValidatedBackup {
   const assets = records(value.assets, 'assets');
   const positions = records(value.positions, 'positions');
   const snapshots = records(value.snapshots, 'snapshots');
+  const priceHistory = Array.isArray(value.priceHistory)
+    ? records(value.priceHistory, 'priceHistory')
+    : [];
 
   if (
     accounts.some((account) => !text(account.id) || !text(account.name).trim())
@@ -155,7 +167,9 @@ export function validateBackup(value: unknown): ValidatedBackup {
     throw new Error('Повреждены активы');
   }
 
-  const normalized = normalizeData({ accounts, assets, positions, snapshots });
+  const normalized = compactDailyHistory(
+    normalizeData({ accounts, assets, positions, snapshots, priceHistory }),
+  );
   const accountIds = new Set(normalized.accounts.map(({ id }) => id));
   const assetIds = new Set(normalized.assets.map(({ id }) => id));
   const assetCodes = normalized.assets.map(({ code }) => code);
@@ -231,6 +245,10 @@ function cloneData(data: PortfolioData): PortfolioData {
         ? { positions: snapshot.positions.map((position) => ({ ...position })) }
         : {}),
     })),
+    priceHistory: data.priceHistory.map((point) => ({
+      ...point,
+      ...(point.source ? { source: { ...point.source } } : {}),
+    })),
   };
 }
 
@@ -238,14 +256,15 @@ export function createBackup(
   data: PortfolioData,
   settings: AppSettings,
   exportedAt: string,
-): BackupV15 {
+): BackupV16 {
+  const compacted = compactDailyHistory(data);
   return {
     app: 'Worth',
     version: BACKUP_VERSION,
     appVersion: APP_VERSION,
     baseCurrency: 'USD',
     exportedAt,
-    ...cloneData(data),
+    ...cloneData(compacted),
     appSettings: {
       ...settings,
       selectedRateAssetIds: [...(settings.selectedRateAssetIds ?? [])],

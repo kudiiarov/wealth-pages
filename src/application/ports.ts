@@ -4,6 +4,7 @@ import type {
   Asset,
   PortfolioData,
   Position,
+  PriceHistoryPoint,
   Snapshot,
   StoreName,
 } from '../domain/models';
@@ -13,6 +14,7 @@ export interface EntityByStore {
   assets: Asset;
   positions: Position;
   snapshots: Snapshot;
+  priceHistory: PriceHistoryPoint;
 }
 
 export interface PortfolioRepository {

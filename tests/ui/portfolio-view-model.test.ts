@@ -72,6 +72,7 @@ it('orders allocation by absolute value without truncating the bar data', () => 
       { id: '4', accountId: 'a', assetId: 'w', quantity: 5, comment: '' },
     ],
     snapshots: [],
+    priceHistory: [],
   };
 
   expect(
@@ -127,6 +128,7 @@ it('normalizes arbitrary asset pairs and converts through USD prices', () => {
     ],
     positions: [],
     snapshots: [],
+    priceHistory: [],
   };
 
   const pairs = normalizeRatePairs(data, [
@@ -152,22 +154,25 @@ it('extracts chronological unit-price history independently of holding value', (
   expect(
     assetPriceHistorySeries('btc', [
       {
-        id: 'later',
+        id: 'daily-price:btc:later',
+        assetId: 'btc',
+        dayKey: 'later',
         createdAt: 200,
-        total: 2,
-        assets: [{ assetId: 'btc', code: 'BTC', price: 45_000, value: 900 }],
+        usdPrice: 45_000,
       },
       {
-        id: 'invalid',
+        id: 'daily-price:eth:middle',
+        assetId: 'eth',
+        dayKey: 'middle',
         createdAt: 150,
-        total: 1,
-        assets: [{ assetId: 'btc', code: 'BTC', value: 800 }],
+        usdPrice: 3_000,
       },
       {
-        id: 'earlier',
+        id: 'daily-price:btc:earlier',
+        assetId: 'btc',
+        dayKey: 'earlier',
         createdAt: 100,
-        total: 1,
-        assets: [{ assetId: 'btc', code: 'BTC', price: 44_000, value: 440 }],
+        usdPrice: 44_000,
       },
     ]),
   ).toEqual([
@@ -202,6 +207,7 @@ it('collapses asset and account allocation after the four largest rows', () => {
       comment: '',
     })),
     snapshots: [],
+    priceHistory: [],
   };
 
   expect(compactAssetAllocation(data)).toMatchObject([
@@ -279,6 +285,7 @@ it('orders account and asset overviews by absolute value including empty entitie
       },
     ],
     snapshots: [],
+    priceHistory: [],
   };
 
   expect(accountOverviewRows(data).map(({ account }) => account.id)).toEqual([
@@ -351,6 +358,7 @@ it('aggregates categories without double counting and tags as overlapping exposu
       { id: '2', accountId: 'a', assetId: 'xaut', quantity: 2, comment: '' },
     ],
     snapshots: [],
+    priceHistory: [],
   };
 
   expect(categoryAllocationRows(data)).toEqual([
@@ -396,6 +404,7 @@ it('builds available filters only from tags that are present on assets', () => {
     ],
     positions: [],
     snapshots: [],
+    priceHistory: [],
   };
 
   expect(portfolioTags(data)).toEqual(['currency', 'Energy', 'Long term']);
@@ -475,6 +484,7 @@ it('combines case variants into one exposure', () => {
       { id: 'p2', accountId: 'a', assetId: 'two', quantity: 1, comment: '' },
     ],
     snapshots: [],
+    priceHistory: [],
   };
 
   expect(portfolioExposures(data)).toEqual([
@@ -512,6 +522,7 @@ it('ranks flow-adjusted asset drivers without treating deposits as gains', () =>
       { id: '2', accountId: 'a', assetId: 'xaut', quantity: 1, comment: '' },
     ],
     snapshots: [],
+    priceHistory: [],
   };
 
   expect(
@@ -659,6 +670,7 @@ it('reports freshness only for active automatically priced assets', () => {
       { id: '3', accountId: 'a', assetId: 'manual', quantity: 1, comment: '' },
     ],
     snapshots: [],
+    priceHistory: [],
   };
 
   expect(priceFreshness(data, now, 3 * 60 * 60 * 1000)).toEqual({
@@ -725,6 +737,7 @@ it('uses the three largest assets until a valid explicit rate selection exists',
       { id: 'p4', accountId: 'a', assetId: 'second', quantity: 1, comment: '' },
     ],
     snapshots: [],
+    priceHistory: [],
   };
 
   expect(selectedRateAssets(data, []).map(({ id }) => id)).toEqual([

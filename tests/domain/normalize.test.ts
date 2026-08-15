@@ -49,6 +49,15 @@ describe('domain normalization', () => {
           assets: [{ assetId: 'usd', symbol: ' usd ' }],
         },
       ],
+      priceHistory: [
+        {
+          id: 'daily-price:usd:2026-08-14',
+          assetId: 'usd',
+          dayKey: '2026-08-14',
+          createdAt: 2,
+          usdPrice: '1',
+        },
+      ],
     });
 
     expect(data.accounts[0]).toMatchObject({
@@ -59,6 +68,10 @@ describe('domain normalization', () => {
     expect(data.positions[0]?.comment).toBe('reserve');
     expect(data.snapshots[0]?.assets?.[0]).toMatchObject({ code: 'USD' });
     expect(data.snapshots[0]?.assets?.[0]).not.toHaveProperty('symbol');
+    expect(data.priceHistory[0]).toMatchObject({
+      assetId: 'usd',
+      usdPrice: 1,
+    });
   });
 
   it('limits icons by Unicode code points and normalizes codes', () => {

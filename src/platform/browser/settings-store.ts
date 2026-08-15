@@ -1,8 +1,9 @@
 import type { SettingsStore } from '../../application/ports';
 import type {
   AppSettings,
-  AutomationInterval,
+  PriceRefreshIntervalMinutes,
   RatePair,
+  SnapshotIntervalMinutes,
 } from '../../domain/models';
 
 export const SETTINGS_KEYS = {
@@ -13,9 +14,11 @@ export const SETTINGS_KEYS = {
   autoRefreshOnLaunch: 'worth-auto-refresh-launch',
   autoPriceRefresh: 'worth-auto-price-refresh',
   priceRefreshIntervalHours: 'worth-price-refresh-hours',
+  priceRefreshIntervalMinutes: 'worth-price-refresh-minutes',
   lastPriceRefreshAt: 'worth-last-price-refresh',
   autoSnapshot: 'worth-auto-snapshot',
   snapshotIntervalHours: 'worth-snapshot-hours',
+  snapshotIntervalMinutes: 'worth-snapshot-minutes',
   lastSnapshotAt: 'worth-last-snapshot',
   positionGrouping: 'worth-position-grouping',
   balancesHidden: 'worth-balances-hidden',
@@ -23,17 +26,20 @@ export const SETTINGS_KEYS = {
   ratePairs: 'worth-rate-pairs',
 } as const;
 
-const AUTOMATION_INTERVALS: readonly AutomationInterval[] = [1, 3, 6, 12, 24];
-
-function interval(
+function interval<T extends number>(
   value: string | null,
-  fallback: AutomationInterval,
-): AutomationInterval {
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  if (value === null) return fallback;
   const parsed = Number(value);
-  return AUTOMATION_INTERVALS.includes(parsed as AutomationInterval)
-    ? (parsed as AutomationInterval)
-    : fallback;
+  return allowed.includes(parsed as T) ? (parsed as T) : fallback;
 }
+
+const PRICE_INTERVALS: readonly PriceRefreshIntervalMinutes[] = [
+  0, 5, 15, 30, 60,
+];
+const SNAPSHOT_INTERVALS: readonly SnapshotIntervalMinutes[] = [0, 30, 60];
 
 function timestamp(value: string | null): number | undefined {
   const parsed = Number(value);
@@ -107,6 +113,18 @@ export class BrowserSettingsStore implements SettingsStore {
     const autoPriceRefresh = this.storage.getItem(
       SETTINGS_KEYS.autoPriceRefresh,
     );
+    const storedPriceMinutes = this.storage.getItem(
+      SETTINGS_KEYS.priceRefreshIntervalMinutes,
+    );
+    const storedSnapshotMinutes = this.storage.getItem(
+      SETTINGS_KEYS.snapshotIntervalMinutes,
+    );
+    const legacyPriceEnabled =
+      autoPriceRefresh === null
+        ? this.storage.getItem(SETTINGS_KEYS.autoRefreshOnLaunch) !== '0'
+        : autoPriceRefresh === '1';
+    const legacySnapshotEnabled =
+      this.storage.getItem(SETTINGS_KEYS.autoSnapshot) === '1';
     const lastPriceRefreshAt = timestamp(
       this.storage.getItem(SETTINGS_KEYS.lastPriceRefreshAt),
     );
@@ -119,19 +137,16 @@ export class BrowserSettingsStore implements SettingsStore {
       theme: theme === 'dark' ? 'dark' : 'light',
       displayCurrency: displayCurrency?.trim() || 'USD',
       pnlPeriod: pnlPeriod === 'last' ? 'last' : 'all',
-      autoPriceRefresh:
-        autoPriceRefresh === null
-          ? this.storage.getItem(SETTINGS_KEYS.autoRefreshOnLaunch) === '1'
-          : autoPriceRefresh === '1',
-      priceRefreshIntervalHours: interval(
-        this.storage.getItem(SETTINGS_KEYS.priceRefreshIntervalHours),
-        3,
+      priceRefreshIntervalMinutes: interval(
+        storedPriceMinutes,
+        PRICE_INTERVALS,
+        legacyPriceEnabled ? 60 : 0,
       ),
       ...(lastPriceRefreshAt === undefined ? {} : { lastPriceRefreshAt }),
-      autoSnapshot: this.storage.getItem(SETTINGS_KEYS.autoSnapshot) === '1',
-      snapshotIntervalHours: interval(
-        this.storage.getItem(SETTINGS_KEYS.snapshotIntervalHours),
-        6,
+      snapshotIntervalMinutes: interval(
+        storedSnapshotMinutes,
+        SNAPSHOT_INTERVALS,
+        legacySnapshotEnabled ? 60 : 0,
       ),
       ...(lastSnapshotAt === undefined ? {} : { lastSnapshotAt }),
       positionGrouping:
@@ -163,31 +178,20 @@ export class BrowserSettingsStore implements SettingsStore {
     if (settings.pnlPeriod !== undefined) {
       this.storage.setItem(SETTINGS_KEYS.pnlPeriod, settings.pnlPeriod);
     }
-    if (settings.autoPriceRefresh !== undefined) {
+    if (settings.priceRefreshIntervalMinutes !== undefined)
       this.storage.setItem(
-        SETTINGS_KEYS.autoPriceRefresh,
-        settings.autoPriceRefresh ? '1' : '0',
-      );
-    }
-    if (settings.priceRefreshIntervalHours !== undefined)
-      this.storage.setItem(
-        SETTINGS_KEYS.priceRefreshIntervalHours,
-        String(settings.priceRefreshIntervalHours),
+        SETTINGS_KEYS.priceRefreshIntervalMinutes,
+        String(settings.priceRefreshIntervalMinutes),
       );
     if (settings.lastPriceRefreshAt !== undefined)
       this.storage.setItem(
         SETTINGS_KEYS.lastPriceRefreshAt,
         String(settings.lastPriceRefreshAt),
       );
-    if (settings.autoSnapshot !== undefined)
+    if (settings.snapshotIntervalMinutes !== undefined)
       this.storage.setItem(
-        SETTINGS_KEYS.autoSnapshot,
-        settings.autoSnapshot ? '1' : '0',
-      );
-    if (settings.snapshotIntervalHours !== undefined)
-      this.storage.setItem(
-        SETTINGS_KEYS.snapshotIntervalHours,
-        String(settings.snapshotIntervalHours),
+        SETTINGS_KEYS.snapshotIntervalMinutes,
+        String(settings.snapshotIntervalMinutes),
       );
     if (settings.lastSnapshotAt !== undefined)
       this.storage.setItem(

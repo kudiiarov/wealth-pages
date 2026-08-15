@@ -42,6 +42,7 @@ const data: PortfolioData = {
   assets,
   positions,
   snapshots: [],
+  priceHistory: [],
 };
 
 describe('portfolio calculations', () => {

@@ -27,8 +27,33 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('portfolioRates')).not.toBeNull();
     expect(document.getElementById('rateSelectionModal')).not.toBeNull();
     expect(document.querySelector('.build-note')?.textContent).toContain(
-      '3.6.2-final',
+      '3.7.0-final',
     );
+  });
+
+  it('uses interval selectors without automation toggles', () => {
+    const document = new JSDOM(html).window.document;
+    const prices = document.querySelector<HTMLSelectElement>(
+      '#priceRefreshIntervalMinutes',
+    );
+    const snapshots = document.querySelector<HTMLSelectElement>(
+      '#snapshotIntervalMinutes',
+    );
+
+    expect(Array.from(prices?.options ?? [], ({ value }) => value)).toEqual([
+      '0',
+      '5',
+      '15',
+      '30',
+      '60',
+    ]);
+    expect(Array.from(snapshots?.options ?? [], ({ value }) => value)).toEqual([
+      '0',
+      '30',
+      '60',
+    ]);
+    expect(document.getElementById('autoPriceRefresh')).toBeNull();
+    expect(document.getElementById('autoSnapshot')).toBeNull();
   });
 
   it('ships every local script, stylesheet, manifest, and icon it references', () => {

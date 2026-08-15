@@ -6,7 +6,7 @@ import {
 } from '../../src/application/launch-automation';
 import type { AppSettings } from '../../src/domain/models';
 
-const HOUR = 60 * 60 * 1_000;
+const MINUTE = 60 * 1_000;
 
 function settings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
@@ -14,10 +14,8 @@ function settings(overrides: Partial<AppSettings> = {}): AppSettings {
     theme: 'light',
     displayCurrency: 'USD',
     pnlPeriod: 'all',
-    autoPriceRefresh: true,
-    priceRefreshIntervalHours: 3,
-    autoSnapshot: true,
-    snapshotIntervalHours: 6,
+    priceRefreshIntervalMinutes: 15,
+    snapshotIntervalMinutes: 30,
     positionGrouping: 'accounts',
     balancesHidden: false,
     selectedRateAssetIds: [],
@@ -49,58 +47,60 @@ class AutomationTarget {
 
 describe('launch automation', () => {
   it('treats missing, invalid, and future completions as due', () => {
-    expect(isAutomationDue(10 * HOUR, undefined, 3)).toBe(true);
-    expect(isAutomationDue(10 * HOUR, -1, 3)).toBe(true);
-    expect(isAutomationDue(10 * HOUR, 11 * HOUR, 3)).toBe(true);
-    expect(isAutomationDue(10 * HOUR, 7 * HOUR, 3)).toBe(true);
-    expect(isAutomationDue(10 * HOUR, 7 * HOUR + 1, 3)).toBe(false);
+    expect(isAutomationDue(10 * MINUTE, undefined, 5)).toBe(true);
+    expect(isAutomationDue(10 * MINUTE, -1, 5)).toBe(true);
+    expect(isAutomationDue(10 * MINUTE, 11 * MINUTE, 5)).toBe(true);
+    expect(isAutomationDue(10 * MINUTE, 5 * MINUTE, 5)).toBe(true);
+    expect(isAutomationDue(10 * MINUTE, 5 * MINUTE + 1, 5)).toBe(false);
+    expect(isAutomationDue(10 * MINUTE, undefined, 0)).toBe(false);
   });
 
   it('refreshes prices without a snapshot when only the price timer is due', async () => {
     const target = new AutomationTarget(
       settings({
-        lastPriceRefreshAt: 6 * HOUR,
-        lastSnapshotAt: 6 * HOUR,
+        lastPriceRefreshAt: 80 * MINUTE,
+        lastSnapshotAt: 90 * MINUTE,
       }),
     );
 
-    await new LaunchAutomation(target, () => 10 * HOUR).run();
+    await new LaunchAutomation(target, () => 100 * MINUTE).run();
 
     expect(target.operations).toEqual(['refresh']);
   });
 
-  it('refreshes prices before every due snapshot', async () => {
+  it('saves a due snapshot without forcing a price refresh', async () => {
     const target = new AutomationTarget(
       settings({
-        priceRefreshIntervalHours: 12,
-        lastPriceRefreshAt: 6 * HOUR,
-        lastSnapshotAt: 3 * HOUR,
+        priceRefreshIntervalMinutes: 60,
+        lastPriceRefreshAt: 90 * MINUTE,
+        lastSnapshotAt: 60 * MINUTE,
       }),
     );
 
-    await new LaunchAutomation(target, () => 10 * HOUR).run();
+    await new LaunchAutomation(target, () => 100 * MINUTE).run();
 
-    expect(target.operations).toEqual(['refresh', 'snapshot']);
+    expect(target.operations).toEqual(['snapshot']);
   });
 
   it('does nothing when both schedules are disabled', async () => {
     const target = new AutomationTarget(
-      settings({ autoPriceRefresh: false, autoSnapshot: false }),
+      settings({
+        priceRefreshIntervalMinutes: 0,
+        snapshotIntervalMinutes: 0,
+      }),
     );
 
-    await new LaunchAutomation(target, () => 10 * HOUR).run();
+    await new LaunchAutomation(target, () => 10 * MINUTE).run();
 
     expect(target.operations).toEqual([]);
   });
 
-  it('does not snapshot when the required refresh fails', async () => {
+  it('still snapshots when an independently due refresh fails', async () => {
     const target = new AutomationTarget(settings(), true);
 
-    await expect(
-      new LaunchAutomation(target, () => 10 * HOUR).run(),
-    ).rejects.toThrow('offline');
+    await new LaunchAutomation(target, () => 10 * MINUTE).run();
 
-    expect(target.operations).toEqual(['refresh']);
+    expect(target.operations).toEqual(['refresh', 'snapshot']);
   });
 
   it('serializes simultaneous lifecycle checks', async () => {
@@ -109,7 +109,7 @@ describe('launch automation', () => {
       releaseRefresh = resolve;
     });
     const target = new AutomationTarget(settings(), false, waitForRefresh);
-    const automation = new LaunchAutomation(target, () => 10 * HOUR);
+    const automation = new LaunchAutomation(target, () => 10 * MINUTE);
 
     const first = automation.run();
     const second = automation.run();

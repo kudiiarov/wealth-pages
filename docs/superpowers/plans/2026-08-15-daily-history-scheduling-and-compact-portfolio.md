@@ -25,10 +25,12 @@
 ### Task 1: Pure Daily History Rules
 
 **Files:**
+
 - Create: `src/domain/daily-history.ts`
 - Create: `tests/domain/daily-history.test.ts`
 
 **Interfaces:**
+
 - Produces: `localDayKey(timestamp: number): string`
 - Produces: `dailySnapshotId(dayKey: string): string`
 - Produces: `dailyPriceHistoryId(assetId: string, dayKey: string): string`
@@ -49,18 +51,24 @@ test('replaces the same local day with the newest snapshot', () => {
     [{ id: 'old', createdAt: new Date(2026, 7, 15, 9).getTime(), total: 10 }],
     { id: 'new', createdAt: new Date(2026, 7, 15, 18).getTime(), total: 25 },
   );
-  expect(result).toEqual([{
-    id: 'daily-snapshot:2026-08-15',
-    createdAt: new Date(2026, 7, 15, 18).getTime(),
-    total: 25,
-  }]);
+  expect(result).toEqual([
+    {
+      id: 'daily-snapshot:2026-08-15',
+      createdAt: new Date(2026, 7, 15, 18).getTime(),
+      total: 25,
+    },
+  ]);
 });
 
 test('keeps one newest price per asset and local day', () => {
   const result = compactDailyHistory(fixtureWithTwoSameDayPrices);
-  expect(result.priceHistory).toMatchObject([{
-    id: 'daily-price:btc:2026-08-15', assetId: 'btc', usdPrice: 46_000,
-  }]);
+  expect(result.priceHistory).toMatchObject([
+    {
+      id: 'daily-price:btc:2026-08-15',
+      assetId: 'btc',
+      usdPrice: 46_000,
+    },
+  ]);
 });
 ```
 
@@ -83,10 +91,13 @@ export function upsertDailySnapshot(
   snapshot: Snapshot,
 ): Snapshot[] {
   const dayKey = localDayKey(snapshot.createdAt);
-  return [...snapshots.filter((item) => localDayKey(item.createdAt) !== dayKey), {
-    ...snapshot,
-    id: dailySnapshotId(dayKey),
-  }].sort((left, right) => left.createdAt - right.createdAt);
+  return [
+    ...snapshots.filter((item) => localDayKey(item.createdAt) !== dayKey),
+    {
+      ...snapshot,
+      id: dailySnapshotId(dayKey),
+    },
+  ].sort((left, right) => left.createdAt - right.createdAt);
 }
 ```
 
@@ -107,6 +118,7 @@ git commit -m "feat: compact portfolio history by local day"
 ### Task 2: Price History Storage and Backup Migration
 
 **Files:**
+
 - Modify: `src/domain/models.ts`
 - Modify: `src/domain/normalize.ts`
 - Modify: `src/application/ports.ts`
@@ -120,6 +132,7 @@ git commit -m "feat: compact portfolio history by local day"
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `compactDailyHistory(data)` from Task 1.
 - Produces: `PriceHistoryPoint`, `PortfolioData.priceHistory`, and `EntityByStore.priceHistory`.
 - Produces: repository store list `['accounts', 'assets', 'positions', 'snapshots', 'priceHistory']` at `DB_VERSION = 2`.
@@ -200,10 +213,12 @@ git commit -m "feat: persist daily asset price history"
 ### Task 3: Daily Writes in Portfolio Service
 
 **Files:**
+
 - Modify: `src/application/portfolio-service.ts`
 - Modify: `tests/application/portfolio-service.test.ts`
 
 **Interfaces:**
+
 - Consumes: daily upsert helpers from Task 1 and repository mapping from Task 2.
 - Produces: manual and provider price changes that atomically write live Asset plus its daily price point.
 - Produces: `saveSnapshot()` that replaces the same-day record.
@@ -223,7 +238,9 @@ test('successful quotes update one latest daily price point per asset', async ()
   await service.refreshPrices('btc');
   prices.setQuote('btc', 46_000);
   await service.refreshPrices('btc');
-  expect(service.data.priceHistory).toMatchObject([{ assetId: 'btc', usdPrice: 46_000 }]);
+  expect(service.data.priceHistory).toMatchObject([
+    { assetId: 'btc', usdPrice: 46_000 },
+  ]);
 });
 ```
 
@@ -253,6 +270,7 @@ git commit -m "feat: overwrite daily snapshots and prices"
 ### Task 4: Minute Interval Settings
 
 **Files:**
+
 - Modify: `src/domain/models.ts`
 - Modify: `src/platform/browser/settings-store.ts`
 - Modify: `src/domain/backup.ts`
@@ -265,6 +283,7 @@ git commit -m "feat: overwrite daily snapshots and prices"
 - Modify: `tests/ui/dom.test.ts`
 
 **Interfaces:**
+
 - Produces: `PriceRefreshIntervalMinutes = 0 | 5 | 15 | 30 | 60`.
 - Produces: `SnapshotIntervalMinutes = 0 | 30 | 60`.
 - Produces: `AppSettings.priceRefreshIntervalMinutes` and `snapshotIntervalMinutes`; removes runtime use of old booleans/hour fields.
@@ -282,7 +301,9 @@ test('defaults prices to 60 minutes and snapshots to off', () => {
 test('maps enabled legacy hourly settings to 60 minutes', () => {
   storage.setItem('worth-auto-price-refresh', '1');
   storage.setItem('worth-price-refresh-hours', '3');
-  expect(new BrowserSettingsStore(storage).load().priceRefreshIntervalMinutes).toBe(60);
+  expect(
+    new BrowserSettingsStore(storage).load().priceRefreshIntervalMinutes,
+  ).toBe(60);
 });
 ```
 
@@ -314,6 +335,7 @@ git commit -m "feat: configure automation in minutes"
 ### Task 5: Active-PWA Scheduler and Independent Due Work
 
 **Files:**
+
 - Modify: `src/application/launch-automation.ts`
 - Create: `src/platform/browser/active-pwa-scheduler.ts`
 - Modify: `src/main.ts`
@@ -321,6 +343,7 @@ git commit -m "feat: configure automation in minutes"
 - Create: `tests/platform/active-pwa-scheduler.test.ts`
 
 **Interfaces:**
+
 - Produces: `isAutomationDue(now, lastCompletedAt, intervalMinutes): boolean` where `0` is never due.
 - Produces: serialized `LaunchAutomation.run()` that independently performs each due operation.
 - Produces: `ActivePwaScheduler.start(): void`, `settingsChanged(): void`, and `dispose(): void`.
@@ -376,6 +399,7 @@ git commit -m "feat: schedule due work while pwa is active"
 ### Task 6: Daily Charts and Clean History Rows
 
 **Files:**
+
 - Modify: `src/ui/portfolio-view-model.ts`
 - Modify: `src/ui/render.ts`
 - Modify: `src/styles/app.css`
@@ -384,6 +408,7 @@ git commit -m "feat: schedule due work while pwa is active"
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `PortfolioData.priceHistory` from Task 2.
 - Produces: `assetPriceHistorySeries(assetId, priceHistory)` based only on daily points.
 - Produces: History rows with no `.history-dot` and daily snapshot chart data.
@@ -428,6 +453,7 @@ git commit -m "feat: render daily price and portfolio history"
 ### Task 7: Position Sheet from Asset and Account Details
 
 **Files:**
+
 - Modify: `index.html`
 - Modify: `src/ui/render.ts`
 - Modify: `src/ui/events.ts`
@@ -439,6 +465,7 @@ git commit -m "feat: render daily price and portfolio history"
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Produces: related rows with `data-position-open="<position-id>"`.
 - Produces: position form detail context with Asset link, Account link, unit price, and calculated value.
 - Produces: source route restoration after save/delete/close.
@@ -446,14 +473,22 @@ git commit -m "feat: render daily price and portfolio history"
 - [ ] **Step 1: Write a failing E2E regression for the navigation loop**
 
 ```ts
-test('opens and edits a position from asset and account detail rows', async ({ page }) => {
+test('opens and edits a position from asset and account detail rows', async ({
+  page,
+}) => {
   await page.goto('#/assets/usdt');
   await page.locator('[data-position-open]').first().click();
   await expect(page.locator('#positionModal')).toBeVisible();
-  await expect(page.locator('[data-position-asset-link]')).toContainText('Tether');
-  await expect(page.locator('[data-position-account-link]')).toContainText('Trust');
+  await expect(page.locator('[data-position-asset-link]')).toContainText(
+    'Tether',
+  );
+  await expect(page.locator('[data-position-account-link]')).toContainText(
+    'Trust',
+  );
   await page.locator('#positionForm [name="quantity"]').fill('2500');
-  await page.locator('#positionForm').evaluate((form: HTMLFormElement) => form.requestSubmit());
+  await page
+    .locator('#positionForm')
+    .evaluate((form: HTMLFormElement) => form.requestSubmit());
   await expect(page).toHaveURL(/#\/assets\/usdt$/);
 });
 ```
@@ -487,6 +522,7 @@ git commit -m "fix: edit positions from entity details"
 ### Task 8: Compact Assets and Accounts, Release, and Full Verification
 
 **Files:**
+
 - Modify: `src/ui/render.ts`
 - Modify: `src/styles/app.css`
 - Modify: `tests/ui/dom.test.ts`
@@ -495,6 +531,7 @@ git commit -m "fix: edit positions from entity details"
 - Modify: `package-lock.json`
 
 **Interfaces:**
+
 - Preserves: allocation bar/list markup and single-column legend.
 - Produces: approximately 70 px separate rows, 46 px icons, 16 px names, 11–12 px secondary text, 15 px right values, and 9 px row gaps.
 - Produces: release `3.7.0-final` (`package.json` version `3.7.0`).
@@ -504,9 +541,15 @@ git commit -m "fix: edit positions from entity details"
 ```ts
 test('keeps allocation legend unchanged and renders compact separate rows', () => {
   renderer.renderAll();
-  expect(document.querySelectorAll('#assetAllocationList .compact-allocation-key')).toHaveLength(5);
-  expect(document.querySelectorAll('#assetsList > .portfolio-row')).toHaveLength(assetCount);
-  expect(document.querySelector('#assetsList > .portfolio-list-card')).toBeNull();
+  expect(
+    document.querySelectorAll('#assetAllocationList .compact-allocation-key'),
+  ).toHaveLength(5);
+  expect(
+    document.querySelectorAll('#assetsList > .portfolio-row'),
+  ).toHaveLength(assetCount);
+  expect(
+    document.querySelector('#assetsList > .portfolio-list-card'),
+  ).toBeNull();
 });
 ```
 

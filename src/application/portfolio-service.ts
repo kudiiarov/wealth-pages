@@ -1,4 +1,9 @@
 import { createBackup, validateBackup } from '../domain/backup';
+import {
+  dailyPriceHistoryId,
+  dailySnapshotId,
+  localDayKey,
+} from '../domain/daily-history';
 import type {
   Account,
   AppSettings,
@@ -6,6 +11,7 @@ import type {
   AutoUpdateSource,
   PortfolioData,
   Position,
+  PriceSource,
 } from '../domain/models';
 import {
   cleanCode,
@@ -72,6 +78,7 @@ const emptyData = (): PortfolioData => ({
   assets: [],
   positions: [],
   snapshots: [],
+  priceHistory: [],
 });
 
 export class PortfolioService {
@@ -112,6 +119,9 @@ export class PortfolioService {
       left.code.localeCompare(right.code, 'ru'),
     );
     this.portfolio.snapshots.sort(
+      (left, right) => left.createdAt - right.createdAt,
+    );
+    this.portfolio.priceHistory.sort(
       (left, right) => left.createdAt - right.createdAt,
     );
   }
@@ -229,14 +239,24 @@ export class PortfolioService {
   }
 
   async saveSnapshot(): Promise<void> {
+    const now = this.dependencies.clock.now();
+    const dayKey = localDayKey(now);
     const snapshot = buildSnapshot(
       this.portfolio,
-      this.dependencies.ids.next(),
-      this.dependencies.clock.now(),
+      dailySnapshotId(dayKey),
+      now,
     );
     await this.dependencies.repository.put('snapshots', snapshot);
+    for (const previous of this.portfolio.snapshots) {
+      if (
+        previous.id !== snapshot.id &&
+        localDayKey(previous.createdAt) === dayKey
+      ) {
+        await this.dependencies.repository.delete('snapshots', previous.id);
+      }
+    }
     await this.reload();
-    this.saveSettings({ lastSnapshotAt: this.dependencies.clock.now() });
+    this.saveSettings({ lastSnapshotAt: now });
   }
 
   async deleteSnapshot(id: string): Promise<void> {
@@ -255,12 +275,14 @@ export class PortfolioService {
     if (!asset || !Number.isFinite(price) || price < 0) {
       throw new Error('Invalid asset price');
     }
+    const now = this.dependencies.clock.now();
     await this.dependencies.repository.put('assets', {
       ...asset,
       price,
       manualPriceCurrency,
-      updatedAt: this.dependencies.clock.now(),
+      updatedAt: now,
     });
+    await this.saveDailyPrice(asset.id, price, now);
     await this.reload();
   }
 
@@ -271,6 +293,7 @@ export class PortfolioService {
         (assetId === undefined || asset.id === assetId),
     );
     const batch = await this.dependencies.prices.getUsdPrices(targets);
+    const now = this.dependencies.clock.now();
     let updated = 0;
 
     for (const quote of batch.quotes) {
@@ -282,9 +305,10 @@ export class PortfolioService {
         ...asset,
         price: quote.usdPrice,
         priceSource: quote.source,
-        priceUpdatedAt: this.dependencies.clock.now(),
-        updatedAt: this.dependencies.clock.now(),
+        priceUpdatedAt: now,
+        updatedAt: now,
       });
+      await this.saveDailyPrice(asset.id, quote.usdPrice, now, quote.source);
       updated += 1;
     }
 
@@ -301,7 +325,7 @@ export class PortfolioService {
         skipped: batch.skipped.length,
       },
     });
-    this.saveSettings({ lastPriceRefreshAt: this.dependencies.clock.now() });
+    this.saveSettings({ lastPriceRefreshAt: now });
     return {
       updated,
       skipped: batch.skipped.length,
@@ -344,6 +368,33 @@ export class PortfolioService {
       )
     ) {
       throw new Error('Duplicate asset code');
+    }
+  }
+
+  private async saveDailyPrice(
+    assetId: string,
+    usdPrice: number,
+    createdAt: number,
+    source?: PriceSource,
+  ): Promise<void> {
+    const dayKey = localDayKey(createdAt);
+    const id = dailyPriceHistoryId(assetId, dayKey);
+    await this.dependencies.repository.put('priceHistory', {
+      id,
+      assetId,
+      dayKey,
+      createdAt,
+      usdPrice,
+      ...(source ? { source: { ...source } } : {}),
+    });
+    for (const previous of this.portfolio.priceHistory) {
+      if (
+        previous.assetId === assetId &&
+        previous.id !== id &&
+        localDayKey(previous.createdAt) === dayKey
+      ) {
+        await this.dependencies.repository.delete('priceHistory', previous.id);
+      }
     }
   }
 
