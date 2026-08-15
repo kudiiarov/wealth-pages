@@ -96,11 +96,21 @@ export interface Snapshot {
   positions?: SnapshotPosition[];
 }
 
+export interface PriceHistoryPoint {
+  id: EntityId;
+  assetId: EntityId;
+  dayKey: string;
+  createdAt: number;
+  usdPrice: number;
+  source?: PriceSource;
+}
+
 export interface PortfolioData {
   accounts: Account[];
   assets: Asset[];
   positions: Position[];
   snapshots: Snapshot[];
+  priceHistory: PriceHistoryPoint[];
 }
 
 export interface RatePair {
@@ -126,5 +136,10 @@ export interface AppSettings {
 }
 
 export type StoreName = keyof PortfolioData;
-export type PortfolioEntity = Account | Asset | Position | Snapshot;
+export type PortfolioEntity =
+  | Account
+  | Asset
+  | Position
+  | Snapshot
+  | PriceHistoryPoint;
 export type UnknownRecord = Record<string, unknown>;
