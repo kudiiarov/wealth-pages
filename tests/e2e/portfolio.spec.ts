@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function seedPortfolio(page: Page, currentTime = Date.now()): Promise<void> {
+async function seedPortfolio(
+  page: Page,
+  currentTime = Date.now(),
+): Promise<void> {
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await page.evaluate(
     ({ currentTime }) =>
