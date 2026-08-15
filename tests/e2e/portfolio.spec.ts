@@ -315,6 +315,8 @@ test('shows and persists three configurable rates that open asset details', asyn
   await page.reload();
 
   await expect(page.locator('#portfolioRates .rate-row')).toHaveCount(3);
+  const configureBox = await page.locator('#configureRatesBtn').boundingBox();
+  expect(configureBox?.height).toBeGreaterThanOrEqual(44);
   await expect(page.locator('#portfolioRates')).toContainText('Bitcoin');
   await expect(page.locator('#portfolioRates')).toContainText('Tether Gold');
   await expect(page.locator('#portfolioRates')).toContainText('Dollar');
@@ -335,6 +337,10 @@ test('shows and persists three configurable rates that open asset details', asyn
   await expect(page.locator('#entityDetailMetadata')).toContainText(
     'Цена актуальна',
   );
+  await page.locator('#entityRelatedList [data-account-open]').first().click();
+  await expect(page).toHaveURL(/#\/accounts\/vault$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/assets\/btc$/);
   await page.locator('[data-detail-back]').click();
   await expect(page).toHaveURL(/#\/home$/);
 
@@ -355,6 +361,42 @@ test('shows and persists three configurable rates that open asset details', asyn
   await expect(page.locator('#portfolioRates')).toContainText('Ethereum');
   await expect(page.locator('#portfolioRates')).not.toContainText('Dollar');
 
+  await page.locator('#configureRatesBtn').click();
+  const checkedRates = page.locator(
+    '#rateSelectionForm [name="rateAsset"]:checked',
+  );
+  for (let index = (await checkedRates.count()) - 1; index >= 0; index -= 1) {
+    await checkedRates.nth(index).uncheck();
+  }
+  await page
+    .locator('.rate-choice')
+    .filter({ hasText: 'Ethereum' })
+    .locator('input')
+    .check();
+  await page
+    .locator('.rate-choice')
+    .filter({ hasText: 'Bitcoin' })
+    .locator('input')
+    .check();
+  await page
+    .locator('#rateSelectionForm')
+    .getByRole('button', { name: 'Сохранить' })
+    .click();
+  await expect(page.locator('#portfolioRates .rate-row').nth(0)).toContainText(
+    'Ethereum',
+  );
+  await expect(page.locator('#portfolioRates .rate-row').nth(1)).toContainText(
+    'Bitcoin',
+  );
+  await page.locator('#configureRatesBtn').click();
+  await page
+    .locator('#rateSelectionForm')
+    .getByRole('button', { name: 'Сохранить' })
+    .click();
+  await expect(page.locator('#portfolioRates .rate-row').nth(0)).toContainText(
+    'Ethereum',
+  );
+
   const tabMetrics = await page.locator('.tab-bar').evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
@@ -368,10 +410,70 @@ test('shows and persists three configurable rates that open asset details', asyn
   await expect(page.locator('[data-rate-asset="btc"] .rate-status')).toHaveText(
     /Price current/,
   );
+  await page.locator('[data-rate-asset="btc"]').click();
+  await expect(page.locator('#entityDetailMenu')).toHaveAttribute(
+    'aria-label',
+    'Actions',
+  );
 
   await page.goto('/#/assets/missing');
   await expect(page).toHaveURL(/#\/assets$/);
   await expect(page.locator('#assetsView')).toHaveClass(/active/);
+});
+
+test('requires two historical snapshots before drawing an entity chart', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 1);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction('snapshots', 'readwrite');
+          const snapshots = transaction.objectStore('snapshots');
+          const firstSnapshot = snapshots.get('first');
+          firstSnapshot.onsuccess = () => {
+            snapshots.clear();
+            snapshots.put(firstSnapshot.result);
+          };
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not update history'));
+        };
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+      }),
+  );
+  const snapshotCount = await page.evaluate(
+    () =>
+      new Promise<number>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 1);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction('snapshots', 'readonly');
+          const count = transaction.objectStore('snapshots').count();
+          count.onsuccess = () => {
+            database.close();
+            resolve(count.result);
+          };
+          count.onerror = () =>
+            reject(count.error ?? new Error('Could not count snapshots'));
+        };
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+      }),
+  );
+  expect(snapshotCount).toBe(1);
+  await page.reload();
+  await page.locator('.tab[data-nav="assetsView"]').click();
+  await page.locator('[data-asset-open="btc"]').click();
+  await expect(page.locator('#entityDetailEmpty')).toBeVisible();
 });
 
 test('inspects exact portfolio and entity history with pointer, touch, and keyboard', async ({

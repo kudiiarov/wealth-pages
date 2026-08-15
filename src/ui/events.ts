@@ -20,6 +20,7 @@ import {
   readPositionForm,
 } from './forms';
 import type { WorthRenderer } from './render';
+import { selectedRateAssets } from './portfolio-view-model';
 import { formatAppRoute, parseAppRoute, type AppRoute } from './routes';
 
 interface ActionItem {
@@ -32,7 +33,6 @@ export class WorthController {
   private pendingActions: ActionItem[] = [];
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
   private rateSelectionOrder: string[] = [];
-  private readonly detailReturnRoutes: AppRoute[] = [];
 
   constructor(
     private readonly service: PortfolioService,
@@ -51,9 +51,10 @@ export class WorthController {
     this.bindForms();
     this.bindChartInspection();
     this.windowRef.addEventListener('hashchange', () => this.applyHashRoute());
+    this.windowRef.addEventListener('popstate', () => this.applyHashRoute());
     if (!this.windowRef.location.hash) {
       this.windowRef.history.replaceState(
-        null,
+        { worthRoot: true },
         '',
         formatAppRoute({ kind: 'home' }),
       );
@@ -218,10 +219,7 @@ export class WorthController {
       '[data-rate-asset]',
     );
     if (rateAsset?.dataset.rateAsset) {
-      this.openEntity(
-        { kind: 'asset', id: rateAsset.dataset.rateAsset },
-        { kind: 'home' },
-      );
+      this.openEntity({ kind: 'asset', id: rateAsset.dataset.rateAsset });
       return;
     }
     const assetOpen = closestElement<HTMLElement>(
@@ -229,12 +227,7 @@ export class WorthController {
       '[data-asset-open]',
     );
     if (assetOpen?.dataset.assetOpen) {
-      this.openEntity(
-        { kind: 'asset', id: assetOpen.dataset.assetOpen },
-        parseAppRoute(this.windowRef.location.hash).kind === 'account'
-          ? parseAppRoute(this.windowRef.location.hash)
-          : { kind: 'assets' },
-      );
+      this.openEntity({ kind: 'asset', id: assetOpen.dataset.assetOpen });
       return;
     }
     const accountOpen = closestElement<HTMLElement>(
@@ -242,22 +235,26 @@ export class WorthController {
       '[data-account-open]',
     );
     if (accountOpen?.dataset.accountOpen) {
-      this.openEntity(
-        { kind: 'account', id: accountOpen.dataset.accountOpen },
-        parseAppRoute(this.windowRef.location.hash).kind === 'asset'
-          ? parseAppRoute(this.windowRef.location.hash)
-          : { kind: 'accounts' },
-      );
+      this.openEntity({ kind: 'account', id: accountOpen.dataset.accountOpen });
       return;
     }
     if (closestElement<HTMLElement>(event.target, '[data-detail-back]')) {
       const current = parseAppRoute(this.windowRef.location.hash);
-      this.goToRoute(
-        this.detailReturnRoutes.pop() ??
-          (current.kind === 'account'
+      const historyState: unknown = this.windowRef.history.state;
+      const canGoBack =
+        typeof historyState === 'object' &&
+        historyState !== null &&
+        'worthNavigation' in historyState &&
+        historyState.worthNavigation === true;
+      if (canGoBack) {
+        this.windowRef.history.back();
+      } else {
+        this.goToRoute(
+          current.kind === 'account'
             ? { kind: 'accounts' }
-            : { kind: 'assets' }),
-      );
+            : { kind: 'assets' },
+        );
+      }
       return;
     }
     const detailPosition = closestElement<HTMLElement>(
@@ -443,12 +440,10 @@ export class WorthController {
     );
     this.element('configureRatesBtn').addEventListener('click', () => {
       this.renderer.renderRateSelection();
-      this.rateSelectionOrder = Array.from(
-        this.form('rateSelectionForm').querySelectorAll<HTMLInputElement>(
-          '[name="rateAsset"]:checked',
-        ),
-        ({ value }) => value,
-      );
+      this.rateSelectionOrder = selectedRateAssets(
+        this.service.data,
+        this.service.settings.selectedRateAssetIds,
+      ).map(({ id }) => id);
       this.openDialog('rateSelectionModal');
     });
     this.form('rateSelectionForm').addEventListener('change', (event) => {
@@ -991,9 +986,7 @@ export class WorthController {
 
   private openEntity(
     route: Extract<AppRoute, { kind: 'asset' | 'account' }>,
-    returnRoute: AppRoute,
   ): void {
-    this.detailReturnRoutes.push(returnRoute);
     this.goToRoute(route);
   }
 
@@ -1002,7 +995,8 @@ export class WorthController {
     if (this.windowRef.location.hash === hash) {
       this.applyHashRoute();
     } else {
-      this.windowRef.location.hash = hash;
+      this.windowRef.history.pushState({ worthNavigation: true }, '', hash);
+      this.applyHashRoute();
     }
   }
 

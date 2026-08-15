@@ -527,6 +527,10 @@ export class WorthRenderer {
         element.placeholder = translate(this.language, key);
     }
     this.documentRef.title = this.t('appTitle');
+    this.element('entityDetailMenu').setAttribute(
+      'aria-label',
+      this.t('actions'),
+    );
     all<HTMLElement>('[data-lang-choice]', this.documentRef).forEach((button) =>
       button.classList.toggle(
         'active',
@@ -1019,6 +1023,7 @@ export class WorthRenderer {
             this.detailRoute.id,
             this.service.data.snapshots,
           );
+    if (historical.length < 2) return [];
     const current =
       this.detailRoute.kind === 'asset'
         ? this.assetTotal(this.detailRoute.id)
