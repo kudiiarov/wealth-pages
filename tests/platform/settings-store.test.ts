@@ -48,10 +48,8 @@ describe('BrowserSettingsStore', () => {
       theme: 'light',
       displayCurrency: 'USD',
       pnlPeriod: 'all',
-      autoPriceRefresh: false,
-      priceRefreshIntervalHours: 3,
-      autoSnapshot: false,
-      snapshotIntervalHours: 6,
+      priceRefreshIntervalMinutes: 60,
+      snapshotIntervalMinutes: 0,
       positionGrouping: 'accounts',
       balancesHidden: false,
       selectedRateAssetIds: [],
@@ -71,28 +69,24 @@ describe('BrowserSettingsStore', () => {
       theme: 'dark',
       displayCurrency: 'EUR',
       pnlPeriod: 'last',
-      autoPriceRefresh: true,
+      priceRefreshIntervalMinutes: 60,
     });
   });
 
   it('round-trips scheduling preferences and completion timestamps', () => {
     store.save({
-      autoPriceRefresh: true,
-      priceRefreshIntervalHours: 12,
+      priceRefreshIntervalMinutes: 15,
       lastPriceRefreshAt: 1_700_000_000_000,
-      autoSnapshot: true,
-      snapshotIntervalHours: 24,
+      snapshotIntervalMinutes: 30,
       lastSnapshotAt: 1_700_000_100_000,
       positionGrouping: 'assets',
       balancesHidden: true,
     });
 
     expect(store.load()).toMatchObject({
-      autoPriceRefresh: true,
-      priceRefreshIntervalHours: 12,
+      priceRefreshIntervalMinutes: 15,
       lastPriceRefreshAt: 1_700_000_000_000,
-      autoSnapshot: true,
-      snapshotIntervalHours: 24,
+      snapshotIntervalMinutes: 30,
       lastSnapshotAt: 1_700_000_100_000,
       positionGrouping: 'assets',
       balancesHidden: true,
@@ -102,23 +96,34 @@ describe('BrowserSettingsStore', () => {
   it('normalizes invalid scheduling values and persists partial updates', () => {
     storage.setItem(SETTINGS_KEYS.language, 'de');
     storage.setItem(SETTINGS_KEYS.theme, 'neon');
-    storage.setItem(SETTINGS_KEYS.priceRefreshIntervalHours, '2');
-    storage.setItem(SETTINGS_KEYS.snapshotIntervalHours, 'forever');
+    storage.setItem(SETTINGS_KEYS.priceRefreshIntervalMinutes, '2');
+    storage.setItem(SETTINGS_KEYS.snapshotIntervalMinutes, 'forever');
     storage.setItem(SETTINGS_KEYS.lastPriceRefreshAt, '-1');
     storage.setItem(SETTINGS_KEYS.lastSnapshotAt, 'tomorrow');
     storage.setItem(SETTINGS_KEYS.positionGrouping, 'brokers');
-    store.save({ theme: 'dark', autoPriceRefresh: true });
+    store.save({ theme: 'dark' });
 
     expect(store.load()).toMatchObject({
       language: 'ru',
       theme: 'dark',
-      autoPriceRefresh: true,
-      priceRefreshIntervalHours: 3,
-      snapshotIntervalHours: 6,
+      priceRefreshIntervalMinutes: 60,
+      snapshotIntervalMinutes: 0,
       positionGrouping: 'accounts',
     });
     expect(store.load()).not.toHaveProperty('lastPriceRefreshAt');
     expect(store.load()).not.toHaveProperty('lastSnapshotAt');
+  });
+
+  it('maps disabled and enabled legacy scheduling settings to minutes', () => {
+    storage.setItem(SETTINGS_KEYS.autoPriceRefresh, '1');
+    storage.setItem(SETTINGS_KEYS.priceRefreshIntervalHours, '3');
+    storage.setItem(SETTINGS_KEYS.autoSnapshot, '0');
+    storage.setItem(SETTINGS_KEYS.snapshotIntervalHours, '6');
+
+    expect(store.load()).toMatchObject({
+      priceRefreshIntervalMinutes: 60,
+      snapshotIntervalMinutes: 0,
+    });
   });
 
   it('round-trips up to three unique selected rate assets', () => {

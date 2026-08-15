@@ -546,39 +546,28 @@ export class WorthRenderer {
         button.dataset.langChoice === this.language,
       ),
     );
-    const autoRefresh = requiredElement(
-      'autoPriceRefresh',
-      HTMLInputElement,
-      this.documentRef,
-    );
-    autoRefresh.checked = this.service.settings.autoPriceRefresh;
     const priceInterval = requiredElement(
-      'priceRefreshIntervalHours',
+      'priceRefreshIntervalMinutes',
       HTMLSelectElement,
       this.documentRef,
     );
     priceInterval.value = String(
-      this.service.settings.priceRefreshIntervalHours,
+      this.service.settings.priceRefreshIntervalMinutes,
     );
-    priceInterval.disabled = !this.service.settings.autoPriceRefresh;
-    const autoSnapshot = requiredElement(
-      'autoSnapshot',
-      HTMLInputElement,
-      this.documentRef,
-    );
-    autoSnapshot.checked = this.service.settings.autoSnapshot;
     const snapshotInterval = requiredElement(
-      'snapshotIntervalHours',
+      'snapshotIntervalMinutes',
       HTMLSelectElement,
       this.documentRef,
     );
     snapshotInterval.value = String(
-      this.service.settings.snapshotIntervalHours,
+      this.service.settings.snapshotIntervalMinutes,
     );
-    snapshotInterval.disabled = !this.service.settings.autoSnapshot;
     for (const select of [priceInterval, snapshotInterval]) {
       for (const option of select.options) {
-        option.textContent = this.t('hoursLabel', Number(option.value));
+        option.textContent =
+          option.value === '0'
+            ? this.t('autoNone')
+            : this.t('minutesLabel', Number(option.value));
       }
     }
     const currencyButton = this.element('displayCurrencyBtn');
@@ -702,7 +691,7 @@ export class WorthRenderer {
     const freshness = priceFreshness(
       this.service.data,
       Date.now(),
-      this.service.settings.priceRefreshIntervalHours * 60 * 60 * 1000,
+      (this.service.settings.priceRefreshIntervalMinutes || 60) * 60 * 1000,
     );
     const trust = this.element('priceTrust');
     trust.classList.toggle(
@@ -730,7 +719,7 @@ export class WorthRenderer {
     const freshness = priceFreshness(
       this.service.data,
       Date.now(),
-      this.service.settings.priceRefreshIntervalHours * 60 * 60 * 1000,
+      (this.service.settings.priceRefreshIntervalMinutes || 60) * 60 * 1000,
     );
     this.element('assetFreshness').textContent =
       freshness.tracked > 0 && freshness.current < freshness.tracked
@@ -925,7 +914,7 @@ export class WorthRenderer {
                   : positionPnl?.pnl && positionPnl.pnl < 0
                     ? '−'
                     : '';
-              return `<button class="related-row related-row-valued" data-account-open="${escapeHtml(position.accountId)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}</small></span><b>${this.money(Number(position.quantity) * currentPrice)}<small class="${this.pnlClass(positionPnl)}">${positionPnl ? `${positionSign}${this.money(Math.abs(positionPnl.pnl))}` : '—'}</small></b><i>›</i></button>`;
+              return `<button class="related-row related-row-valued" data-position-open="${escapeHtml(position.id)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.accountIcon(account))}" style="background:${this.accountColor(account)}">${escapeHtml(this.accountIcon(account))}</span><span><strong>${escapeHtml(account?.name || this.t('deletedAccount'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset.code)}</small></span><b>${this.money(Number(position.quantity) * currentPrice)}<small class="${this.pnlClass(positionPnl)}">${positionPnl ? `${positionSign}${this.money(Math.abs(positionPnl.pnl))}` : '—'}</small></b><i>›</i></button>`;
             })
             .join('')
         : `<div class="empty-state compact-empty">${this.t('emptyAsset')}</div>`;
@@ -955,7 +944,7 @@ export class WorthRenderer {
         ? positions
             .map((position) => {
               const asset = this.assetBy(position.assetId);
-              return `<button class="related-row related-row-valued" data-asset-open="${escapeHtml(position.assetId)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span><strong>${escapeHtml(asset?.name || this.t('asset'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset?.code || '')}</small></span><b>${this.money(Number(position.quantity) * Number(asset?.price || 0))}</b><i>›</i></button>`;
+              return `<button class="related-row related-row-valued" data-position-open="${escapeHtml(position.id)}" type="button"><span class="portfolio-position-icon ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span><strong>${escapeHtml(asset?.name || this.t('asset'))}</strong><small>${formatNumber(position.quantity, this.language)} ${escapeHtml(asset?.code || '')}</small></span><b>${this.money(Number(position.quantity) * Number(asset?.price || 0))}</b><i>›</i></button>`;
             })
             .join('')
         : `<div class="empty-state compact-empty">${this.t('emptyAccount')}</div>`;
@@ -983,7 +972,7 @@ export class WorthRenderer {
           );
           const previous = data[index - 1];
           const difference = previous ? item.value - previous.value : null;
-          return `<div class="list-card"><span class="history-dot"></span><div class="list-main"><strong>${formatDate(item.snapshot.createdAt, this.language)}</strong><small>${formatTime(item.snapshot.createdAt, this.language)}${difference === null ? ` · ${this.t('firstSnapshot')}` : ` · ${difference >= 0 ? '+' : '−'}${this.money(Math.abs(difference))}`}</small></div><div class="list-value"><strong>${this.money(item.value)}</strong></div><button class="menu-button" data-snapshot-menu="${item.snapshot.id}" aria-label="${this.t('actions')}">···</button></div>`;
+          return `<div class="list-card"><div class="list-main"><strong>${formatDate(item.snapshot.createdAt, this.language)}</strong><small>${formatTime(item.snapshot.createdAt, this.language)}${difference === null ? ` · ${this.t('firstSnapshot')}` : ` · ${difference >= 0 ? '+' : '−'}${this.money(Math.abs(difference))}`}</small></div><div class="list-value"><strong>${this.money(item.value)}</strong></div><button class="menu-button" data-snapshot-menu="${item.snapshot.id}" aria-label="${this.t('actions')}">···</button></div>`;
         })
         .join('');
     }
@@ -1089,11 +1078,10 @@ export class WorthRenderer {
     const start = this.detailPeriodStart();
     const historical = assetPriceHistorySeries(
       this.detailRoute.id,
-      this.service.data.snapshots,
+      this.service.data.priceHistory,
     ).filter(({ createdAt }) => start === undefined || createdAt >= start);
     if (historical.length < 2) return [];
-    const current = Number(this.assetBy(this.detailRoute.id)?.price) || 0;
-    return [...historical, { createdAt: Date.now(), value: current }];
+    return historical;
   }
 
   private detailPeriodStart(): number | undefined {
@@ -1135,7 +1123,7 @@ export class WorthRenderer {
   private assetPriceStatus(asset: Asset): string {
     if (asset.autoUpdateSource === 'none') return this.t('autoSourceNone');
     const maximumAge =
-      this.service.settings.priceRefreshIntervalHours * 60 * 60 * 1000;
+      (this.service.settings.priceRefreshIntervalMinutes || 60) * 60 * 1000;
     return typeof asset.priceUpdatedAt === 'number' &&
       Date.now() - asset.priceUpdatedAt <= maximumAge
       ? this.t('currentPriceStatus')

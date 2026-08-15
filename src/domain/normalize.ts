@@ -5,6 +5,7 @@ import type {
   AutoUpdateSource,
   PortfolioData,
   Position,
+  PriceHistoryPoint,
   Snapshot,
   SnapshotAsset,
   UnknownRecord,
@@ -151,11 +152,56 @@ function normalizePosition(value: UnknownRecord): Position {
   };
 }
 
+function normalizePriceHistoryPoint(
+  value: UnknownRecord,
+): PriceHistoryPoint | undefined {
+  const id = stringValue(value.id);
+  const assetId = stringValue(value.assetId);
+  const dayKey = stringValue(value.dayKey);
+  const createdAt = Number(value.createdAt);
+  const usdPrice = Number(value.usdPrice);
+  if (
+    !id ||
+    !assetId ||
+    !dayKey ||
+    !Number.isFinite(createdAt) ||
+    createdAt < 0 ||
+    !Number.isFinite(usdPrice) ||
+    usdPrice < 0
+  ) {
+    return;
+  }
+  const source = asRecord(value.source);
+  const sourceType = source.type;
+  return {
+    id,
+    assetId,
+    dayKey,
+    createdAt,
+    usdPrice,
+    ...(sourceType === 'fiat' || sourceType === 'crypto'
+      ? {
+          source: {
+            type: sourceType,
+            ...(stringValue(source.code)
+              ? { code: stringValue(source.code) }
+              : {}),
+            ...(stringValue(source.id) ? { id: stringValue(source.id) } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
 export function normalizeData(value: UnknownRecord): PortfolioData {
   return {
     accounts: asRecords(value.accounts).map(normalizeAccount),
     assets: asRecords(value.assets).map(normalizeAsset),
     positions: asRecords(value.positions).map(normalizePosition),
     snapshots: asRecords(value.snapshots).map(normalizeSnapshot),
+    priceHistory: asRecords(value.priceHistory).flatMap((point) => {
+      const normalized = normalizePriceHistoryPoint(point);
+      return normalized ? [normalized] : [];
+    }),
   };
 }

@@ -2,22 +2,24 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function seedPortfolio(page: Page): Promise<void> {
   const now = Date.now();
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await page.evaluate(
     ({ currentTime }) =>
       new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('worth-local-portfolio', 1);
+        const request = indexedDB.open('worth-local-portfolio', 2);
         request.onerror = () =>
           reject(request.error ?? new Error('Could not open portfolio'));
         request.onsuccess = () => {
           const database = request.result;
           const transaction = database.transaction(
-            ['accounts', 'assets', 'positions', 'snapshots'],
+            ['accounts', 'assets', 'positions', 'snapshots', 'priceHistory'],
             'readwrite',
           );
           const accounts = transaction.objectStore('accounts');
           const assets = transaction.objectStore('assets');
           const positions = transaction.objectStore('positions');
           const snapshots = transaction.objectStore('snapshots');
+          const priceHistory = transaction.objectStore('priceHistory');
           accounts.put({
             id: 'vault',
             name: 'Vault',
@@ -127,7 +129,7 @@ async function seedPortfolio(page: Page): Promise<void> {
             positions.put(position);
           snapshots.put({
             id: 'first',
-            createdAt: currentTime - 7_200_000,
+            createdAt: currentTime - 2 * 24 * 60 * 60 * 1_000,
             total: 500.12,
             accounts: [
               { accountId: 'vault', name: 'Vault', total: 460.12 },
@@ -188,7 +190,7 @@ async function seedPortfolio(page: Page): Promise<void> {
           });
           snapshots.put({
             id: 'second',
-            createdAt: currentTime - 3_600_000,
+            createdAt: currentTime - 24 * 60 * 60 * 1_000,
             total: 620.45,
             accounts: [
               { accountId: 'vault', name: 'Vault', total: 575.45 },
@@ -247,6 +249,27 @@ async function seedPortfolio(page: Page): Promise<void> {
               },
             ],
           });
+          for (const [assetId, earlier, later] of [
+            ['btc', 80, 95],
+            ['xaut', 180, 195],
+            ['usd', 1, 1],
+            ['eth', 40, 45],
+          ] as const) {
+            priceHistory.put({
+              id: `legacy-price:${assetId}:first`,
+              assetId,
+              dayKey: 'legacy-first',
+              createdAt: currentTime - 2 * 24 * 60 * 60 * 1_000,
+              usdPrice: earlier,
+            });
+            priceHistory.put({
+              id: `legacy-price:${assetId}:second`,
+              assetId,
+              dayKey: 'legacy-second',
+              createdAt: currentTime - 24 * 60 * 60 * 1_000,
+              usdPrice: later,
+            });
+          }
           transaction.oncomplete = () => {
             database.close();
             resolve();
@@ -303,7 +326,8 @@ test('creates entities and opens their dedicated detail screens', async ({
   );
   await expect(page.locator('#entityRelatedList')).toContainText('140,67 USD');
 
-  await page.locator('#entityRelatedList [data-account-open]').click();
+  await page.locator('#entityRelatedList [data-position-open]').click();
+  await page.locator('[data-position-account-link]').click();
   await expect(page).toHaveURL(/#\/accounts\//);
   await expect(page.locator('#entityDetailTitle')).toHaveText('Основной счёт');
   await expect(page.locator('#entityRelatedList')).toContainText('Доллар');
@@ -351,7 +375,8 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   await expect(page.locator('#entityDetailHero')).toContainText(
     'Цена актуальна',
   );
-  await page.locator('#entityRelatedList [data-account-open]').first().click();
+  await page.locator('#entityRelatedList [data-position-open]').first().click();
+  await page.locator('[data-position-account-link]').click();
   await expect(page).toHaveURL(/#\/accounts\/vault$/);
   await page.goBack();
   await expect(page).toHaveURL(/#\/assets\/btc$/);
@@ -452,11 +477,30 @@ test('matches the approved asset detail hierarchy and header actions', async ({
     '42.9% портфеля',
   );
   await expect(
-    page.locator('#entityRelatedList [data-account-open="vault"]'),
+    page.locator('#entityRelatedList [data-position-open="btc-vault"]'),
   ).toContainText('$300.00');
   await expect(
-    page.locator('#entityRelatedList [data-account-open="vault"]'),
+    page.locator('#entityRelatedList [data-position-open="btc-vault"]'),
   ).toContainText('+$60.00');
+  await page
+    .locator('#entityRelatedList [data-position-open="btc-vault"]')
+    .click();
+  await expect(page.locator('#positionModal')).toBeVisible();
+  await expect(page.locator('[data-position-asset-link]')).toContainText(
+    'Bitcoin',
+  );
+  await expect(page.locator('[data-position-account-link]')).toContainText(
+    'Vault',
+  );
+  await page.locator('#positionForm [name="quantity"]').fill('4');
+  await page
+    .locator('#positionForm')
+    .evaluate((form: HTMLFormElement) => form.requestSubmit());
+  await expect(page.locator('#positionModal')).not.toBeVisible();
+  await expect(page).toHaveURL(/#\/assets\/btc$/);
+  await expect(
+    page.locator('#entityRelatedList [data-position-open="btc-vault"]'),
+  ).toContainText('$400.00');
   await page
     .locator('.detail-nav [data-detail-add-position="asset:btc"]')
     .click();
@@ -473,7 +517,7 @@ test('summarizes the four largest assets and accounts without search controls', 
   await page.evaluate(
     () =>
       new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('worth-local-portfolio', 1);
+        const request = indexedDB.open('worth-local-portfolio', 2);
         request.onsuccess = () => {
           const database = request.result;
           const transaction = database.transaction(
@@ -563,11 +607,30 @@ test('summarizes the four largest assets and accounts without search controls', 
       accountRadius: getComputedStyle(account).borderRadius,
       accountsGap: getComputedStyle(accountsList).gap,
       accountsTopBorder: getComputedStyle(accountsList).borderTopWidth,
+      accountHeight: account.getBoundingClientRect().height,
+      accountIcon: account
+        .querySelector<HTMLElement>('.portfolio-row-icon')!
+        .getBoundingClientRect().width,
+      accountName: Number.parseFloat(
+        getComputedStyle(
+          account.querySelector<HTMLElement>('.portfolio-row-main strong')!,
+        ).fontSize,
+      ),
+      accountValue: Number.parseFloat(
+        getComputedStyle(
+          account.querySelector<HTMLElement>('.portfolio-row-value strong')!,
+        ).fontSize,
+      ),
     };
   });
   expect(listSurfaces.accountRadius).toBe(listSurfaces.assetRadius);
   expect(listSurfaces.accountsGap).not.toBe('0px');
   expect(listSurfaces.accountsTopBorder).toBe('0px');
+  expect(listSurfaces.accountHeight).toBeGreaterThanOrEqual(68);
+  expect(listSurfaces.accountHeight).toBeLessThanOrEqual(72);
+  expect(listSurfaces.accountIcon).toBe(46);
+  expect(listSurfaces.accountName).toBe(16);
+  expect(listSurfaces.accountValue).toBe(15);
 
   const accountLayout = await page.evaluate(() => ({
     overline: document
@@ -589,7 +652,7 @@ test('summarizes the four largest assets and accounts without search controls', 
   expect(accountLayout.allocation).toBeLessThan(accountLayout.listTitle);
 });
 
-test('requires two historical snapshots before drawing an entity chart', async ({
+test('requires two historical prices before drawing an asset chart', async ({
   page,
 }) => {
   await page.goto('/');
@@ -597,15 +660,15 @@ test('requires two historical snapshots before drawing an entity chart', async (
   await page.evaluate(
     () =>
       new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('worth-local-portfolio', 1);
+        const request = indexedDB.open('worth-local-portfolio', 2);
         request.onsuccess = () => {
           const database = request.result;
-          const transaction = database.transaction('snapshots', 'readwrite');
-          const snapshots = transaction.objectStore('snapshots');
-          const firstSnapshot = snapshots.get('first');
-          firstSnapshot.onsuccess = () => {
-            snapshots.clear();
-            snapshots.put(firstSnapshot.result);
+          const transaction = database.transaction('priceHistory', 'readwrite');
+          const prices = transaction.objectStore('priceHistory');
+          const firstPrice = prices.get('legacy-price:btc:first');
+          firstPrice.onsuccess = () => {
+            prices.clear();
+            prices.put(firstPrice.result);
           };
           transaction.oncomplete = () => {
             database.close();
@@ -618,26 +681,26 @@ test('requires two historical snapshots before drawing an entity chart', async (
           reject(request.error ?? new Error('Could not open portfolio'));
       }),
   );
-  const snapshotCount = await page.evaluate(
+  const priceCount = await page.evaluate(
     () =>
       new Promise<number>((resolve, reject) => {
-        const request = indexedDB.open('worth-local-portfolio', 1);
+        const request = indexedDB.open('worth-local-portfolio', 2);
         request.onsuccess = () => {
           const database = request.result;
-          const transaction = database.transaction('snapshots', 'readonly');
-          const count = transaction.objectStore('snapshots').count();
+          const transaction = database.transaction('priceHistory', 'readonly');
+          const count = transaction.objectStore('priceHistory').count();
           count.onsuccess = () => {
             database.close();
             resolve(count.result);
           };
           count.onerror = () =>
-            reject(count.error ?? new Error('Could not count snapshots'));
+            reject(count.error ?? new Error('Could not count prices'));
         };
         request.onerror = () =>
           reject(request.error ?? new Error('Could not open portfolio'));
       }),
   );
-  expect(snapshotCount).toBe(1);
+  expect(priceCount).toBe(1);
   await page.reload();
   await page.locator('.tab[data-nav="assetsView"]').click();
   await page.locator('[data-asset-open="btc"]').click();
@@ -669,11 +732,11 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
   await expect(page.locator('#entityDetailMetadata')).toContainText('42.9%');
   await detailCanvas.focus();
   await expect(page.locator('#entityDetailChartTooltip')).toContainText(
-    '$100.00',
+    '$95.00',
   );
   await page.keyboard.press('ArrowLeft');
   await expect(page.locator('#entityDetailChartTooltip')).toContainText(
-    '$95.00',
+    '$80.00',
   );
   const detailBox = await detailCanvas.boundingBox();
   if (!detailBox) throw new Error('Detail chart is not visible');
@@ -693,7 +756,8 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
   });
   await expect(page.locator('#entityDetailChartTooltip')).toBeHidden();
 
-  await page.locator('#entityRelatedList [data-account-open]').first().click();
+  await page.locator('#entityRelatedList [data-position-open]').first().click();
+  await page.locator('[data-position-account-link]').click();
   await expect(page).toHaveURL(/#\/accounts\/vault$/);
   await expect(page.locator('#entityDetailChartSection')).toBeHidden();
   await expect(page.locator('#entityDetailHero')).toContainText('$650.00');

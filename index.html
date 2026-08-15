@@ -116,12 +116,12 @@
 </section>
 <section class="settings-list settings-auto-section">
 <label class="settings-row automation-row">
-<span><strong data-i18n="autoPriceRefresh">Автообновление цен</strong><small data-i18n="autoPriceRefreshSub">Проверять цены при открытии приложения</small></span>
-<span class="automation-controls"><select aria-label="Период обновления цен" id="priceRefreshIntervalHours"><option value="1">1 ч</option><option value="3">3 ч</option><option value="6">6 ч</option><option value="12">12 ч</option><option value="24">24 ч</option></select><input id="autoPriceRefresh" type="checkbox"/></span>
+<span><strong data-i18n="autoPriceRefresh">Автообновление цен</strong><small data-i18n="autoPriceRefreshSub">Как часто обновлять рыночные цены</small></span>
+<span class="automation-controls"><select aria-label="Период обновления цен" id="priceRefreshIntervalMinutes"><option value="0">Нет</option><option value="5">5 минут</option><option value="15">15 минут</option><option value="30">30 минут</option><option value="60">60 минут</option></select></span>
 </label>
 <label class="settings-row automation-row">
 <span><strong data-i18n="autoSnapshot">Автоснимки</strong><small data-i18n="autoSnapshotSub">Автоматически сохранять историю портфеля</small></span>
-<span class="automation-controls"><select aria-label="Период снимков" id="snapshotIntervalHours"><option value="1">1 ч</option><option value="3">3 ч</option><option value="6">6 ч</option><option value="12">12 ч</option><option value="24">24 ч</option></select><input id="autoSnapshot" type="checkbox"/></span>
+<span class="automation-controls"><select aria-label="Период снимков" id="snapshotIntervalMinutes"><option value="0">Нет</option><option value="30">30 минут</option><option value="60">60 минут</option></select></span>
 </label>
 </section>
 <section class="settings-list settings-price-section">
@@ -146,7 +146,7 @@
 <span><strong data-i18n="deleteAll">Удалить все данные</strong><small data-i18n="deleteAllSub">Счета, активы, позиции и история</small></span><span>›</span>
 </button>
 </section>
-<div class="build-note">Worth · 3.6.2-final</div>
+<div class="build-note">Worth · 3.7.0-final</div>
 </section>
 </main>
 <nav aria-label="Навигация" class="tab-bar">
@@ -206,12 +206,18 @@
 <form class="sheet" id="positionForm">
 <div class="sheet-handle"></div>
 <div class="sheet-head"><div><div class="section-kicker" data-i18n="newPos" id="positionModeLabel">Новая</div><h2 data-i18n="position">Позиция</h2></div><button class="close-button" data-close="positionModal" type="button">×</button></div>
+<div class="position-context hidden" id="positionContext">
+<button class="position-entity-link" data-position-asset-link type="button"><span class="position-context-icon" id="positionAssetIcon"></span><span><small data-i18n="asset">Актив</small><strong id="positionAssetName"></strong></span><i>›</i></button>
+<button class="position-entity-link" data-position-account-link type="button"><span class="position-context-icon" id="positionAccountIcon"></span><span><small data-i18n="account">Счёт</small><strong id="positionAccountName"></strong></span><i>›</i></button>
+<div class="position-context-values"><span><small data-i18n="unitPrice">Цена за единицу, $</small><strong id="positionUnitPrice"></strong></span><span><small data-i18n="positionValue">Стоимость позиции</small><strong id="positionCalculatedValue"></strong></span></div>
+</div>
 <div class="inline-warning hidden" data-i18n="createAccountAssetFirst" id="positionPrerequisite">Сначала создайте хотя бы один счёт и один актив.</div>
-<label class="field"><span data-i18n="account">Счёт</span><select name="accountId" required=""></select></label>
-<label class="field"><span data-i18n="asset">Актив</span><select name="assetId" required=""></select></label>
+<label class="field position-select-field"><span data-i18n="account">Счёт</span><select name="accountId" required=""></select></label>
+<label class="field position-select-field"><span data-i18n="asset">Актив</span><select name="assetId" required=""></select></label>
 <label class="field"><span data-i18n="quantity">Количество</span><input autocomplete="off" inputmode="decimal" name="quantity" placeholder="1000" required="" type="text"/></label>
 <label class="field"><span data-i18n-html="commentOptional">Комментарий <em>необязательно</em></span><input autocomplete="off" data-i18n-placeholder="commentExample" maxlength="80" name="comment" placeholder="На машину, резерв, отпуск…" type="text"/></label>
 <button class="sheet-primary" data-i18n="save" type="submit">Сохранить</button>
+<button class="position-delete hidden" data-i18n="deletePosition" id="positionDeleteBtn" type="button">Удалить позицию</button>
 </form>
 </dialog>
 <dialog class="modal" id="priceModal">

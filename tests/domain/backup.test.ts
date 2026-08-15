@@ -22,12 +22,13 @@ describe('backup validation and serialization', () => {
       theme: 'dark',
       displayCurrency: 'USD',
       pnlPeriod: 'last',
-      autoPriceRefresh: true,
+      priceRefreshIntervalMinutes: 60,
+      snapshotIntervalMinutes: 0,
     });
   });
 
   it('accepts every published backup schema version', () => {
-    for (let version = 1; version <= 15; version += 1) {
+    for (let version = 1; version <= 16; version += 1) {
       expect(validateBackup({ ...currentV14, version }).version).toBe(version);
     }
   });
@@ -50,7 +51,7 @@ describe('backup validation and serialization', () => {
         assets: [{ ...currentV14.assets[0], price: 'not-a-number' }],
       }),
     ).toThrow('Повреждены активы');
-    expect(() => validateBackup({ ...currentV14, version: 16 })).toThrow(
+    expect(() => validateBackup({ ...currentV14, version: 17 })).toThrow(
       'Неподдерживаемая версия резервной копии',
     );
   });
@@ -62,11 +63,9 @@ describe('backup validation and serialization', () => {
       theme: 'dark',
       displayCurrency: 'USD',
       pnlPeriod: 'last',
-      autoPriceRefresh: true,
-      priceRefreshIntervalHours: 3,
+      priceRefreshIntervalMinutes: 15,
       lastPriceRefreshAt: 1_700_000_000_000,
-      autoSnapshot: true,
-      snapshotIntervalHours: 6,
+      snapshotIntervalMinutes: 30,
       lastSnapshotAt: 1_700_000_100_000,
       positionGrouping: 'assets',
       balancesHidden: true,
@@ -81,13 +80,14 @@ describe('backup validation and serialization', () => {
 
     expect(backup).toMatchObject({
       app: 'Worth',
-      version: 15,
-      appVersion: '3.6.2-final',
+      version: 16,
+      appVersion: '3.7.0-final',
       baseCurrency: 'USD',
       exportedAt: '2026-08-14T00:00:00.000Z',
       appSettings: settings,
     });
     expect(backup.accounts).not.toBe(validated.data.accounts);
+    expect(backup.priceHistory).not.toBe(validated.data.priceHistory);
     expect(backup.appSettings.selectedRateAssetIds).not.toBe(
       settings.selectedRateAssetIds,
     );
@@ -139,22 +139,24 @@ describe('backup validation and serialization', () => {
     expect(backup.assets[0]?.tags).not.toBe(validated.data.assets[0]?.tags);
   });
 
-  it('ignores invalid schema 15 scheduling settings', () => {
+  it('ignores invalid schema 16 scheduling settings', () => {
     const backup = validateBackup({
       ...currentV14,
-      version: 15,
+      version: 16,
       appSettings: {
         ...currentV14.appSettings,
-        priceRefreshIntervalHours: 2,
-        snapshotIntervalHours: 'daily',
+        priceRefreshIntervalMinutes: 2,
+        snapshotIntervalMinutes: 'daily',
         lastPriceRefreshAt: -1,
         lastSnapshotAt: 'tomorrow',
         positionGrouping: 'brokers',
       },
     });
 
-    expect(backup.settings).not.toHaveProperty('priceRefreshIntervalHours');
-    expect(backup.settings).not.toHaveProperty('snapshotIntervalHours');
+    expect(backup.settings).toMatchObject({
+      priceRefreshIntervalMinutes: 60,
+      snapshotIntervalMinutes: 0,
+    });
     expect(backup.settings).not.toHaveProperty('lastPriceRefreshAt');
     expect(backup.settings).not.toHaveProperty('lastSnapshotAt');
     expect(backup.settings).not.toHaveProperty('positionGrouping');
