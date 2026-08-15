@@ -80,6 +80,46 @@ function history(
   };
 }
 
+function mixedPoint(
+  createdAt: number,
+  xPrice: number,
+  yPrice: number,
+  quantities: { xA: number; xB?: number; yB: number },
+): PnlPoint {
+  const position = (
+    positionId: string,
+    accountId: string,
+    assetId: string,
+    quantity: number,
+    price: number,
+  ) => ({
+    positionId,
+    accountId,
+    accountName: accountId === 'a' ? 'Account A' : 'Account B',
+    assetId,
+    assetCode: assetId.toUpperCase(),
+    comment: '',
+    quantity,
+    price,
+    value: quantity * price,
+  });
+  return {
+    createdAt,
+    assets: [
+      { assetId: 'x', price: xPrice },
+      { assetId: 'y', price: yPrice },
+      { assetId: 'quote', price: 2 },
+    ],
+    positions: [
+      position('x-a', 'a', 'x', quantities.xA, xPrice),
+      ...(quantities.xB === undefined
+        ? []
+        : [position('x-b', 'b', 'x', quantities.xB, xPrice)]),
+      position('y-b', 'b', 'y', quantities.yB, yPrice),
+    ],
+  };
+}
+
 describe('flow-adjusted P&L', () => {
   it('normalizes points into a quote using same-day cross-rates', () => {
     const oldAt = new Date(2026, 7, 14, 12).getTime();
@@ -129,6 +169,37 @@ describe('flow-adjusted P&L', () => {
     expect(normalized?.assets).toEqual(
       expect.arrayContaining([{ assetId: 'usd', price: 1 }]),
     );
+  });
+
+  it('rejects invalid held quantities and prices without rejecting negative quantities or explicit zero prices', () => {
+    const invalidQuantity = point(1, Number.NaN, 10);
+    const infiniteQuantity = point(1, Number.POSITIVE_INFINITY, 10);
+    const negativePrice = point(1, 1, -10);
+    const nonFinitePrice = point(1, 1, Number.NaN);
+    const missingPrice = point(1, 1, 10);
+    missingPrice.positions[0]!.price = undefined as unknown as number;
+    missingPrice.assets = [];
+    const implicitZeroPrice = point(1, 1, 0);
+    implicitZeroPrice.assets = [];
+    const explicitZeroPrice = point(1, 1, 0);
+    const negativeQuantity = point(1, -2, 10);
+
+    for (const incompatible of [
+      invalidQuantity,
+      infiniteQuantity,
+      negativePrice,
+      nonFinitePrice,
+      missingPrice,
+      implicitZeroPrice,
+    ]) {
+      expect(normalizePnlPointInQuote(incompatible, undefined, [])).toBeNull();
+    }
+    expect(
+      normalizePnlPointInQuote(explicitZeroPrice, undefined, [])?.positions[0],
+    ).toMatchObject({ price: 0, value: 0 });
+    expect(
+      normalizePnlPointInQuote(negativeQuantity, undefined, [])?.positions[0],
+    ).toMatchObject({ quantity: -2, price: 10, value: -20 });
   });
 
   it('treats quantity increases as flows valued at the later price', () => {
@@ -184,6 +255,106 @@ describe('flow-adjusted P&L', () => {
 
     expect(series.map(({ createdAt }) => createdAt)).toEqual([1, 2, 3, 4]);
     expect(flowAdjustedPnl(series, includeAll)?.pnl).toBe(300);
+  });
+
+  it('keeps current as the final unique point across every period selector', () => {
+    const now = new Date(2026, 7, 15, 21).getTime();
+    const earlier = point(now - 2 * 86_400_000, 1, 10);
+    const duplicateEarlier = point(earlier.createdAt, 1, 11);
+    const latestEligible = point(now - 86_400_000, 1, 12);
+    const sameTimestamp = point(now, 1, 99);
+    const future = point(now + 1, 1, 100);
+    const current = point(now, 1, 15);
+    const snapshots = [
+      future,
+      latestEligible,
+      earlier,
+      sameTimestamp,
+      duplicateEarlier,
+    ];
+
+    expect(
+      selectPnlSeries(snapshots, current, 'all').map(
+        ({ createdAt }) => createdAt,
+      ),
+    ).toEqual([earlier.createdAt, latestEligible.createdAt, current.createdAt]);
+    expect(
+      selectPnlSeries(snapshots, current, 'last').map(
+        ({ createdAt }) => createdAt,
+      ),
+    ).toEqual([latestEligible.createdAt, current.createdAt]);
+    expect(
+      selectPnlSeriesSince(snapshots, current, now - 36 * 60 * 60 * 1_000).map(
+        ({ createdAt }) => createdAt,
+      ),
+    ).toEqual([earlier.createdAt, latestEligible.createdAt, current.createdAt]);
+    expect(
+      selectOverviewPnlSeries(
+        snapshots,
+        current,
+        '24h',
+        now,
+        localDayKey(now),
+      ).map(({ createdAt }) => createdAt),
+    ).toEqual([latestEligible.createdAt, current.createdAt]);
+    expect(
+      selectOverviewPnlSeries(
+        snapshots,
+        current,
+        'all',
+        now,
+        localDayKey(now),
+      ).map(({ createdAt }) => createdAt),
+    ).toEqual([earlier.createdAt, latestEligible.createdAt, current.createdAt]);
+  });
+
+  it('normalizes mixed deposits, withdrawals, and transfers consistently across filters', () => {
+    const normalized = normalizePnlSeriesInQuote(
+      [
+        mixedPoint(1, 10, 20, { xA: 10, yB: 5 }),
+        mixedPoint(2, 12, 18, { xA: 15, yB: 5 }),
+        mixedPoint(3, 15, 21, { xA: 10, xB: 5, yB: 5 }),
+        mixedPoint(4, 14, 22, { xA: 10, xB: 2, yB: 5 }),
+      ],
+      'quote',
+      [],
+    );
+
+    const portfolio = flowAdjustedPnl(normalized, includeAll);
+    const assetX = flowAdjustedPnl(
+      normalized,
+      ({ assetId }) => assetId === 'x',
+    );
+    const assetY = flowAdjustedPnl(
+      normalized,
+      ({ assetId }) => assetId === 'y',
+    );
+    const accountA = flowAdjustedPnl(
+      normalized,
+      ({ accountId }) => accountId === 'a',
+    );
+    const accountB = flowAdjustedPnl(
+      normalized,
+      ({ accountId }) => accountId === 'b',
+    );
+
+    expect(portfolio).toMatchObject({
+      pnl: 30,
+      baseCapital: 100,
+      positiveFlows: 30,
+    });
+    expect(portfolio?.pct).toBeCloseTo((30 / 130) * 100);
+    expect(assetX?.pnl).toBeCloseTo(25);
+    expect(assetX?.positiveFlows).toBeCloseTo(30);
+    expect(assetY?.pnl).toBeCloseTo(5);
+    expect(accountA?.pnl).toBeCloseTo(27.5);
+    expect(accountB?.pnl).toBeCloseTo(2.5);
+    expect((assetX?.pnl ?? 0) + (assetY?.pnl ?? 0)).toBeCloseTo(
+      portfolio?.pnl ?? 0,
+    );
+    expect((accountA?.pnl ?? 0) + (accountB?.pnl ?? 0)).toBeCloseTo(
+      portfolio?.pnl ?? 0,
+    );
   });
 
   it('returns null without a comparable interval', () => {

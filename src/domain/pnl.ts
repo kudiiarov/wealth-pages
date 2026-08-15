@@ -27,6 +27,12 @@ const finitePositive = (value: unknown): number | undefined => {
   return Number.isFinite(number) && number > 0 ? number : undefined;
 };
 
+const finiteNumber = (value: unknown): number | undefined => {
+  if (value === null || value === undefined || value === '') return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+};
+
 function quotePriceForPoint(
   point: PnlPoint,
   quoteAssetId: string,
@@ -64,6 +70,26 @@ export function normalizePnlPointInQuote(
   );
   if (hasNonQuotePosition && quotePrice === undefined) return null;
   const divisor = quotePrice ?? 1;
+  const sourcePrices = new Map<string, number>();
+  for (const position of point.positions) {
+    const quantity = finiteNumber(position.quantity);
+    const positionPrice = finiteNumber(position.price);
+    const assetObservation = point.assets.find(
+      (asset) => asset.assetId === position.assetId,
+    );
+    const observedPrice = finiteNumber(assetObservation?.price);
+    if (
+      quantity === undefined ||
+      positionPrice === undefined ||
+      positionPrice < 0 ||
+      (assetObservation !== undefined &&
+        (observedPrice === undefined || observedPrice < 0)) ||
+      (positionPrice === 0 && observedPrice !== 0)
+    ) {
+      return null;
+    }
+    sourcePrices.set(position.positionId, observedPrice ?? positionPrice);
+  }
   const assets = point.assets.map((asset) => ({
     ...asset,
     price:
@@ -75,15 +101,10 @@ export function normalizePnlPointInQuote(
     assets.push({ assetId: effectiveQuoteAssetId, price: 1 });
   }
   const positions = point.positions.map((position) => {
-    const sourcePrice =
-      finitePositive(
-        point.assets.find((asset) => asset.assetId === position.assetId)?.price,
-      ) ??
-      finitePositive(position.price) ??
-      0;
+    const sourcePrice = sourcePrices.get(position.positionId)!;
     const price =
       position.assetId === effectiveQuoteAssetId ? 1 : sourcePrice / divisor;
-    return { ...position, price, value: Number(position.quantity) * price };
+    return { ...position, price, value: position.quantity * price };
   });
   return { ...point, positions, assets };
 }
@@ -183,6 +204,7 @@ export function flowAdjustedPnl(
       ...previousPositions.keys(),
       ...nextPositions.keys(),
     ]);
+    let intervalFlow = 0;
 
     for (const positionId of positionIds) {
       const probe =
@@ -193,8 +215,9 @@ export function flowAdjustedPnl(
 
       hasComparablePosition = true;
       pnl += result.pnl;
-      if (result.flow > 0) positiveFlows += result.flow;
+      intervalFlow += result.flow;
     }
+    if (intervalFlow > 0) positiveFlows += intervalFlow;
   }
 
   if (!hasComparablePosition && baseCapital === 0) return null;
@@ -209,15 +232,34 @@ export function flowAdjustedPnl(
   };
 }
 
+function eligibleSnapshots(
+  snapshots: readonly PnlPoint[],
+  current: PnlPoint,
+): PnlPoint[] {
+  const byCreatedAt = new Map<number, PnlPoint>();
+  for (const snapshot of snapshots) {
+    if (
+      Number.isFinite(snapshot.createdAt) &&
+      snapshot.createdAt < current.createdAt
+    ) {
+      byCreatedAt.set(snapshot.createdAt, snapshot);
+    }
+  }
+  return [...byCreatedAt.values()].sort(
+    (left, right) => left.createdAt - right.createdAt,
+  );
+}
+
 export function selectPnlSeries(
   snapshots: readonly PnlPoint[],
   current: PnlPoint,
   period: PnlPeriod,
 ): PnlPoint[] {
-  if (snapshots.length === 0) return [];
+  const eligible = eligibleSnapshots(snapshots, current);
+  if (eligible.length === 0) return [];
   return period === 'last'
-    ? [snapshots.at(-1)!, current]
-    : [...snapshots, current];
+    ? [eligible.at(-1)!, current]
+    : [...eligible, current];
 }
 
 export function selectPnlSeriesSince(
@@ -225,14 +267,15 @@ export function selectPnlSeriesSince(
   current: PnlPoint,
   periodStart?: number,
 ): PnlPoint[] {
-  if (snapshots.length === 0) return [];
-  if (periodStart === undefined) return [...snapshots, current];
+  const eligible = eligibleSnapshots(snapshots, current);
+  if (eligible.length === 0) return [];
+  if (periodStart === undefined) return [...eligible, current];
   let baselineIndex = 0;
-  for (let index = 0; index < snapshots.length; index += 1) {
-    if (snapshots[index]!.createdAt <= periodStart) baselineIndex = index;
+  for (let index = 0; index < eligible.length; index += 1) {
+    if (eligible[index]!.createdAt <= periodStart) baselineIndex = index;
     else break;
   }
-  return [...snapshots.slice(baselineIndex), current];
+  return [...eligible.slice(baselineIndex), current];
 }
 
 export function selectOverviewPnlSeries(
@@ -242,10 +285,8 @@ export function selectOverviewPnlSeries(
   now: number,
   currentDayKey: string,
 ): PnlPoint[] {
-  if (snapshots.length === 0) return [];
-  const sorted = [...snapshots].sort(
-    (left, right) => left.createdAt - right.createdAt,
-  );
+  const sorted = eligibleSnapshots(snapshots, current);
+  if (sorted.length === 0) return [];
   if (period === 'all') return [...sorted, current];
 
   const cutoff = now - 86_400_000;

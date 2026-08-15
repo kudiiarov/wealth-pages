@@ -434,6 +434,13 @@ test('currency-aware performance preserves selected-currency gains and losses', 
     await expect(page.locator('#pnlMoney')).toContainText(money);
     await expect(page.locator('#pnlPercent')).toHaveText(percent);
   }
+
+  await page.locator('#displayCurrencyBtn').click();
+  await page.locator('[data-currency-code="USD"]').click();
+  await page.locator('.tab[data-nav="assetsView"]').click();
+  await expect(
+    page.locator('[data-asset-open="eur"] .portfolio-row-value small'),
+  ).toHaveText('−$0.55 · −1.0%');
 });
 
 test('currency-aware performance hides values without a historical quote', async ({
@@ -449,6 +456,33 @@ test('currency-aware performance hides values without a historical quote', async
   await expect(
     page.locator('[data-asset-open="eur"] .portfolio-row-value small'),
   ).toHaveText('—');
+});
+
+test('deduplicates canonical and persisted USD currency choices', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  await page.locator('#displayCurrencyBtn').click();
+  const displayUsd = page.locator('[data-currency-code="USD"]');
+  await expect(displayUsd).toHaveCount(1);
+  await expect(displayUsd.locator('strong')).toHaveText('Dollar');
+  await expect(displayUsd.locator('.currency-option-icon')).toHaveCSS(
+    'background-color',
+    'rgb(86, 103, 255)',
+  );
+  await displayUsd.click();
+
+  await page.locator('[data-rate-asset="btc"]').click();
+  await page.locator('#entityDetailMenu').click();
+  await page.getByRole('button', { name: 'Изменить цену' }).click();
+  const priceUsd = page.locator(
+    '#priceForm [name="priceCurrency"] option[value="USD"]',
+  );
+  await expect(priceUsd).toHaveCount(1);
+  await expect(priceUsd).toHaveText('$ USD');
 });
 
 test('currency-aware performance inspects normalized Home and History values', async ({
@@ -683,6 +717,40 @@ test('freshness and asset headings stay aligned and code-free', async ({
   await expect(assetHeading.locator('em')).toHaveCount(0);
 });
 
+test('localizes static accessibility labels in English', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#settingsShortcut').click();
+  await page.locator('[data-lang-choice="en"]').click();
+
+  await expect(page.locator('#settingsShortcut')).toHaveAttribute(
+    'aria-label',
+    'Settings',
+  );
+  await expect(page.locator('#settingsShortcut')).toHaveAttribute(
+    'title',
+    'Settings',
+  );
+  await expect(page.locator('#detailPeriods')).toHaveAttribute(
+    'aria-label',
+    'Price period',
+  );
+  await expect(
+    page.locator('[data-theme-choice="light"]').locator('..'),
+  ).toHaveAttribute('aria-label', 'Application theme');
+  await expect(page.locator('#priceRefreshIntervalMinutes')).toHaveAttribute(
+    'aria-label',
+    'Price refresh interval',
+  );
+  await expect(page.locator('#snapshotIntervalMinutes')).toHaveAttribute(
+    'aria-label',
+    'Snapshot interval',
+  );
+  await expect(page.locator('.tab-bar')).toHaveAttribute(
+    'aria-label',
+    'Navigation',
+  );
+});
+
 test('matches the approved asset detail hierarchy and header actions', async ({
   page,
 }) => {
@@ -827,6 +895,17 @@ test('summarizes the four largest assets and accounts without search controls', 
   ).toHaveCount(5);
   await expect(page.locator('#assetAllocationList')).toContainText('Другое');
   await expect(page.locator('#assetsList .portfolio-row')).toHaveCount(9);
+  const assetAllocationOrder = await page.evaluate(() => ({
+    metricsBottom: document
+      .querySelector('#assetAllocationSummary .allocation-metrics')!
+      .getBoundingClientRect().bottom,
+    barTop: document
+      .getElementById('assetAllocationBar')!
+      .getBoundingClientRect().top,
+  }));
+  expect(assetAllocationOrder.metricsBottom).toBeLessThan(
+    assetAllocationOrder.barTop,
+  );
 
   await page.locator('[data-nav="accountsView"]').click();
   await expect(page.locator('#accountSearch')).toHaveCount(0);
@@ -908,6 +987,17 @@ test('summarizes the four largest assets and accounts without search controls', 
   expect(Math.abs(accountLayout.add - accountLayout.overline)).toBeLessThan(20);
   expect(accountLayout.metrics).toBeGreaterThan(accountLayout.allocation);
   expect(accountLayout.allocation).toBeLessThan(accountLayout.listTitle);
+  const accountAllocationOrder = await page.evaluate(() => ({
+    metricsBottom: document
+      .querySelector('#accountAllocationSummary .allocation-metrics')!
+      .getBoundingClientRect().bottom,
+    barTop: document
+      .getElementById('accountAllocationBar')!
+      .getBoundingClientRect().top,
+  }));
+  expect(accountAllocationOrder.metricsBottom).toBeLessThan(
+    accountAllocationOrder.barTop,
+  );
 });
 
 test('overview period updates row performance without changing totals or allocation', async ({
@@ -1013,7 +1103,10 @@ test('overview period updates row performance without changing totals or allocat
   });
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
-  ).toHaveText('+25.0%');
+  ).toHaveText('+$60.00 · +25.0%');
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value strong'),
+  ).toHaveText('$300.00');
 
   await page.locator('#assetsView [data-overview-period="24h"]').click();
   await expect(
@@ -1021,7 +1114,10 @@ test('overview period updates row performance without changing totals or allocat
   ).toHaveAttribute('aria-pressed', 'true');
   await expect(
     page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
-  ).toHaveText('+5.3%');
+  ).toHaveText('+$15.00 · +5.3%');
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value strong'),
+  ).toHaveText('$300.00');
   await expect(page.locator('#assetAllocationTotal')).toHaveText(
     overviewSummaries.assets.total ?? '',
   );
@@ -1042,7 +1138,10 @@ test('overview period updates row performance without changing totals or allocat
   ).toHaveAttribute('aria-pressed', 'true');
   await expect(
     page.locator('[data-account-open="exchange"] .portfolio-row-value small'),
-  ).toHaveText('+11.1%');
+  ).toHaveText('+$5.00 · +11.1%');
+  await expect(
+    page.locator('[data-account-open="exchange"] .portfolio-row-value strong'),
+  ).toHaveText('$50.00');
   await expect(page.locator('#accountAllocationTotal')).toHaveText(
     overviewSummaries.accounts.total ?? '',
   );
@@ -1056,6 +1155,66 @@ test('overview period updates row performance without changing totals or allocat
       ),
     )
     .toEqual(overviewSummaries.accounts.widths);
+
+  await page.locator('[data-nav="homeView"]').click();
+  await page.locator('#privacyToggle').click();
+  await page.locator('[data-nav="accountsView"]').click();
+  await expect(
+    page.locator('[data-account-open="exchange"] .portfolio-row-value small'),
+  ).toHaveText('•••• · +11.1%');
+});
+
+test('keeps Home, overview rows, and entity detail performance periods independent', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  await expect(page.locator('#pnlMoney')).toHaveText('+$90.00');
+  await expect(page.locator('#pnlPercent')).toHaveText('+14.75%');
+  await page.locator('[data-home-period="1d"]').click();
+  await expect(page.locator('#pnlMoney')).toHaveText('+$25.00');
+  await expect(page.locator('#pnlPercent')).toHaveText('+3.70%');
+
+  await page.locator('.tab[data-nav="assetsView"]').click();
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
+  ).toHaveText('+$60.00 · +25.0%');
+  await page.locator('#assetsView [data-overview-period="24h"]').click();
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
+  ).toHaveText('+$15.00 · +5.3%');
+
+  await page.locator('[data-nav="homeView"]').click();
+  await expect(page.locator('[data-home-period="1d"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.locator('#pnlMoney')).toHaveText('+$25.00');
+  await expect(page.locator('#pnlPercent')).toHaveText('+3.70%');
+  await page.locator('[data-home-period="all"]').click();
+
+  await page.locator('.tab[data-nav="assetsView"]').click();
+  await expect(
+    page.locator('#assetsView [data-overview-period="24h"]'),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.locator('[data-asset-open="btc"] .portfolio-row-value small'),
+  ).toHaveText('+$15.00 · +5.3%');
+  await page.locator('[data-asset-open="btc"]').click();
+  await expect(page.locator('#entityHoldingSummary')).toContainText('+$60.00');
+  await expect(page.locator('#entityHoldingSummary')).toContainText('+25.0%');
+
+  await page.locator('[data-detail-back]').click();
+  await page.locator('.tab[data-nav="accountsView"]').click();
+  await expect(
+    page.locator('[data-account-open="exchange"] .portfolio-row-value small'),
+  ).toHaveText('+$5.00 · +11.1%');
+  await page.locator('[data-account-open="exchange"]').click();
+  await expect(
+    page.locator('#entityDetailHero > .detail-hero-main > small'),
+  ).toHaveText('+$10.00 · +25.0%');
 });
 
 test('overview period visibly distinguishes the selected segment', async ({
