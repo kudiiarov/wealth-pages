@@ -650,6 +650,37 @@ test('shows and persists configurable asset pairs that open asset details', asyn
   await expect(page.locator('#assetsView')).toHaveClass(/active/);
 });
 
+test('freshness and asset headings stay aligned and code-free', async ({ page }) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  const rateStatus = page.locator('[data-rate-asset="btc"] .rate-status');
+  await expect(rateStatus.locator('.freshness-dot')).toHaveCount(1);
+  await expect(rateStatus).toHaveCSS('justify-content', 'flex-start');
+  const verticalCenters = await rateStatus.evaluate((status) => {
+    const dot = status.querySelector<HTMLElement>('.freshness-dot');
+    const text = status.querySelector<HTMLElement>('small');
+    if (!dot || !text) throw new Error('Missing freshness content');
+    const dotBox = dot.getBoundingClientRect();
+    const textBox = text.getBoundingClientRect();
+    return {
+      dot: dotBox.top + dotBox.height / 2,
+      text: textBox.top + textBox.height / 2,
+    };
+  });
+  expect(Math.abs(verticalCenters.dot - verticalCenters.text)).toBeLessThanOrEqual(
+    1,
+  );
+
+  await page.locator('.tab[data-nav="assetsView"]').click();
+  const assetHeading = page.locator(
+    '[data-asset-open="btc"] .portfolio-row-main strong',
+  );
+  await expect(assetHeading).toHaveText('Bitcoin');
+  await expect(assetHeading.locator('em')).toHaveCount(0);
+});
+
 test('matches the approved asset detail hierarchy and header actions', async ({
   page,
 }) => {

@@ -129,8 +129,9 @@ button {
 .ui-freshness.manual .freshness-dot {
   display: none;
 }
-.rate-status.current::before {
-  content: none;
+.rate-status {
+  width: max-content;
+  justify-content: flex-start;
 }
 svg {
   fill: none;
@@ -1926,15 +1927,6 @@ html[data-theme='dark'] .security-icon {
   font-size: 9px;
   font-style: normal;
 }
-.rate-status.current::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 5px;
-  border-radius: 50%;
-  background: #21c26b;
-}
 .rate-status.stale,
 .detail-metadata .stale {
   color: var(--orange);
@@ -2777,12 +2769,6 @@ html[data-theme='dark'] .security-icon {
 }
 .portfolio-row-main strong {
   font-size: 16px;
-}
-.portfolio-row-main em {
-  color: var(--muted);
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 520;
 }
 .portfolio-row-main small {
   width: fit-content;
