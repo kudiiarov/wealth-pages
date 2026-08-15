@@ -27,7 +27,7 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('portfolioRates')).not.toBeNull();
     expect(document.getElementById('rateSelectionModal')).not.toBeNull();
     expect(document.querySelector('.build-note')?.textContent).toContain(
-      '3.5.0-final',
+      '3.6.0-final',
     );
   });
 

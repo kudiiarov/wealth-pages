@@ -9,7 +9,7 @@ Mobile-first portfolio tracker that works locally, offline, and without an accou
 - RU/EN interface, light/dark theme, and configurable display currency;
 - optional price refresh through Frankfurter and CoinGecko;
 - bounded local event log for diagnostics, including per-asset price failures;
-- schema-compatible import for backup versions 1–14;
+- schema-compatible import for backup versions 1–15;
 - installable PWA with offline startup after the first successful load;
 - static GitHub Pages deployment under `/wealth-pages/`.
 
@@ -69,4 +69,4 @@ On iOS, open the HTTPS Pages URL in Safari and choose **Share → Add to Home Sc
 - legacy records are normalized on read;
 - backup schemas 1–14 remain importable;
 - exports use schema 15 and include application settings;
-- the current product version is `3.2.3` (`3.2.3-final` in the UI and backups).
+- the current product version is `3.6.0` (`3.6.0-final` in the UI and backups).

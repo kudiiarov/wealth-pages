@@ -70,8 +70,9 @@ function normalizeRatePairs(value: unknown): RatePair[] {
     .flatMap((item) => {
       if (item === null || typeof item !== 'object' || Array.isArray(item))
         return [];
-      const sourceAssetId = Reflect.get(item, 'sourceAssetId');
-      const quoteAssetId = Reflect.get(item, 'quoteAssetId');
+      const record = item as Record<string, unknown>;
+      const sourceAssetId = record.sourceAssetId;
+      const quoteAssetId = record.quoteAssetId;
       if (
         typeof sourceAssetId !== 'string' ||
         !sourceAssetId.trim() ||

@@ -27,6 +27,7 @@
 ### Task 1: Persist ordered rate pairs with backward compatibility
 
 **Files:**
+
 - Modify: `src/domain/models.ts`
 - Modify: `src/platform/browser/settings-store.ts`
 - Modify: `src/domain/backup.ts`
@@ -37,6 +38,7 @@
 - Modify: `tests/application/launch-automation.test.ts`
 
 **Interfaces:**
+
 - Produces: `interface RatePair { sourceAssetId: string; quoteAssetId: string }`
 - Produces: `AppSettings.ratePairs: RatePair[]`
 - Retains: legacy `selectedRateAssetIds` parsing only as an import/migration input.
@@ -78,11 +80,13 @@ export interface RatePair {
 function normalizeRatePairs(value: unknown): RatePair[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
-  return value.flatMap((item) => {
-    if (!isRatePair(item) || seen.has(item.sourceAssetId)) return [];
-    seen.add(item.sourceAssetId);
-    return [{ ...item }];
-  }).slice(0, 3);
+  return value
+    .flatMap((item) => {
+      if (!isRatePair(item) || seen.has(item.sourceAssetId)) return [];
+      seen.add(item.sourceAssetId);
+      return [{ ...item }];
+    })
+    .slice(0, 3);
 }
 ```
 
@@ -104,10 +108,12 @@ git commit -m "feat: persist configurable rate pairs"
 ### Task 2: Add pair conversion, price history, and compact allocation selectors
 
 **Files:**
+
 - Modify: `src/ui/portfolio-view-model.ts`
 - Modify: `tests/ui/portfolio-view-model.test.ts`
 
 **Interfaces:**
+
 - Produces: `normalizeRatePairs(data, configured, fallbackQuoteCode?, limit?): RatePair[]`
 - Produces: `ratePairRows(data, pairs): RatePairRow[]`
 - Produces: `assetPriceHistorySeries(assetId, snapshots): HistoryDatum[]`
@@ -119,14 +125,16 @@ git commit -m "feat: persist configurable rate pairs"
 Cover arbitrary pair conversion, a zero quote price, deleted IDs, fallback pairs, snapshot price extraction, descending top-four order, and exact Other totals:
 
 ```ts
-expect(ratePairRows(data, [{ sourceAssetId: 'usd', quoteAssetId: 'rub' }]))
-  .toMatchObject([{ value: 86 }]);
+expect(
+  ratePairRows(data, [{ sourceAssetId: 'usd', quoteAssetId: 'rub' }]),
+).toMatchObject([{ value: 86 }]);
 expect(assetPriceHistorySeries('btc', snapshots)).toEqual([
   { createdAt: 100, value: 44_000 },
   { createdAt: 200, value: 45_000 },
 ]);
 expect(compactAssetAllocation(data, 4).at(-1)).toMatchObject({
-  kind: 'other', count: 7,
+  kind: 'other',
+  count: 7,
 });
 ```
 
@@ -156,6 +164,7 @@ git commit -m "feat: derive rate pairs and compact allocations"
 ### Task 3: Redesign Home rates and the pair configuration sheet
 
 **Files:**
+
 - Modify: `index.html`
 - Modify: `src/ui/render.ts`
 - Modify: `src/ui/events.ts`
@@ -165,6 +174,7 @@ git commit -m "feat: derive rate pairs and compact allocations"
 - Modify: `tests/legacy/static-shell.characterization.test.ts`
 
 **Interfaces:**
+
 - Consumes: `AppSettings.ratePairs`, `normalizeRatePairs`, and `ratePairRows` from Tasks 1–2.
 - Produces: pair form controls named `rateSource` and `rateQuote` with a stable row index.
 
@@ -185,7 +195,9 @@ Replace checkbox state with three ordered pair rows. On submit read both selects
 ```html
 <button class="rate-row" data-rate-asset="btc">
   <span class="driver-icon">₿</span>
-  <span class="rate-identity"><strong>Bitcoin</strong><em>Цена актуальна</em></span>
+  <span class="rate-identity"
+    ><strong>Bitcoin</strong><em>Цена актуальна</em></span
+  >
   <span class="rate-value">$45,000</span><i>›</i>
 </button>
 ```
@@ -208,6 +220,7 @@ git commit -m "feat: add configurable currency pairs"
 ### Task 4: Replace Assets and Accounts controls with four-plus-Other summaries
 
 **Files:**
+
 - Modify: `index.html`
 - Modify: `src/ui/render.ts`
 - Modify: `src/ui/events.ts`
@@ -216,6 +229,7 @@ git commit -m "feat: add configurable currency pairs"
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `compactAssetAllocation` and `compactAccountAllocation` from Task 2.
 - Produces DOM containers: `assetAllocationBar`, `assetAllocationList`, `accountAllocationBar`, and `accountAllocationList`.
 
@@ -249,6 +263,7 @@ git commit -m "feat: simplify portfolio overview tabs"
 ### Task 5: Make asset details price-first and account details aggregation-only
 
 **Files:**
+
 - Modify: `index.html`
 - Modify: `src/ui/render.ts`
 - Modify: `src/ui/events.ts`
@@ -258,6 +273,7 @@ git commit -m "feat: simplify portfolio overview tabs"
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `assetPriceHistorySeries` from Task 2 and existing `homePnl` filtering.
 - Produces: asset price chart inspection through existing detail chart handlers.
 - Produces: account detail without any active chart canvas.
@@ -292,12 +308,14 @@ git commit -m "feat: redesign portfolio entity details"
 ### Task 6: Version, responsive polish, and production verification
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `package-lock.json`
 - Modify: `src/domain/backup.ts`
 - Modify: `tests/e2e/portfolio.spec.ts`
 
 **Interfaces:**
+
 - Produces: application version `3.6.0` and backup-visible `3.6.0-final`.
 
 - [ ] **Step 1: Extend responsive E2E coverage**
