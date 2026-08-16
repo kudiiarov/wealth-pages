@@ -2456,7 +2456,9 @@ html[data-theme='dark'] .security-icon {
   padding: 18px 14px 8px;
   overflow: hidden;
 }
-.portfolio-drivers-section .driver-group + .driver-group {
+.portfolio-drivers-section
+  .driver-group:not(.hidden)
+  + .driver-group:not(.hidden) {
   margin-top: 10px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
@@ -2607,7 +2609,8 @@ html[data-theme='dark'] .security-icon {
 }
 .portfolio-heading {
   align-items: center;
-  margin-bottom: 18px;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 .portfolio-heading h1 {
   font-size: 40px;

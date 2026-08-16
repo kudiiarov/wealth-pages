@@ -802,14 +802,104 @@ test('uses the Home section rhythm before Assets and Accounts list headings', as
     const gap = await page.locator(`#${view}`).evaluate((element) => {
       const summary = element.querySelector('.compact-allocation');
       const heading = element.querySelector('.portfolio-list-heading');
-      if (!summary || !heading) throw new Error('Missing portfolio sections');
-      return (
-        heading.getBoundingClientRect().top -
-        summary.getBoundingClientRect().bottom
-      );
+      const title = element.querySelector('.portfolio-heading h1');
+      if (!summary || !heading || !title) {
+        throw new Error('Missing portfolio sections');
+      }
+      return {
+        beforeSummary:
+          summary.getBoundingClientRect().top -
+          title.getBoundingClientRect().bottom,
+        beforeList:
+          heading.getBoundingClientRect().top -
+          summary.getBoundingClientRect().bottom,
+      };
     });
-    expect(gap).toBe(25);
+    expect(gap.beforeSummary).toBe(16);
+    expect(gap.beforeList).toBe(25);
   }
+});
+
+test('hides empty Home driver groups and the whole widget when no asset moved', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  await expect(page.locator('#portfolioGainers')).toBeVisible();
+  await expect(page.locator('#portfolioLosers')).toBeHidden();
+
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 2);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction('assets', 'readwrite');
+          const prices = new Map([
+            ['btc', 80],
+            ['xaut', 180],
+            ['usd', 1],
+            ['eth', 40],
+          ]);
+          for (const [id, price] of prices) {
+            const get = transaction.objectStore('assets').get(id);
+            get.onsuccess = () =>
+              transaction.objectStore('assets').put({ ...get.result, price });
+          }
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not flatten prices'));
+        };
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+      }),
+  );
+  await page.reload();
+
+  await expect(page.locator('#portfolioDrivers')).toBeHidden();
+
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 2);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction('assets', 'readwrite');
+          const prices = new Map([
+            ['btc', 70],
+            ['xaut', 170],
+            ['eth', 30],
+          ]);
+          for (const [id, price] of prices) {
+            const get = transaction.objectStore('assets').get(id);
+            get.onsuccess = () =>
+              transaction.objectStore('assets').put({ ...get.result, price });
+          }
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not lower prices'));
+        };
+        request.onerror = () =>
+          reject(request.error ?? new Error('Could not open portfolio'));
+      }),
+  );
+  await page.reload();
+
+  await expect(page.locator('#portfolioDrivers')).toBeVisible();
+  await expect(page.locator('#portfolioGainers')).toBeHidden();
+  await expect(page.locator('#portfolioLosers')).toBeVisible();
+  await expect(page.locator('#portfolioLosersGroup')).toHaveCSS(
+    'border-top-width',
+    '0px',
+  );
 });
 
 test('keeps system actions neutral', async ({ page }) => {
@@ -1549,9 +1639,7 @@ test('keeps Home, overview rows, and entity detail performance periods independe
   await expect(
     page.locator('#portfolioGainers [data-driver-asset="btc"] .driver-value'),
   ).toHaveText('+$15.00');
-  await expect(page.locator('#portfolioLosers')).toContainText(
-    'За этот период ни один актив не снизился',
-  );
+  await expect(page.locator('#portfolioLosers')).toBeHidden();
 
   await page.locator('.tab[data-nav="assetsView"]').click();
   await expect(

@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.4 — 2026-08-16
+
+- Removed duplicate spacing above Assets/Accounts allocation cards and hid empty Home gainer/loser groups, including the whole widget when neither group has data.
+
 ## 3.8.3 — 2026-08-16
 
 - Simplified Home gainers and losers, added period-linked rate changes, aligned section spacing, and reordered Accounts before Assets in the tab bar.

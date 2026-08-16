@@ -30,7 +30,7 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('priceTrustText')).toBeNull();
     expect(document.getElementById('rateSelectionModal')).not.toBeNull();
     expect(document.querySelector('.build-note')?.textContent).toContain(
-      '3.8.3-final',
+      '3.8.4-final',
     );
   });
 

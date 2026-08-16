@@ -743,19 +743,9 @@ export class WorthRenderer {
 
     const driverPoints = this.homeChartPnlSeries();
     const drivers = portfolioDrivers(this.service.data, driverPoints);
-    const renderDrivers = (positive: boolean): string => {
-      const rows = drivers
-        .filter(({ value }) => (positive ? value > 0 : value < 0))
-        .slice(0, 2);
-      if (!rows.length) {
-        const key =
-          driverPoints.length < 2
-            ? 'driversNeedHistory'
-            : positive
-              ? 'noGainers'
-              : 'noLosers';
-        return `<div class="empty-state compact-empty">${this.t(key)}</div>`;
-      }
+    const gainers = drivers.filter(({ value }) => value > 0).slice(0, 2);
+    const losers = drivers.filter(({ value }) => value < 0).slice(0, 2);
+    const renderDrivers = (rows: typeof drivers, positive: boolean): string => {
       return rows
         .flatMap((driver) => {
           const asset = this.service.data.assets.find(
@@ -771,8 +761,20 @@ export class WorthRenderer {
         })
         .join('');
     };
-    this.element('portfolioGainers').innerHTML = renderDrivers(true);
-    this.element('portfolioLosers').innerHTML = renderDrivers(false);
+    this.element('portfolioGainers').innerHTML = renderDrivers(gainers, true);
+    this.element('portfolioLosers').innerHTML = renderDrivers(losers, false);
+    this.element('portfolioGainersGroup').classList.toggle(
+      'hidden',
+      !gainers.length,
+    );
+    this.element('portfolioLosersGroup').classList.toggle(
+      'hidden',
+      !losers.length,
+    );
+    this.element('portfolioDrivers').classList.toggle(
+      'hidden',
+      !gainers.length && !losers.length,
+    );
 
     const legacyPairs = this.service.settings.selectedRateAssetIds.map(
       (sourceAssetId) => ({
