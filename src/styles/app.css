@@ -520,9 +520,6 @@ svg {
   height: 2px;
   background: var(--history-balance-color, var(--green));
 }
-.history-chart-legend [data-history-flow-legend] i {
-  background: #33bfc6;
-}
 .history-chart-legend b {
   font-weight: 650;
 }

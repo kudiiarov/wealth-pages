@@ -1719,6 +1719,7 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
   await expect(page.locator('#historyBalanceChange')).toHaveText(
     '+$200.00 · +40.0%',
   );
+  await expect(page.locator('#historyFlowChange')).toHaveText('+$110');
   await expect(page.locator('#historyChartTooltip')).toContainText(
     'Vault • +55USD • +$55',
   );

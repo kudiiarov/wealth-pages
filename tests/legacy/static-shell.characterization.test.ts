@@ -30,7 +30,7 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('priceTrustText')).toBeNull();
     expect(document.getElementById('rateSelectionModal')).not.toBeNull();
     expect(document.querySelector('.build-note')?.textContent).toContain(
-      '3.8.0-final',
+      '3.8.1-final',
     );
   });
 
@@ -81,12 +81,12 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('assetFreshness')).toBeNull();
   });
 
-  it('labels balance, P&L, and cash movement in portfolio history', () => {
+  it('keeps cash movement in the history summary without a chart legend', () => {
     const document = new JSDOM(html).window.document;
     expect(document.querySelector('#historyBalanceChange')).not.toBeNull();
     expect(document.querySelector('#historyPnlChange')).not.toBeNull();
     expect(document.querySelector('#historyFlowChange')).not.toBeNull();
-    expect(document.querySelector('[data-history-flow-legend]')).not.toBeNull();
+    expect(document.querySelector('[data-history-flow-legend]')).toBeNull();
   });
 
   it('uses svg artwork inside circular detail action buttons', () => {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.1 — 2026-08-16
+
+- Removed the separate cash-movement series and legend from the History chart while preserving the movement total and per-position movement details during chart inspection.
+
 ## 3.8.0 — 2026-08-16
 
 - Replaced the Assets/Accounts segmented period selector with one shared `24h` / `All time` text action, defaulting to `24h`.
