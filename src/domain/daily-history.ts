@@ -20,10 +20,14 @@ export function dailyPriceHistoryId(assetId: string, dayKey: string): string {
 function compactSnapshots(snapshots: readonly Snapshot[]): Snapshot[] {
   const byDay = new Map<string, Snapshot>();
   for (const snapshot of snapshots) {
-    const dayKey = localDayKey(snapshot.createdAt);
+    const dayKey = snapshot.dayKey || localDayKey(snapshot.createdAt);
     const current = byDay.get(dayKey);
     if (!current || snapshot.createdAt >= current.createdAt) {
-      byDay.set(dayKey, { ...snapshot, id: dailySnapshotId(dayKey) });
+      byDay.set(dayKey, {
+        ...snapshot,
+        id: dailySnapshotId(dayKey),
+        dayKey,
+      });
     }
   }
   return [...byDay.values()].sort(

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { PortfolioData } from '../../src/domain/models';
 import { buildSnapshot } from '../../src/domain/snapshots';
+import { localDayKey } from '../../src/domain/daily-history';
 
 const data: PortfolioData = {
   accounts: [
@@ -41,7 +42,12 @@ describe('snapshot construction', () => {
   it('copies stable position identity and current valuation', () => {
     const snapshot = buildSnapshot(data, 's1', 123);
 
-    expect(snapshot).toMatchObject({ id: 's1', createdAt: 123, total: 2 });
+    expect(snapshot).toMatchObject({
+      id: 's1',
+      createdAt: 123,
+      dayKey: localDayKey(123),
+      total: 2,
+    });
     expect(snapshot.positions?.[0]).toEqual({
       positionId: 'p1',
       accountId: 'a1',

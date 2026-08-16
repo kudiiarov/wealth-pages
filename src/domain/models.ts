@@ -92,6 +92,7 @@ export interface Snapshot {
   [key: string]: unknown;
   id: EntityId;
   createdAt: number;
+  dayKey?: string;
   total: number;
   accounts?: SnapshotAccount[];
   assets?: SnapshotAsset[];

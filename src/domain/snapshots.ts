@@ -1,4 +1,5 @@
 import type { PortfolioData, Snapshot } from './models';
+import { localDayKey } from './daily-history';
 import {
   accountTotal,
   assetQuantity,
@@ -15,6 +16,7 @@ export function buildSnapshot(
   return {
     id,
     createdAt,
+    dayKey: localDayKey(createdAt),
     total: portfolioTotal(data),
     accounts: data.accounts.map((account) => ({
       accountId: account.id,

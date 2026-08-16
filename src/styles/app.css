@@ -518,7 +518,7 @@ svg {
 .history-chart-legend i {
   width: 12px;
   height: 2px;
-  background: var(--green);
+  background: var(--history-balance-color, var(--green));
 }
 .history-chart-legend [data-history-flow-legend] i {
   background: #33bfc6;
@@ -528,9 +528,12 @@ svg {
 }
 .history-performance-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
+}
+.history-performance-summary > span:first-child {
+  grid-column: 1 / -1;
 }
 .history-performance-summary span {
   min-width: 0;
@@ -545,10 +548,8 @@ svg {
 }
 .history-performance-summary strong {
   margin-top: 2px;
-  overflow: hidden;
   font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 .history-performance-summary span:nth-child(3) strong {
   color: #33bfc6;

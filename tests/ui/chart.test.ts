@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   flowChartPoints,
+  flowMarkerSegments,
   nearestChartPointIndex,
   traceAngularChartLine,
 } from '../../src/ui/chart';
@@ -54,5 +55,19 @@ describe('history cash-flow line', () => {
       { x: 50, y: 120 },
       { x: 90, y: 45 },
     ]);
+  });
+
+  it('creates markers only for intervals with actual movement', () => {
+    expect(
+      flowMarkerSegments(
+        [0, -100, 0],
+        [
+          { x: 10, y: 70 },
+          { x: 50, y: 120 },
+          { x: 90, y: 70 },
+        ],
+        70,
+      ),
+    ).toEqual([{ x: 50, fromY: 70, toY: 120 }]);
   });
 });

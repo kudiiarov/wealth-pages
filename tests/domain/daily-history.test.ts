@@ -22,6 +22,23 @@ const emptyData = (): PortfolioData => ({
 });
 
 describe('daily history', () => {
+  it('preserves a snapshot day key instead of regrouping its timestamp', () => {
+    const data = emptyData();
+    data.snapshots = [
+      {
+        id: 'legacy',
+        dayKey: '2026-08-14',
+        createdAt: new Date(2026, 7, 15, 1).getTime(),
+        total: 10,
+      },
+    ];
+
+    expect(compactDailyHistory(data).snapshots[0]).toMatchObject({
+      id: 'daily-snapshot:2026-08-14',
+      dayKey: '2026-08-14',
+    });
+  });
+
   it('uses local calendar components instead of the UTC date', () => {
     expect(localDayKey(new Date(2026, 7, 15, 0, 5).getTime())).toBe(
       '2026-08-15',
@@ -44,6 +61,7 @@ describe('daily history', () => {
     expect(result).toEqual([
       {
         id: 'daily-snapshot:2026-08-15',
+        dayKey: '2026-08-15',
         createdAt: timestamp(15, 18),
         total: 25,
       },

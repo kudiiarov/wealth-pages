@@ -20,7 +20,6 @@ import {
   selectPnlSeriesSince,
   summarizePositionFlows,
   type PnlPoint,
-  type PositionFlowSummary,
   type PnlResult,
 } from '../domain/pnl';
 import {
@@ -89,7 +88,6 @@ export interface UiState {
 interface HistoryItem {
   snapshot: Snapshot;
   value: number;
-  flow?: PositionFlowSummary;
 }
 
 type ChartKind = 'home' | 'history' | 'detail';
@@ -241,17 +239,13 @@ export class WorthRenderer {
   }
 
   redrawChart(): void {
-    const history = this.historyData();
+    const history = this.historyChartData();
     this.historyChartGeometry = drawHistoryChart(
       requiredElement('historyChart', HTMLCanvasElement, this.documentRef),
       this.element('historyEmpty'),
       this.element('chartDates'),
       this.element('historyBalanceChange'),
-      history.map(({ snapshot, value, flow }) => ({
-        createdAt: snapshot.createdAt,
-        value,
-        ...(flow ? { flow } : {}),
-      })),
+      history,
       {
         displayValue: (value) => value,
         displayUnit: () => this.displayAsset()?.icon || '$',
@@ -260,10 +254,10 @@ export class WorthRenderer {
       },
       this.historyChartSelection,
     );
-    const points = this.normalizedSnapshotPoints();
+    const points = this.historyPnlPoints();
     const pnl = flowAdjustedPnl(points, () => true);
     const totalFlow = history.reduce(
-      (total, item) => total + (item.flow?.total ?? 0),
+      (total, point) => total + (point.flow?.total ?? 0),
       0,
     );
     this.element('historyPnlChange').textContent = pnl
@@ -1117,29 +1111,38 @@ export class WorthRenderer {
     const pointsByCreatedAt = new Map(
       points.map((point) => [point.createdAt, point]),
     );
-    const flowsByCreatedAt = new Map<number, PositionFlowSummary>();
-    for (let index = 1; index < points.length; index += 1) {
-      const previous = points[index - 1];
-      const current = points[index];
-      if (previous && current) {
-        flowsByCreatedAt.set(
-          current.createdAt,
-          summarizePositionFlows(previous, current),
-        );
-      }
-    }
     return this.service.data.snapshots.flatMap((snapshot) => {
       const point = pointsByCreatedAt.get(snapshot.createdAt);
-      const flow = flowsByCreatedAt.get(snapshot.createdAt);
       return point
         ? [
             {
               snapshot,
               value: pnlPointTotal(point),
-              ...(flow ? { flow } : {}),
             },
           ]
         : [];
+    });
+  }
+
+  private historyPnlPoints(): PnlPoint[] {
+    const current = this.normalizedCurrentPnlPoint();
+    return current
+      ? selectPnlSeries(this.normalizedSnapshotPoints(), current, 'all')
+      : [];
+  }
+
+  private historyChartData(): HistoryDatum[] {
+    const points = this.historyPnlPoints();
+    return points.map((point, index) => {
+      const previous = points[index - 1];
+      const flow = previous
+        ? summarizePositionFlows(previous, point)
+        : undefined;
+      return {
+        createdAt: point.createdAt,
+        value: pnlPointTotal(point),
+        ...(flow ? { flow } : {}),
+      };
     });
   }
 
@@ -1176,6 +1179,14 @@ export class WorthRenderer {
   private homeChartPnlSeries(): PnlPoint[] {
     const current = this.normalizedCurrentPnlPoint();
     if (!current) return [];
+    if (this.ui.homePeriod === '1d') {
+      return selectOverviewPnlSeries(
+        this.normalizedSnapshotPoints(),
+        current,
+        '24h',
+        current.createdAt,
+      );
+    }
     return selectPnlSeriesSince(
       this.normalizedSnapshotPoints(),
       current,

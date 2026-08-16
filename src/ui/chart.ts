@@ -41,6 +41,22 @@ export function flowChartPoints(
   }));
 }
 
+export interface FlowMarkerSegment {
+  x: number;
+  fromY: number;
+  toY: number;
+}
+
+export function flowMarkerSegments(
+  values: readonly number[],
+  points: readonly ChartPoint[],
+  zeroY: number,
+): FlowMarkerSegment[] {
+  return points.flatMap((point, index) =>
+    values[index] === 0 ? [] : [{ x: point.x, fromY: zeroY, toY: point.y }],
+  );
+}
+
 export function traceAngularChartLine(
   context: CanvasRenderingContext2D,
   points: readonly ChartPoint[],
@@ -273,6 +289,9 @@ export function drawHistoryChart(
   const difference = lastRaw - firstRaw;
   const percentage = firstRaw ? (difference / Math.abs(firstRaw)) * 100 : 0;
   const lineColor = difference >= 0 ? '#21c26b' : '#ee5264';
+  canvas
+    .closest<HTMLElement>('.chart-surface')
+    ?.style.setProperty('--history-balance-color', lineColor);
   const gradient = context.createLinearGradient(
     0,
     padding.top,
@@ -324,18 +343,18 @@ export function drawHistoryChart(
     context.lineTo(width - padding.right, zeroY);
     context.stroke();
     context.setLineDash([]);
-    context.beginPath();
-    traceAngularChartLine(context, flowPoints);
-    context.strokeStyle = '#33bfc6';
-    context.lineWidth = 2;
-    context.stroke();
-    flowPoints.forEach((point, index) => {
-      if (flowValues[index] === 0) return;
+    for (const marker of flowMarkerSegments(flowValues, flowPoints, zeroY)) {
       context.beginPath();
-      context.arc(point.x, point.y, 3.2, 0, Math.PI * 2);
+      context.moveTo(marker.x, marker.fromY);
+      context.lineTo(marker.x, marker.toY);
+      context.strokeStyle = '#33bfc6';
+      context.lineWidth = 2;
+      context.stroke();
+      context.beginPath();
+      context.arc(marker.x, marker.toY, 3.2, 0, Math.PI * 2);
       context.fillStyle = '#33bfc6';
       context.fill();
-    });
+    }
     context.restore();
   }
 

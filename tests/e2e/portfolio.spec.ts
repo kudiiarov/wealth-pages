@@ -508,7 +508,7 @@ test('currency-aware performance inspects normalized Home and History values', a
   await page.locator('[data-nav="historyView"]').click();
   await page.locator('#historyChart').focus();
   await expect(page.locator('#historyChartTooltip strong')).toHaveText(
-    '52 080,00 ₽',
+    '60 200,00 ₽',
   );
 });
 
@@ -1524,6 +1524,41 @@ test('keeps Home, overview rows, and entity detail performance periods independe
   ).toContainText('+$10.00 · +25.0%');
 });
 
+test('Home 1D starts at the latest snapshot from the previous calendar day', async ({
+  page,
+}) => {
+  const now = new Date(2026, 7, 16, 15, 52).getTime();
+  await page.clock.setFixedTime(now);
+  await page.goto('/');
+  await seedPortfolio(page, now);
+  await page.evaluate(
+    ({ previousEvening }) =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 2);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction('snapshots', 'readwrite');
+          const store = transaction.objectStore('snapshots');
+          const get = store.get('second');
+          get.onsuccess = () =>
+            store.put({ ...get.result, createdAt: previousEvening });
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not move snapshot'));
+        };
+      }),
+    { previousEvening: new Date(2026, 7, 15, 20, 49).getTime() },
+  );
+  await page.reload();
+
+  await expect(page.locator('#pnlMoney')).toHaveText('+$90.00');
+  await page.locator('[data-home-period="1d"]').click();
+  await expect(page.locator('#pnlMoney')).toHaveText('+$25.00');
+});
+
 test('overview period shows a dash when no eligible 24 hour baseline exists', async ({
   page,
 }) => {
@@ -1680,13 +1715,16 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
     historyBox.x + historyBox.width - 10,
     historyBox.y + historyBox.height / 2,
   );
-  await expect(page.locator('#historyChartTooltip')).toContainText('$620.00');
+  await expect(page.locator('#historyChartTooltip')).toContainText('$700.00');
+  await expect(page.locator('#historyBalanceChange')).toHaveText(
+    '+$200.00 · +40.0%',
+  );
   await expect(page.locator('#historyChartTooltip')).toContainText(
     'Vault • +55USD • +$55',
   );
   await historyCanvas.focus();
   await page.keyboard.press('ArrowLeft');
-  await expect(page.locator('#historyChartTooltip')).toContainText('$500.00');
+  await expect(page.locator('#historyChartTooltip')).toContainText('$620.00');
 
   await page.locator('[data-nav="homeView"]').click();
   await page.locator('#privacyToggle').click();
