@@ -81,6 +81,14 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('assetFreshness')).toBeNull();
   });
 
+  it('labels balance, P&L, and cash movement in portfolio history', () => {
+    const document = new JSDOM(html).window.document;
+    expect(document.querySelector('#historyBalanceChange')).not.toBeNull();
+    expect(document.querySelector('#historyPnlChange')).not.toBeNull();
+    expect(document.querySelector('#historyFlowChange')).not.toBeNull();
+    expect(document.querySelector('[data-history-flow-legend]')).not.toBeNull();
+  });
+
   it('uses svg artwork inside circular detail action buttons', () => {
     const document = new JSDOM(html).window.document;
 

@@ -22,6 +22,19 @@ export interface PnlResult {
   baselineAt: number;
 }
 
+export interface PositionFlowChange {
+  positionId: string;
+  accountName: string;
+  assetCode: string;
+  quantityDelta: number;
+  valueDelta: number;
+}
+
+export interface PositionFlowSummary {
+  total: number;
+  changes: PositionFlowChange[];
+}
+
 const finitePositive = (value: unknown): number | undefined => {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : undefined;
@@ -173,6 +186,41 @@ function intervalResult(
   return { pnl: endValue - startValue - flow, flow };
 }
 
+export function summarizePositionFlows(
+  previous: PnlPoint,
+  next: PnlPoint,
+): PositionFlowSummary {
+  const previousPositions = positionMap(previous);
+  const nextPositions = positionMap(next);
+  const positionIds = new Set([
+    ...previousPositions.keys(),
+    ...nextPositions.keys(),
+  ]);
+  const changes: PositionFlowChange[] = [];
+
+  for (const positionId of positionIds) {
+    const before = previousPositions.get(positionId);
+    const after = nextPositions.get(positionId);
+    const position = after ?? before;
+    if (!position) continue;
+    const quantityDelta = numeric(after?.quantity) - numeric(before?.quantity);
+    if (quantityDelta === 0) continue;
+    const price = numeric(after?.price) || assetPrice(next, position.assetId);
+    changes.push({
+      positionId,
+      accountName: position.accountName,
+      assetCode: position.assetCode,
+      quantityDelta,
+      valueDelta: quantityDelta * price,
+    });
+  }
+
+  return {
+    total: changes.reduce((total, change) => total + change.valueDelta, 0),
+    changes,
+  };
+}
+
 export function flowAdjustedPnl(
   points: readonly PnlPoint[],
   include: (position: SnapshotPosition) => boolean,
@@ -283,22 +331,17 @@ export function selectOverviewPnlSeries(
   current: PnlPoint,
   period: OverviewPnlPeriod,
   now: number,
-  currentDayKey: string,
 ): PnlPoint[] {
   const sorted = eligibleSnapshots(snapshots, current);
   if (sorted.length === 0) return [];
   if (period === 'all') return [...sorted, current];
 
-  const cutoff = now - 86_400_000;
-  let baseline: PnlPoint | undefined;
-  for (const snapshot of sorted) {
-    if (
-      snapshot.createdAt <= cutoff &&
-      localDayKey(snapshot.createdAt) !== currentDayKey
-    ) {
-      baseline = snapshot;
-    }
-  }
+  const previousDate = new Date(now);
+  previousDate.setDate(previousDate.getDate() - 1);
+  const previousDayKey = localDayKey(previousDate.getTime());
+  const baseline = sorted.findLast(
+    (snapshot) => localDayKey(snapshot.createdAt) === previousDayKey,
+  );
   if (!baseline) return [];
   const baselineCreatedAt = baseline.createdAt;
   return [

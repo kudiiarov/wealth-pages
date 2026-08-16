@@ -442,6 +442,10 @@ test('currency-aware performance preserves selected-currency gains and losses', 
   await page.locator('.tab[data-nav="assetsView"]').click();
   await expect(
     page.locator('[data-asset-open="eur"] .portfolio-row-value small'),
+  ).toHaveText('—');
+  await page.locator('#assetsView [data-overview-period-toggle]').click();
+  await expect(
+    page.locator('[data-asset-open="eur"] .portfolio-row-value small'),
   ).toHaveText('−$0.55 · −1.0%');
 });
 
@@ -522,6 +526,65 @@ test('keeps self currency price history flat', async ({ page }) => {
   ).toHaveText('1 ₽');
   await expect(page.locator('#entityDetailPriceChange')).toContainText('0 ₽');
   await expect(page.locator('#entityDetailPriceChange')).toContainText('0.0%');
+});
+
+test('uses the asset header precision in the price chart tooltip', async ({
+  page,
+}) => {
+  const now = Date.now();
+  await page.goto('/');
+  await seedPortfolio(page, now);
+  await page.evaluate(
+    ({ currentTime }) =>
+      new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('worth-local-portfolio', 2);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction(
+            ['assets', 'priceHistory'],
+            'readwrite',
+          );
+          transaction.objectStore('assets').put({
+            id: 'cny',
+            name: 'Chinese Yuan',
+            code: 'CNY',
+            icon: '¥',
+            color: '#ff4015',
+            price: 0.148359,
+            autoUpdateSource: 'none',
+          });
+          for (const [dayKey, createdAt, usdPrice] of [
+            ['2026-08-15', currentTime - 86_400_000, 0.1484],
+            ['2026-08-16', currentTime, 0.148359],
+          ] as const) {
+            transaction.objectStore('priceHistory').put({
+              id: `cny:${dayKey}`,
+              assetId: 'cny',
+              dayKey,
+              createdAt,
+              usdPrice,
+            });
+          }
+          transaction.oncomplete = () => {
+            database.close();
+            resolve();
+          };
+          transaction.onerror = () =>
+            reject(transaction.error ?? new Error('Could not seed CNY'));
+        };
+      }),
+    { currentTime: now },
+  );
+  await page.reload();
+  await page.goto('/#/assets/cny');
+
+  await expect(
+    page.locator('#entityDetailHero > .detail-hero-main > strong'),
+  ).toHaveText('$0.1484');
+  await page.locator('#entityDetailChart').focus();
+  await expect(page.locator('#entityDetailChartTooltip strong')).toHaveText(
+    '$0.1484',
+  );
 });
 
 test('creates entities and opens their dedicated detail screens', async ({
@@ -1618,6 +1681,9 @@ test('inspects exact portfolio and entity history with pointer, touch, and keybo
     historyBox.y + historyBox.height / 2,
   );
   await expect(page.locator('#historyChartTooltip')).toContainText('$620.00');
+  await expect(page.locator('#historyChartTooltip')).toContainText(
+    'Vault • +55USD • +$55',
+  );
   await historyCanvas.focus();
   await page.keyboard.press('ArrowLeft');
   await expect(page.locator('#historyChartTooltip')).toContainText('$500.00');

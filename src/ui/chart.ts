@@ -1,9 +1,11 @@
 import type { Language } from '../domain/models';
+import type { PositionFlowSummary } from '../domain/pnl';
 import { formatShortDate, locale } from '../i18n/format';
 
 export interface HistoryDatum {
   createdAt: number;
   value: number;
+  flow?: PositionFlowSummary;
 }
 
 export interface ChartFormatters {
@@ -21,7 +23,22 @@ export interface ChartPoint {
 
 export interface ChartGeometry {
   points: readonly ChartPoint[];
+  flowPoints?: readonly ChartPoint[];
   data: readonly HistoryDatum[];
+}
+
+export function flowChartPoints(
+  values: readonly number[],
+  xCoordinates: readonly number[],
+  top: number,
+  height: number,
+): ChartPoint[] {
+  const extent = Math.max(...values.map((value) => Math.abs(value)), 1);
+  const middle = top + height / 2;
+  return values.map((value, index) => ({
+    x: xCoordinates[index] ?? 0,
+    y: middle - (value / extent) * (height / 2),
+  }));
 }
 
 export function traceAngularChartLine(
@@ -131,6 +148,7 @@ export function drawPortfolioSparkline(
   context.lineJoin = 'miter';
   context.lineCap = 'butt';
   context.stroke();
+
   context.beginPath();
   context.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
   context.fillStyle = color;
@@ -239,6 +257,17 @@ export function drawHistoryChart(
     x: padding.left + (index * plotWidth) / (values.length - 1),
     y: padding.top + ((maximum - value) / range) * plotHeight,
   }));
+  const flowValues = data.map(({ flow }) => flow?.total ?? 0);
+  const hasFlows =
+    !formatting.minimal && flowValues.some((value) => value !== 0);
+  const flowPoints = hasFlows
+    ? flowChartPoints(
+        flowValues,
+        points.map(({ x }) => x),
+        padding.top,
+        plotHeight,
+      )
+    : undefined;
   const firstRaw = rawValues[0] ?? 0;
   const lastRaw = rawValues.at(-1) ?? 0;
   const difference = lastRaw - firstRaw;
@@ -284,6 +313,32 @@ export function drawHistoryChart(
   context.lineCap = 'butt';
   context.stroke();
 
+  if (flowPoints) {
+    const zeroY = padding.top + plotHeight / 2;
+    context.save();
+    context.setLineDash([4, 4]);
+    context.strokeStyle = 'rgba(51,191,198,.35)';
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(padding.left, zeroY);
+    context.lineTo(width - padding.right, zeroY);
+    context.stroke();
+    context.setLineDash([]);
+    context.beginPath();
+    traceAngularChartLine(context, flowPoints);
+    context.strokeStyle = '#33bfc6';
+    context.lineWidth = 2;
+    context.stroke();
+    flowPoints.forEach((point, index) => {
+      if (flowValues[index] === 0) return;
+      context.beginPath();
+      context.arc(point.x, point.y, 3.2, 0, Math.PI * 2);
+      context.fillStyle = '#33bfc6';
+      context.fill();
+    });
+    context.restore();
+  }
+
   points.forEach((point, index) => {
     if (formatting.minimal && index !== points.length - 1) return;
     context.beginPath();
@@ -322,5 +377,14 @@ export function drawHistoryChart(
       formatting.language,
     );
   drawInspection(context, points[selectedIndex ?? -1], height, lineColor);
-  return { points, data };
+  if (flowPoints && selectedIndex !== undefined) {
+    const flowPoint = flowPoints[selectedIndex];
+    if (flowPoint && flowValues[selectedIndex] !== 0) {
+      context.beginPath();
+      context.arc(flowPoint.x, flowPoint.y, 5, 0, Math.PI * 2);
+      context.fillStyle = '#33bfc6';
+      context.fill();
+    }
+  }
+  return { points, ...(flowPoints ? { flowPoints } : {}), data };
 }

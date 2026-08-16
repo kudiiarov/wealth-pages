@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  flowChartPoints,
   nearestChartPointIndex,
   traceAngularChartLine,
 } from '../../src/ui/chart';
@@ -43,5 +44,15 @@ describe('minimal asset chart path', () => {
       [90, 60],
     ]);
     expect(context.quadraticCurveTo).not.toHaveBeenCalled();
+  });
+});
+
+describe('history cash-flow line', () => {
+  it('uses an independent zero-centered scale for interval movements', () => {
+    expect(flowChartPoints([0, -100, 50], [10, 50, 90], 20, 100)).toEqual([
+      { x: 10, y: 70 },
+      { x: 50, y: 120 },
+      { x: 90, y: 45 },
+    ]);
   });
 });

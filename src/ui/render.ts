@@ -18,15 +18,15 @@ import {
   selectOverviewPnlSeries,
   selectPnlSeries,
   selectPnlSeriesSince,
+  summarizePositionFlows,
   type PnlPoint,
+  type PositionFlowSummary,
   type PnlResult,
 } from '../domain/pnl';
-import { localDayKey } from '../domain/daily-history';
 import {
   formatDate,
   formatDisplayExactMoney,
   formatDisplayMoney,
-  formatExactMoney,
   formatMoney,
   formatNumber,
   formatPrice,
@@ -89,6 +89,7 @@ export interface UiState {
 interface HistoryItem {
   snapshot: Snapshot;
   value: number;
+  flow?: PositionFlowSummary;
 }
 
 type ChartKind = 'home' | 'history' | 'detail';
@@ -240,14 +241,16 @@ export class WorthRenderer {
   }
 
   redrawChart(): void {
+    const history = this.historyData();
     this.historyChartGeometry = drawHistoryChart(
       requiredElement('historyChart', HTMLCanvasElement, this.documentRef),
       this.element('historyEmpty'),
       this.element('chartDates'),
-      this.element('historyChange'),
-      this.historyData().map(({ snapshot, value }) => ({
+      this.element('historyBalanceChange'),
+      history.map(({ snapshot, value, flow }) => ({
         createdAt: snapshot.createdAt,
         value,
+        ...(flow ? { flow } : {}),
       })),
       {
         displayValue: (value) => value,
@@ -257,6 +260,19 @@ export class WorthRenderer {
       },
       this.historyChartSelection,
     );
+    const points = this.normalizedSnapshotPoints();
+    const pnl = flowAdjustedPnl(points, () => true);
+    const totalFlow = history.reduce(
+      (total, item) => total + (item.flow?.total ?? 0),
+      0,
+    );
+    this.element('historyPnlChange').textContent = pnl
+      ? `${pnl.pnl > 0 ? '+' : pnl.pnl < 0 ? '−' : ''}${this.displayPnlMoney(Math.abs(pnl.pnl))}`
+      : '—';
+    this.element('historyFlowChange').textContent =
+      history.length > 1
+        ? `${totalFlow > 0 ? '+' : totalFlow < 0 ? '−' : ''}${this.displayFlowMoney(Math.abs(totalFlow))}`
+        : '—';
   }
 
   redrawDetailChart(): void {
@@ -340,13 +356,23 @@ export class WorthRenderer {
     const exactValue = this.service.settings.balancesHidden
       ? '••••'
       : kind === 'detail'
-        ? this.formatDisplayExactPrice(datum.value)
+        ? this.formatDisplayPrice(datum.value)
         : formatDisplayExactMoney(
             datum.value,
             this.language,
             this.displayAsset(),
           );
-    tooltip.innerHTML = `<strong>${escapeHtml(exactValue)}</strong><small>${escapeHtml(formatDate(datum.createdAt, this.language))} · ${escapeHtml(formatTime(datum.createdAt, this.language))}</small>`;
+    const flowMarkup =
+      kind === 'history' && datum.flow?.changes.length
+        ? datum.flow.changes
+            .map((change) => {
+              const quantitySign = change.quantityDelta > 0 ? '+' : '−';
+              const valueSign = change.valueDelta > 0 ? '+' : '−';
+              return `<small class="chart-flow-change">${escapeHtml(change.accountName)} • ${quantitySign}${escapeHtml(formatNumber(Math.abs(change.quantityDelta), this.language))}${escapeHtml(change.assetCode)} • ${valueSign}${escapeHtml(this.displayFlowMoney(Math.abs(change.valueDelta)))}</small>`;
+            })
+            .join('')
+        : '';
+    tooltip.innerHTML = `<strong>${escapeHtml(exactValue)}</strong><small>${escapeHtml(formatDate(datum.createdAt, this.language))} · ${escapeHtml(formatTime(datum.createdAt, this.language))}</small>${flowMarkup}`;
     tooltip.style.left = `${Math.min(Math.max(point.x, 58), Math.max(58, canvas.clientWidth - 58))}px`;
     tooltip.classList.remove('hidden');
   }
@@ -467,6 +493,23 @@ export class WorthRenderer {
     return this.service.settings.balancesHidden
       ? '••••'
       : formatDisplayMoney(value, this.language, this.displayAsset());
+  }
+
+  private displayFlowMoney(value: number): string {
+    const displayAsset = this.displayAsset();
+    if (!displayAsset) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(value);
+    }
+    const formatted = new Intl.NumberFormat(locale(this.language), {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 4,
+    }).format(value);
+    return `${formatted} ${displayAsset.icon || displayAsset.code}`;
   }
 
   private renderPrivacyToggle(): void {
@@ -1065,26 +1108,38 @@ export class WorthRenderer {
     );
   }
 
-  private formatDisplayExactPrice(value: number): string {
-    const quote = this.displayAsset();
-    return formatExactMoney(
-      value * (Number(quote?.price) || 1),
-      this.language,
-      quote,
-    );
-  }
-
   private assetTotal(id: string): number {
     return assetTotal(id, this.service.data);
   }
 
   private historyData(): HistoryItem[] {
+    const points = this.normalizedSnapshotPoints();
     const pointsByCreatedAt = new Map(
-      this.normalizedSnapshotPoints().map((point) => [point.createdAt, point]),
+      points.map((point) => [point.createdAt, point]),
     );
+    const flowsByCreatedAt = new Map<number, PositionFlowSummary>();
+    for (let index = 1; index < points.length; index += 1) {
+      const previous = points[index - 1];
+      const current = points[index];
+      if (previous && current) {
+        flowsByCreatedAt.set(
+          current.createdAt,
+          summarizePositionFlows(previous, current),
+        );
+      }
+    }
     return this.service.data.snapshots.flatMap((snapshot) => {
       const point = pointsByCreatedAt.get(snapshot.createdAt);
-      return point ? [{ snapshot, value: pnlPointTotal(point) }] : [];
+      const flow = flowsByCreatedAt.get(snapshot.createdAt);
+      return point
+        ? [
+            {
+              snapshot,
+              value: pnlPointTotal(point),
+              ...(flow ? { flow } : {}),
+            },
+          ]
+        : [];
     });
   }
 
@@ -1291,7 +1346,6 @@ export class WorthRenderer {
       current,
       this.ui.overviewPeriod,
       now,
-      localDayKey(now),
     );
   }
 

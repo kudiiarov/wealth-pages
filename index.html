@@ -85,8 +85,9 @@
 <section class="surface chart-surface">
 <div class="chart-stat">
 <span data-i18n="allHistory" id="historyRangeLabel">Вся история</span>
-<strong id="historyChange">—</strong>
+<div class="history-chart-legend"><span><i></i><b data-i18n="balanceChange">Баланс</b></span><span data-history-flow-legend><i></i><b data-i18n="cashMovement">Движение</b></span></div>
 </div>
+<div class="history-performance-summary"><span><small data-i18n="balanceChange">Баланс</small><strong id="historyBalanceChange">—</strong></span><span><small>P&amp;L</small><strong id="historyPnlChange">—</strong></span><span><small data-i18n="cashMovement">Движение</small><strong id="historyFlowChange">—</strong></span></div>
 <div class="chart-inspector history-chart-inspector"><canvas aria-describedby="historyChartTooltip" aria-label="График стоимости портфеля" id="historyChart" tabindex="0"></canvas><output aria-live="polite" class="chart-tooltip hidden" id="historyChartTooltip" role="status"></output></div>
 <div class="empty-state overlay-empty" data-i18n="needTwo" id="historyEmpty">Нужно минимум два снимка для графика.</div>
 <div class="chart-dates" id="chartDates"><span></span><span></span></div>

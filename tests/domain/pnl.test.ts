@@ -8,6 +8,7 @@ import {
   selectOverviewPnlSeries,
   selectPnlSeries,
   selectPnlSeriesSince,
+  summarizePositionFlows,
   type PnlPoint,
 } from '../../src/domain/pnl';
 import type { PriceHistoryPoint } from '../../src/domain/models';
@@ -121,6 +122,31 @@ function mixedPoint(
 }
 
 describe('flow-adjusted P&L', () => {
+  it('reports only position quantity changes since the previous point', () => {
+    const previous = mixedPoint(1, 10, 20, { xA: 10, yB: 5 });
+    const current = mixedPoint(2, 12, 18, { xA: 8, xB: 3, yB: 5 });
+
+    expect(summarizePositionFlows(previous, current)).toEqual({
+      total: 12,
+      changes: [
+        expect.objectContaining({
+          positionId: 'x-a',
+          accountName: 'Account A',
+          assetCode: 'X',
+          quantityDelta: -2,
+          valueDelta: -24,
+        }),
+        expect.objectContaining({
+          positionId: 'x-b',
+          accountName: 'Account B',
+          assetCode: 'X',
+          quantityDelta: 3,
+          valueDelta: 36,
+        }),
+      ],
+    });
+  });
+
   it('normalizes points into a quote using same-day cross-rates', () => {
     const oldAt = new Date(2026, 7, 14, 12).getTime();
     const currentAt = new Date(2026, 7, 15, 12).getTime();
@@ -289,22 +315,14 @@ describe('flow-adjusted P&L', () => {
       ),
     ).toEqual([earlier.createdAt, latestEligible.createdAt, current.createdAt]);
     expect(
-      selectOverviewPnlSeries(
-        snapshots,
-        current,
-        '24h',
-        now,
-        localDayKey(now),
-      ).map(({ createdAt }) => createdAt),
+      selectOverviewPnlSeries(snapshots, current, '24h', now).map(
+        ({ createdAt }) => createdAt,
+      ),
     ).toEqual([latestEligible.createdAt, current.createdAt]);
     expect(
-      selectOverviewPnlSeries(
-        snapshots,
-        current,
-        'all',
-        now,
-        localDayKey(now),
-      ).map(({ createdAt }) => createdAt),
+      selectOverviewPnlSeries(snapshots, current, 'all', now).map(
+        ({ createdAt }) => createdAt,
+      ),
     ).toEqual([earlier.createdAt, latestEligible.createdAt, current.createdAt]);
   });
 
@@ -361,7 +379,7 @@ describe('flow-adjusted P&L', () => {
     expect(flowAdjustedPnl([point(1, 1, 10)], includeAll)).toBeNull();
   });
 
-  it('selects strict overview periods without using today as a 24h baseline', () => {
+  it('uses the latest snapshot from the previous local day for 1D', () => {
     const now = new Date(2026, 7, 15, 21).getTime();
     const current = point(now, 1, 15);
     const august13 = point(new Date(2026, 7, 13, 12).getTime(), 1, 10);
@@ -384,30 +402,19 @@ describe('flow-adjusted P&L', () => {
     ];
 
     expect(
-      selectOverviewPnlSeries(
-        points,
-        current,
-        '24h',
-        now,
-        localDayKey(now),
-      ).map(({ createdAt }) => createdAt),
+      selectOverviewPnlSeries(points, current, '24h', now).map(
+        ({ createdAt }) => createdAt,
+      ),
     ).toEqual([
-      august14BeforeCutoff.createdAt,
       august14AfterCutoff.createdAt,
       august15.createdAt,
       current.createdAt,
     ]);
+    expect(selectOverviewPnlSeries([current], current, '24h', now)).toEqual([]);
     expect(
-      selectOverviewPnlSeries([current], current, '24h', now, localDayKey(now)),
-    ).toEqual([]);
-    expect(
-      selectOverviewPnlSeries(
-        points,
-        current,
-        'all',
-        now,
-        localDayKey(now),
-      ).map(({ createdAt }) => createdAt),
+      selectOverviewPnlSeries(points, current, 'all', now).map(
+        ({ createdAt }) => createdAt,
+      ),
     ).toEqual([
       august13.createdAt,
       august14BeforeCutoff.createdAt,
