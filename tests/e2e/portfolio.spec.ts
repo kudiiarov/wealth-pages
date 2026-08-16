@@ -778,6 +778,38 @@ test('aligns the Rates and Portfolio structure section gaps', async ({
   });
   expect(gaps.rates).toBe(10);
   expect(gaps.rates).toBe(gaps.structure);
+  const headingAlignment = await page.evaluate(() => {
+    const title = document.querySelector('.section-heading-row h2');
+    const action = document.querySelector('#configureRatesBtn span');
+    if (!title || !action) throw new Error('Missing Rates heading content');
+    return Math.abs(
+      title.getBoundingClientRect().bottom -
+        action.getBoundingClientRect().bottom,
+    );
+  });
+  expect(headingAlignment).toBeLessThanOrEqual(2);
+});
+
+test('uses the Home section rhythm before Assets and Accounts list headings', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await seedPortfolio(page);
+  await page.reload();
+
+  for (const view of ['assetsView', 'accountsView']) {
+    await page.locator(`.tab[data-nav="${view}"]`).click();
+    const gap = await page.locator(`#${view}`).evaluate((element) => {
+      const summary = element.querySelector('.compact-allocation');
+      const heading = element.querySelector('.portfolio-list-heading');
+      if (!summary || !heading) throw new Error('Missing portfolio sections');
+      return (
+        heading.getBoundingClientRect().top -
+        summary.getBoundingClientRect().bottom
+      );
+    });
+    expect(gap).toBe(25);
+  }
 });
 
 test('keeps system actions neutral', async ({ page }) => {
@@ -1480,15 +1512,40 @@ test('keeps Home, overview rows, and entity detail performance periods independe
 
   await expect(page.locator('#pnlMoney')).toHaveText('+$90.00');
   await expect(page.locator('#pnlPercent')).toHaveText('+14.75%');
+  await expect(page.locator('[data-rate-asset="btc"] .rate-change')).toHaveText(
+    '+25,0%',
+  );
+  await expect(
+    page.locator('[data-rate-asset="btc"] .rate-change'),
+  ).toHaveClass(/pnl-positive/);
   await expect(
     page.locator('#portfolioGainers [data-driver-asset="btc"] .driver-value'),
   ).toHaveText('+$60.00');
+  await expect(
+    page.locator('#portfolioGainers [data-driver-asset="btc"] small'),
+  ).toHaveCount(0);
+  const chevrons = await page.evaluate(() => {
+    const driver = document.querySelector<HTMLElement>(
+      '#portfolioGainers .driver-row > i',
+    );
+    const rate = document.querySelector<HTMLElement>('.rate-row > i');
+    if (!driver || !rate) throw new Error('Missing navigation chevrons');
+    const read = (element: HTMLElement) => {
+      const style = getComputedStyle(element);
+      return { color: style.color, fontSize: style.fontSize };
+    };
+    return { driver: read(driver), rate: read(rate) };
+  });
+  expect(chevrons.driver).toEqual(chevrons.rate);
   await expect(
     page.locator('#portfolioDrivers [data-home-period]'),
   ).toHaveCount(0);
   await page.locator('[data-home-period="1d"]').click();
   await expect(page.locator('#pnlMoney')).toHaveText('+$25.00');
   await expect(page.locator('#pnlPercent')).toHaveText('+3.70%');
+  await expect(page.locator('[data-rate-asset="btc"] .rate-change')).toHaveText(
+    '+5,3%',
+  );
   await expect(
     page.locator('#portfolioGainers [data-driver-asset="btc"] .driver-value'),
   ).toHaveText('+$15.00');

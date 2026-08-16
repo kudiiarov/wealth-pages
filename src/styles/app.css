@@ -1933,6 +1933,8 @@ html[data-theme='dark'] .security-icon {
   color: var(--muted);
   font-size: 12px;
   font-weight: 750;
+  display: flex;
+  align-items: flex-end;
 }
 .rate-list {
   padding: 6px 14px;
@@ -1993,7 +1995,16 @@ html[data-theme='dark'] .security-icon {
   font-size: 13px;
   font-weight: 750;
 }
-.rate-row > i {
+.rate-value strong,
+.rate-value small {
+  display: block;
+}
+.rate-value small {
+  font-size: 10px;
+  font-weight: 750;
+}
+.rate-row > i,
+.driver-row > i {
   color: var(--muted);
   font-size: 22px;
   font-style: normal;
@@ -2468,7 +2479,7 @@ html[data-theme='dark'] .security-icon {
   background: transparent;
   color: var(--ink);
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto 18px;
+  grid-template-columns: 34px minmax(0, 1fr) auto 12px;
   align-items: center;
   gap: 10px;
   padding: 7px 0;
@@ -2478,15 +2489,8 @@ html[data-theme='dark'] .security-icon {
 .driver-identity {
   min-width: 0;
 }
-.driver-identity strong,
-.driver-identity small {
+.driver-identity strong {
   display: block;
-}
-.driver-identity small {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.35;
 }
 .driver-row + .driver-row {
   border-top: 1px solid var(--line);
@@ -2507,10 +2511,6 @@ html[data-theme='dark'] .security-icon {
 .driver-row b {
   font-size: 14px;
   white-space: nowrap;
-}
-.driver-row i {
-  font-style: normal;
-  font-size: 16px;
 }
 .driver-row .positive {
   color: #9cda68;
@@ -2757,7 +2757,7 @@ html[data-theme='dark'] .security-icon {
 }
 .portfolio-list-heading {
   gap: 12px;
-  margin: 30px 2px 14px;
+  margin: 25px 2px 14px;
 }
 .portfolio-list-heading h2 {
   min-width: 0;

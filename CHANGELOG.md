@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.3 — 2026-08-16
+
+- Simplified Home gainers and losers, added period-linked rate changes, aligned section spacing, and reordered Accounts before Assets in the tab bar.
+
 ## 3.8.2 — 2026-08-16
 
 - Added period-linked Home gainers and losers with flow-adjusted contribution, price movement, and portfolio-share explanations.

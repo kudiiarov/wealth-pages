@@ -10,7 +10,7 @@ import { compactDailyHistory } from './daily-history';
 import { normalizeData } from './normalize';
 
 export const BACKUP_VERSION = 16;
-export const APP_VERSION = '3.8.2-final';
+export const APP_VERSION = '3.8.3-final';
 
 export interface ValidatedBackup {
   version: number;

@@ -57,6 +57,7 @@ import {
   compactAssetAllocation,
   inferAssetProfile,
   normalizeRatePairs,
+  pairPriceChangePct,
   portfolioDrivers,
   portfolioTags,
   priceFreshness,
@@ -764,14 +765,8 @@ export class WorthRenderer {
           const value = this.service.settings.balancesHidden
             ? '••••'
             : `${positive ? '+' : '−'}${this.displayPnlMoney(Math.abs(driver.value))}`;
-          const explanation = this.t(
-            'driverExplanation',
-            this.signedPercent(driver.pricePct),
-            this.unsignedPercent(driver.sharePct),
-            this.signedPercent(driver.contributionPct),
-          );
           return [
-            `<button class="driver-row" data-driver-asset="${escapeHtml(asset.id)}" type="button"><span class="driver-icon ui-icon-tile ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span class="driver-identity"><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(explanation)}</small></span><b class="driver-value ${positive ? 'positive' : 'negative'}">${value}</b><i aria-hidden="true">›</i></button>`,
+            `<button class="driver-row" data-driver-asset="${escapeHtml(asset.id)}" type="button"><span class="driver-icon ui-icon-tile ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span class="driver-identity"><strong>${escapeHtml(asset.name)}</strong></span><b class="driver-value ${positive ? 'positive' : 'negative'}">${value}</b><i aria-hidden="true">›</i></button>`,
           ];
         })
         .join('');
@@ -797,10 +792,29 @@ export class WorthRenderer {
     );
     this.element('portfolioRates').innerHTML = rates.length
       ? rates
-          .map(
-            ({ source, quote, value }) =>
-              `<button class="rate-row ui-list-row" data-rate-asset="${escapeHtml(source.id)}" type="button"><span class="driver-icon ui-icon-tile compact ${this.iconLengthClass(this.assetIcon(source))}" style="background:${this.assetColor(source)}">${escapeHtml(this.assetIcon(source))}</span><span class="rate-identity"><strong>${escapeHtml(source.name)}</strong>${this.assetFreshnessMarkup(source, 'rate-status')}</span><span class="rate-value">${this.service.settings.balancesHidden ? '••••' : value === undefined ? '—' : formatPrice(Number(source.price) || 0, this.language, quote.code === 'USD' ? undefined : quote)}</span><i aria-hidden="true">›</i></button>`,
-          )
+          .map(({ source, quote, value }) => {
+            const change = pairPriceChangePct(
+              driverPoints,
+              source.id,
+              quote.id,
+            );
+            const changeClass =
+              change === null || change === 0
+                ? ''
+                : change > 0
+                  ? 'pnl-positive'
+                  : 'pnl-negative';
+            const price = this.service.settings.balancesHidden
+              ? '••••'
+              : value === undefined
+                ? '—'
+                : formatPrice(
+                    Number(source.price) || 0,
+                    this.language,
+                    quote.code === 'USD' ? undefined : quote,
+                  );
+            return `<button class="rate-row ui-list-row" data-rate-asset="${escapeHtml(source.id)}" type="button"><span class="driver-icon ui-icon-tile compact ${this.iconLengthClass(this.assetIcon(source))}" style="background:${this.assetColor(source)}">${escapeHtml(this.assetIcon(source))}</span><span class="rate-identity"><strong>${escapeHtml(source.name)}</strong>${this.assetFreshnessMarkup(source, 'rate-status')}</span><span class="rate-value"><strong>${price}</strong><small class="rate-change ${changeClass}">${this.signedPercent(change)}</small></span><i aria-hidden="true">›</i></button>`;
+          })
           .join('')
       : `<div class="empty-state compact-empty">${this.t('emptyAssets')}</div>`;
 

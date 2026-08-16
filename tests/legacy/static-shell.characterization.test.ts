@@ -17,7 +17,7 @@ describe('legacy static application shell', () => {
       Array.from(document.querySelectorAll<HTMLElement>('.tab[data-nav]')).map(
         ({ dataset }) => dataset.nav,
       ),
-    ).toEqual(['homeView', 'assetsView', 'accountsView', 'historyView']);
+    ).toEqual(['homeView', 'accountsView', 'assetsView', 'historyView']);
     expect(document.getElementById('positionsView')).toBeNull();
     expect(document.getElementById('portfolioSegment')).toBeNull();
     expect(document.getElementById('historyScope')).toBeNull();
@@ -30,7 +30,7 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('priceTrustText')).toBeNull();
     expect(document.getElementById('rateSelectionModal')).not.toBeNull();
     expect(document.querySelector('.build-note')?.textContent).toContain(
-      '3.8.2-final',
+      '3.8.3-final',
     );
   });
 

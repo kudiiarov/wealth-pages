@@ -19,8 +19,61 @@ import {
   priceFreshness,
   ratePairRows,
   normalizeRatePairs,
+  pairPriceChangePct,
   selectedRateAssets,
 } from '../../src/ui/portfolio-view-model';
+
+it('calculates a configured rate pair change from the shared period endpoints', () => {
+  expect(
+    pairPriceChangePct(
+      [
+        {
+          createdAt: 1,
+          positions: [],
+          assets: [
+            { assetId: 'btc', price: 80 },
+            { assetId: 'usd', price: 1 },
+          ],
+        },
+        {
+          createdAt: 2,
+          positions: [],
+          assets: [
+            { assetId: 'btc', price: 100 },
+            { assetId: 'usd', price: 1 },
+          ],
+        },
+      ],
+      'btc',
+      'usd',
+    ),
+  ).toBe(25);
+  expect(
+    pairPriceChangePct(
+      [
+        {
+          createdAt: 1,
+          positions: [],
+          assets: [
+            { assetId: 'gold', price: 100 },
+            { assetId: 'usd', price: 1 },
+          ],
+        },
+        {
+          createdAt: 2,
+          positions: [],
+          assets: [
+            { assetId: 'gold', price: 80 },
+            { assetId: 'usd', price: 1 },
+          ],
+        },
+      ],
+      'gold',
+      'usd',
+    ),
+  ).toBe(-20);
+  expect(pairPriceChangePct([], 'btc', 'usd')).toBeNull();
+});
 import type { PortfolioData } from '../../src/domain/models';
 
 it('orders allocation by absolute value without truncating the bar data', () => {
@@ -716,22 +769,8 @@ it('ranks flow-adjusted asset drivers without treating deposits as gains', () =>
       },
     ]),
   ).toEqual([
-    {
-      assetId: 'btc',
-      code: 'BTC',
-      value: 30,
-      pricePct: 20,
-      sharePct: (240 / 330) * 100,
-      contributionPct: (30 / 200) * 100,
-    },
-    {
-      assetId: 'xaut',
-      code: 'XAUT',
-      value: -10,
-      pricePct: -10,
-      sharePct: (90 / 330) * 100,
-      contributionPct: (-10 / 200) * 100,
-    },
+    { assetId: 'btc', code: 'BTC', value: 30 },
+    { assetId: 'xaut', code: 'XAUT', value: -10 },
   ]);
 });
 

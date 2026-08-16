@@ -234,8 +234,6 @@ const ru = {
   rates: 'Курсы валют',
   topGainers: 'Лидеры роста',
   topLosers: 'Лидеры падения',
-  driverExplanation: (price: string, share: string, contribution: string) =>
-    `Цена ${price} · доля ${share} · вклад ${contribution}`,
   noGainers: 'За этот период ни один актив не вырос',
   noLosers: 'За этот период ни один актив не снизился',
   driversNeedHistory: 'Нужно минимум два снимка за период',
@@ -541,8 +539,6 @@ const en = {
   rates: 'Rates',
   topGainers: 'Top gainers',
   topLosers: 'Top losers',
-  driverExplanation: (price: string, share: string, contribution: string) =>
-    `Price ${price} · share ${share} · contribution ${contribution}`,
   noGainers: 'No assets gained during this period',
   noLosers: 'No assets declined during this period',
   driversNeedHistory: 'At least two snapshots are needed for this period',

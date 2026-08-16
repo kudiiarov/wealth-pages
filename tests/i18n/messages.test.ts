@@ -53,12 +53,6 @@ describe('localized messages', () => {
   it('explains gainers and losers in both interface languages', () => {
     expect(translate('ru', 'topGainers')).toBe('Лидеры роста');
     expect(translate('ru', 'topLosers')).toBe('Лидеры падения');
-    expect(translate('ru', 'driverExplanation', '+4,8%', '32%', '+1,6%')).toBe(
-      'Цена +4,8% · доля 32% · вклад +1,6%',
-    );
     expect(translate('en', 'topGainers')).toBe('Top gainers');
-    expect(translate('en', 'driverExplanation', '+4.8%', '32%', '+1.6%')).toBe(
-      'Price +4.8% · share 32% · contribution +1.6%',
-    );
   });
 });
