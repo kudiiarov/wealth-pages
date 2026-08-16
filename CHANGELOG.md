@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.2 — 2026-08-16
+
+- Added period-linked Home gainers and losers with flow-adjusted contribution, price movement, and portfolio-share explanations.
+
 ## 3.8.1 — 2026-08-16
 
 - Removed the separate cash-movement series and legend from the History chart while preserving the movement total and per-position movement details during chart inspection.

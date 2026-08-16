@@ -30,8 +30,24 @@ describe('legacy static application shell', () => {
     expect(document.getElementById('priceTrustText')).toBeNull();
     expect(document.getElementById('rateSelectionModal')).not.toBeNull();
     expect(document.querySelector('.build-note')?.textContent).toContain(
-      '3.8.1-final',
+      '3.8.2-final',
     );
+  });
+
+  it('places period-linked gainers and losers after the Home chart without a second period control', () => {
+    const document = new JSDOM(html).window.document;
+    const chart = document.getElementById('homeChart');
+    const drivers = document.getElementById('portfolioDrivers');
+
+    expect(drivers).not.toBeNull();
+    expect(drivers?.classList.contains('surface')).toBe(true);
+    expect(drivers?.querySelectorAll('.driver-list.surface')).toHaveLength(0);
+    expect(chart?.closest('.balance-block')?.nextElementSibling).toBe(
+      drivers?.closest('section'),
+    );
+    expect(drivers?.querySelector('[data-home-period]')).toBeNull();
+    expect(document.getElementById('portfolioGainers')).not.toBeNull();
+    expect(document.getElementById('portfolioLosers')).not.toBeNull();
   });
 
   it('uses interval selectors without automation toggles', () => {

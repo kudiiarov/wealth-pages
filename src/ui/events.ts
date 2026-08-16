@@ -261,6 +261,14 @@ export class WorthController {
       this.openEntity({ kind: 'account', id: accountId });
       return;
     }
+    const driverAsset = closestElement<HTMLElement>(
+      event.target,
+      '[data-driver-asset]',
+    );
+    if (driverAsset?.dataset.driverAsset) {
+      this.openEntity({ kind: 'asset', id: driverAsset.dataset.driverAsset });
+      return;
+    }
     const assetOpen = closestElement<HTMLElement>(
       event.target,
       '[data-asset-open]',

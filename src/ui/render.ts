@@ -57,6 +57,7 @@ import {
   compactAssetAllocation,
   inferAssetProfile,
   normalizeRatePairs,
+  portfolioDrivers,
   portfolioTags,
   priceFreshness,
   ratePairRows,
@@ -739,6 +740,45 @@ export class WorthRenderer {
     moneyElement.className = `pnl-money ${style}`;
     percentElement.className = `pnl-percent ${style}`;
 
+    const driverPoints = this.homeChartPnlSeries();
+    const drivers = portfolioDrivers(this.service.data, driverPoints);
+    const renderDrivers = (positive: boolean): string => {
+      const rows = drivers
+        .filter(({ value }) => (positive ? value > 0 : value < 0))
+        .slice(0, 2);
+      if (!rows.length) {
+        const key =
+          driverPoints.length < 2
+            ? 'driversNeedHistory'
+            : positive
+              ? 'noGainers'
+              : 'noLosers';
+        return `<div class="empty-state compact-empty">${this.t(key)}</div>`;
+      }
+      return rows
+        .flatMap((driver) => {
+          const asset = this.service.data.assets.find(
+            ({ id }) => id === driver.assetId,
+          );
+          if (!asset) return [];
+          const value = this.service.settings.balancesHidden
+            ? '••••'
+            : `${positive ? '+' : '−'}${this.displayPnlMoney(Math.abs(driver.value))}`;
+          const explanation = this.t(
+            'driverExplanation',
+            this.signedPercent(driver.pricePct),
+            this.unsignedPercent(driver.sharePct),
+            this.signedPercent(driver.contributionPct),
+          );
+          return [
+            `<button class="driver-row" data-driver-asset="${escapeHtml(asset.id)}" type="button"><span class="driver-icon ui-icon-tile ${this.iconLengthClass(this.assetIcon(asset))}" style="background:${this.assetColor(asset)}">${escapeHtml(this.assetIcon(asset))}</span><span class="driver-identity"><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(explanation)}</small></span><b class="driver-value ${positive ? 'positive' : 'negative'}">${value}</b><i aria-hidden="true">›</i></button>`,
+          ];
+        })
+        .join('');
+    };
+    this.element('portfolioGainers').innerHTML = renderDrivers(true);
+    this.element('portfolioLosers').innerHTML = renderDrivers(false);
+
     const legacyPairs = this.service.settings.selectedRateAssetIds.map(
       (sourceAssetId) => ({
         sourceAssetId,
@@ -1364,6 +1404,19 @@ export class WorthRenderer {
     if (!result || result.pct === null) return '—';
     const sign = result.pct > 0 ? '+' : result.pct < 0 ? '−' : '';
     return `${sign}${Math.abs(result.pct).toFixed(1)}%`;
+  }
+
+  private signedPercent(value: number | null): string {
+    if (value === null || !Number.isFinite(value)) return '—';
+    const sign = value > 0 ? '+' : value < 0 ? '−' : '';
+    return `${sign}${this.unsignedPercent(Math.abs(value))}`;
+  }
+
+  private unsignedPercent(value: number): string {
+    return `${new Intl.NumberFormat(locale(this.language), {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(value)}%`;
   }
 
   private pnlSummary(result: PnlResult | null): string {

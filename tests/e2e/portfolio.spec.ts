@@ -1480,9 +1480,21 @@ test('keeps Home, overview rows, and entity detail performance periods independe
 
   await expect(page.locator('#pnlMoney')).toHaveText('+$90.00');
   await expect(page.locator('#pnlPercent')).toHaveText('+14.75%');
+  await expect(
+    page.locator('#portfolioGainers [data-driver-asset="btc"] .driver-value'),
+  ).toHaveText('+$60.00');
+  await expect(
+    page.locator('#portfolioDrivers [data-home-period]'),
+  ).toHaveCount(0);
   await page.locator('[data-home-period="1d"]').click();
   await expect(page.locator('#pnlMoney')).toHaveText('+$25.00');
   await expect(page.locator('#pnlPercent')).toHaveText('+3.70%');
+  await expect(
+    page.locator('#portfolioGainers [data-driver-asset="btc"] .driver-value'),
+  ).toHaveText('+$15.00');
+  await expect(page.locator('#portfolioLosers')).toContainText(
+    'За этот период ни один актив не снизился',
+  );
 
   await page.locator('.tab[data-nav="assetsView"]').click();
   await expect(

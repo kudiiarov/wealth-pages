@@ -8,7 +8,12 @@ import type {
   Snapshot,
 } from '../domain/models';
 import { flowAdjustedPnl, type PnlPoint } from '../domain/pnl';
-import { accountTotal, assetQuantity, assetTotal } from '../domain/portfolio';
+import {
+  accountTotal,
+  assetQuantity,
+  assetTotal,
+  portfolioTotal,
+} from '../domain/portfolio';
 import type { HistoryDatum } from './chart';
 
 export interface AllocationRow {
@@ -71,6 +76,9 @@ export interface PortfolioDriver {
   assetId: string;
   code: string;
   value: number;
+  pricePct: number | null;
+  sharePct: number;
+  contributionPct: number | null;
 }
 
 export interface PriceFreshness {
@@ -446,14 +454,40 @@ export function portfolioDrivers(
   data: PortfolioData,
   points: readonly PnlPoint[],
 ): PortfolioDriver[] {
+  const portfolioResult = flowAdjustedPnl(points, () => true);
+  const total = portfolioTotal(data);
   return assetOverviewRows(data)
-    .flatMap(({ asset }) => {
+    .flatMap(({ asset, value }) => {
       const result = flowAdjustedPnl(
         points,
         (position) => position.assetId === asset.id,
       );
+      const prices = points.flatMap((point) => {
+        const price = point.assets.find(
+          ({ assetId }) => assetId === asset.id,
+        )?.price;
+        return typeof price === 'number' && Number.isFinite(price) && price > 0
+          ? [price]
+          : [];
+      });
+      const firstPrice = prices[0];
+      const lastPrice = prices.at(-1);
       return result && result.pnl !== 0
-        ? [{ assetId: asset.id, code: asset.code, value: result.pnl }]
+        ? [
+            {
+              assetId: asset.id,
+              code: asset.code,
+              value: result.pnl,
+              pricePct:
+                firstPrice !== undefined && lastPrice !== undefined
+                  ? ((lastPrice - firstPrice) / firstPrice) * 100
+                  : null,
+              sharePct: total ? (value / total) * 100 : 0,
+              contributionPct: portfolioResult?.baseCapital
+                ? (result.pnl / portfolioResult.baseCapital) * 100
+                : null,
+            },
+          ]
         : [];
     })
     .sort((left, right) => Math.abs(right.value) - Math.abs(left.value));

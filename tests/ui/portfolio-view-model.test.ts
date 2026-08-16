@@ -716,8 +716,22 @@ it('ranks flow-adjusted asset drivers without treating deposits as gains', () =>
       },
     ]),
   ).toEqual([
-    { assetId: 'btc', code: 'BTC', value: 30 },
-    { assetId: 'xaut', code: 'XAUT', value: -10 },
+    {
+      assetId: 'btc',
+      code: 'BTC',
+      value: 30,
+      pricePct: 20,
+      sharePct: (240 / 330) * 100,
+      contributionPct: (30 / 200) * 100,
+    },
+    {
+      assetId: 'xaut',
+      code: 'XAUT',
+      value: -10,
+      pricePct: -10,
+      sharePct: (90 / 330) * 100,
+      contributionPct: (-10 / 200) * 100,
+    },
   ]);
 });
 
